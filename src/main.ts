@@ -1,10 +1,9 @@
 import { AstPrinter } from "./Ast/AstPrinter"
-import { BinaryExpr, LiteralExpr } from "./Ast/Expr"
 import { Scanner } from "./Lexer/Lexer"
 import { Token, Tokenkind } from "./Lexer/Token"
 import { Parser } from "./Parse/Parse"
 
-const code =`53+41*3/2`
+const code =`4>3==53+41*3/2>8`
 
 function main() {
     const sanner = new Scanner(code)
@@ -22,3 +21,4 @@ function main() {
 }
 
 main()
+

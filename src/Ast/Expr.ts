@@ -5,6 +5,7 @@ import { Token } from "../Lexer/Token"
 export interface ExprVisitor<R>{
     visitBinaryExpr(expr: BinaryExpr): R;
     visitLiteralExpr(expr: LiteralExpr): R;
+    visitUnaryExpr(expr: UnaryExpr): R;
 }
 
 export interface Expr{ //表达式 基类
@@ -25,6 +26,26 @@ export class BinaryExpr implements Expr{
       return visitor.visitBinaryExpr(this)
     }
 }
+export class UnaryExpr implements Expr {
+
+    operator: Token;
+    right: Expr;
+
+    constructor(operator: Token, right: Expr) {
+
+        this.operator = operator;
+        this.right = right;
+
+    }
+
+    accept<R>(visitor: ExprVisitor<R>): R {
+
+        return visitor.visitUnaryExpr(this);
+
+    }
+
+}
+
 
 //字面量表达式
 export class LiteralExpr implements Expr {

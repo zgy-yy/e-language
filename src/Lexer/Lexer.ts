@@ -42,6 +42,21 @@ export class Scanner {//扫描器，或称为词法分析
             case ';':
                 this.addToken(Tokenkind.SEMICOLON)
                 break
+            case "!":
+                this.addToken(this.match("=") ? Tokenkind.BANG_EQUAL : Tokenkind.BANG);
+                break;
+            case "=":
+                this.addToken(
+                    this.match("=") ? Tokenkind.EQUAL_EQUAL : Tokenkind.EQUAL
+                );
+                break;
+            case "<":
+                this.addToken(this.match("=") ? Tokenkind.LESS_EQUAL : Tokenkind.LESS);
+                break;
+            case ">":
+                this.addToken(
+                    this.match("=") ? Tokenkind.GREATER_EQUAL : Tokenkind.GREATER
+                );
             case " ":
             case "\r":
             case "\t":
@@ -78,9 +93,16 @@ export class Scanner {//扫描器，或称为词法分析
         if (this.isAtEnd()) return Scanner.END;
         return this.source.charAt(this.current);
     }
-    peekNext() {
+   private peekNext() {
         if (this.current + 1 >= this.source.length) return Scanner.END;
         return this.source.charAt(this.current + 1);
+    }
+    //匹配当前字符，如果匹配成功，current+1
+    private  match(expected: string): boolean {
+        if (this.isAtEnd()) return false;
+        if (this.source.charAt(this.current) !== expected) return false;
+        this.current++;
+        return true;
     }
 
     private number() {

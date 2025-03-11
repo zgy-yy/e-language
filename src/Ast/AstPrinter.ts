@@ -1,9 +1,12 @@
-import { BinaryExpr, Expr, ExprVisitor, LiteralExpr } from "./Expr";
+import { BinaryExpr, Expr, ExprVisitor, LiteralExpr, UnaryExpr } from "./Expr";
 
 
 export class AstPrinter implements ExprVisitor<string>{
     visitBinaryExpr(expr: BinaryExpr): string {
         return this.parenthesize(expr.operator.lexeme, expr.left, expr.right);
+    }
+    visitUnaryExpr(expr: UnaryExpr): string {
+        return this.parenthesize(expr.operator.lexeme, expr.right);
     }
 
     visitLiteralExpr(expr: LiteralExpr): string {

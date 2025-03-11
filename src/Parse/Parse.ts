@@ -1,4 +1,4 @@
-import { BinaryExpr, Expr, LiteralExpr } from "../Ast/Expr";
+import { BinaryExpr, Expr, LiteralExpr, UnaryExpr } from "../Ast/Expr";
 import { Token, Tokenkind } from "../Lexer/Token";
 
 export class Parser {
@@ -16,13 +16,30 @@ export class Parser {
         return statements
     }
 
-    
     expression(): Expr {//表达式
-        return this.term();
+        return this.equality()
     }
-
-    term() {//+ - 运算
-        let expr = this.factor()//加减运算的优先级 小于 乘除运算；所以 
+    equality() {//等于 ｜ 不等 表达式
+        let expr = this.comparison()
+        while (this.match(Tokenkind.EQUAL_EQUAL, Tokenkind.BANG_EQUAL)) {
+            const operator = this.previous()
+            const right = this.comparison()
+            expr = new BinaryExpr(expr, operator, right)
+        }
+        return expr
+    }
+    comparison() {//比较表达式
+        let expr = this.term()
+        while (this.match(Tokenkind.GREATER, Tokenkind.GREATER_EQUAL, Tokenkind.LESS, Tokenkind.LESS_EQUAL)) {
+            const operator = this.previous()
+            const right = this.term()
+            expr = new BinaryExpr(expr, operator, right)
+        }
+        return expr
+    
+    }
+    term() {//+ - 运算 表达式
+        let expr = this.factor()//加减运算的优先级 小于 乘除运算；所以加减运算的左操作数是乘除表达式
         while (this.match(Tokenkind.PLUS, Tokenkind.MINUS)) {
             const operator = this.previous();
             const right = this.factor()
@@ -30,7 +47,7 @@ export class Parser {
         }
         return expr
     }
-    factor(){// * / 运算
+    factor(){// * / 运算 表达式
         let expr = this.primary()//左操作数
         while (this.match(Tokenkind.SLASH, Tokenkind.STAR)) {//match会使得 游标前进一步
             const operator = this.previous()//操作符
@@ -39,8 +56,16 @@ export class Parser {
         }
         return expr
     }
+    unary() {//一元表达式
+        if (this.match(Tokenkind.BANG, Tokenkind.MINUS)) {
+            const operator = this.previous()
+            const right = this.unary()
+            return new UnaryExpr(operator, right)
+        }
+        return this.primary()
+    }
 
-    primary(): Expr { //字面量，this  boolean 标识符
+    primary(): Expr { //住表达式 =>字面量，this  boolean 标识符
         if (this.match(Tokenkind.NUMBER, Tokenkind.STRING)) {
             return new LiteralExpr(this.previous().literal); //字面量 表达式
         }

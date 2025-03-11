@@ -4,7 +4,20 @@ export enum Tokenkind{
     MINUS = "-",
     STAR = "*",
     SLASH = "/",
-    SEMICOLON=';',
+    SEMICOLON = ';',
+    //逻辑
+    BANG = "!",
+    AND = "&&",
+    OR = "||",
+
+    //比较
+    EQUAL = "=",
+    BANG_EQUAL = "!=",
+    EQUAL_EQUAL = "==",
+    GREATER = ">",
+    GREATER_EQUAL = ">=",
+    LESS = "<",
+    LESS_EQUAL = "<=",
 
     //literal
     STRING = "string",

@@ -1,20 +1,38 @@
 section .data
-    hello db 'Hello, World!', 0xA  ; 定义字符串和换行符
-    hello_len equ $ - hello         ; 计算字符串长度
-
+	format db "Result: % d", 0x0a, 0
 section .text
-    global _start                   ; 声明入口点
+	global main
+	extern printf
+main:
+	mov rax, 5
+	push rax
+	mov rax, 5
+	push rax
+	mov rax, 3
+	push rax
+	mov rax, 2
+	pop rbx
+	imul rax, rbx
+	pop rbx
+	cqo
+	div rbx
+	push rax
+	mov rax, 1
+	pop rbx
+	add rax, rbx
+	pop rbx
+	sub rax, rbx
 
-_start:
-    ; 系统调用 sys_write (系统调用号 1)
-    mov rax, 1                      ; 系统调用号 (sys_write)
-    mov rdi, 1                      ; 文件描述符 (stdout)
-    mov rsi, hello                  ; 字符串地址
-    mov rdx, hello_len              ; 字符串长度
-    syscall                         ; 调用内核
 
-    ; 系统调用 sys_exit (系统调用号 60)
-    mov rax, 60                     ; 系统调用号 (sys_exit)
-    xor rdi, rdi                    ; 返回值 0
-    syscall                         ; 调用内核
 
+;调用 printf
+	lea rdi, [rel format]
+	mov rsi, rax
+	xor eax, eax
+	call printf wrt ..plt
+
+;退出程序
+	mov eax, 60
+	xor edi, edi
+	syscall
+section .note.GNU-stack noalloc noexec nowrite progbits

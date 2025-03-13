@@ -1,9 +1,10 @@
 import { AstPrinter } from "./Ast/AstPrinter"
+import { CodeGen } from "./CodeGen/CodeGen"
 import { Scanner } from "./Lexer/Lexer"
 import { Token, Tokenkind } from "./Lexer/Token"
 import { Parser } from "./Parse/Parse"
 
-const code =`4>3==53+41*3/2>8`
+const code =`1+2*3/5-5`
 
 function main() {
     const sanner = new Scanner(code)
@@ -17,6 +18,8 @@ function main() {
     const statements = parser.parse()
     console.log('zz', statements)
     
+    const codeGen = new CodeGen()
+    codeGen.generateCode(statements[0])
     new AstPrinter().print(statements[0])
 }
 

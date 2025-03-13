@@ -4,8 +4,8 @@ import { Token } from "../Lexer/Token"
 
 export interface ExprVisitor<R>{
     visitBinaryExpr(expr: BinaryExpr): R;
-    visitLiteralExpr(expr: LiteralExpr): R;
     visitUnaryExpr(expr: UnaryExpr): R;
+    visitLiteralExpr(expr: LiteralExpr): R;
 }
 
 export interface Expr{ //表达式 基类
@@ -32,14 +32,11 @@ export class UnaryExpr implements Expr {
     right: Expr;
 
     constructor(operator: Token, right: Expr) {
-
         this.operator = operator;
         this.right = right;
 
     }
-
     accept<R>(visitor: ExprVisitor<R>): R {
-
         return visitor.visitUnaryExpr(this);
 
     }

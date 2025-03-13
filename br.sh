@@ -31,7 +31,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # 链接目标文件
-ld "$OBJ_DIR/$BASENAME.o" -o "$BIN_DIR/$BASENAME"
+gcc -no-pie "$OBJ_DIR/$BASENAME.o" -o "$BIN_DIR/$BASENAME"
 if [ $? -ne 0 ]; then
     echo "Error: Linking failed"
     exit 1

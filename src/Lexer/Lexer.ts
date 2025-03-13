@@ -65,6 +65,10 @@ export class Scanner {//扫描器，或称为词法分析
             case "\n":
                 this.line++;
                 break;
+            
+            case '"':
+                this.string();
+                break;
             default:
             //匹配数字
                 if (isDigit(c)) {
@@ -103,6 +107,20 @@ export class Scanner {//扫描器，或称为词法分析
         if (this.source.charAt(this.current) !== expected) return false;
         this.current++;
         return true;
+    }
+
+    private string() {
+        while (this.peek() !== '"' && !this.isAtEnd()) {
+            if (this.peek() === "\n") this.line++;
+            this.advance();
+        }
+        if (this.isAtEnd()) {
+            console.log('error')
+            return;
+        }
+        this.advance();
+        const value = this.source.substring(this.start + 1, this.current - 1);
+        this.addToken(Tokenkind.STRING, value);
     }
 
     private number() {

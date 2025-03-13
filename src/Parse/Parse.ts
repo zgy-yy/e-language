@@ -1,4 +1,5 @@
 import { BinaryExpr, Expr, LiteralExpr, UnaryExpr } from "../Ast/Expr";
+import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
 
 export class Parser {
@@ -110,10 +111,40 @@ export class Parser {
         return this.tokens[this.current - 1];
     }
 
-    private error(token: Token, message: string) {
-        console.warn(token)
-        return new ParseError("Parser error."+message);
+
+    // 错误同步
+    consume(kind :Tokenkind, message: string) {//消费当前token，如果不是kind类型的token，抛出异常
+        if (this.check(kind)) {
+            return this.advance()
+        }
+        throw this.error(this.peek(), "Expect " + kind)
     }
+    private error(token: Token, message: string) {
+        El.error(token, message)
+        return new ParseError("Parser error." + message);
+    }
+    synchronize() {
+        this.advance()
+        while (!this.isAtEnd()) {
+            if (this.previous().type == Tokenkind.SEMICOLON) {
+                return
+            }
+            switch (this.peek().type) {
+                // case Tokenkind.CLASS:
+                // case Tokenkind.FUN:
+                // case Tokenkind.VAR:
+                // case Tokenkind.FOR:
+                // case Tokenkind.IF:
+                // case Tokenkind.WHILE:
+                // case Tokenkind.PRINT:
+                // case Tokenkind.RETURN:
+                    // return
+            }
+            this.advance()
+        }
+    }
+
+    
 
 }
 

@@ -1,10 +1,10 @@
 export enum Tokenkind{
+    SEMICOLON = ';',
     //算术
     PLUS = "+",
     MINUS = "-",
     STAR = "*",
     SLASH = "/",
-    SEMICOLON = ';',
     //逻辑
     BANG = "!",
     AND = "&&",

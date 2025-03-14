@@ -1,4 +1,4 @@
-import { BinaryExpr, Expr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, Expr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { ExpressionStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
@@ -67,12 +67,24 @@ export class Parser {
         return new ExpressionStmt(value)
     }
 
-
-
     //表达式
     expression(): Expr {//表达式
-        return this.equality()
+        return this.assignment()
     }
+    //赋值表达式
+    assignment(): Expr {
+        const expr = this.equality()//表达式得出左值
+        if (this.match(Tokenkind.EQUAL)) {
+            const equals = this.previous()
+            const value = this.assignment()
+            if (expr instanceof VariableExpr) {
+                return new AssignExpr(expr.name,  value)
+            }
+            El.error(equals, "Invalid assignment target.")
+        }
+        return expr
+    }
+
     equality() {//等于 ｜ 不等 表达式
         let expr = this.comparison()
         while (this.match(Tokenkind.EQUAL_EQUAL, Tokenkind.BANG_EQUAL)) {

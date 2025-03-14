@@ -1,8 +1,9 @@
-import { BinaryExpr, Expr, ExprVisitor, LiteralExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { AssignExpr, BinaryExpr, Expr, ExprVisitor, LiteralExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { ExpressionStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
+
     // Stmt
     visitExpressionStmt(stmt: ExpressionStmt): string {
        return stmt.expression.accept(this);
@@ -15,6 +16,10 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     // Expr 
+    visitAssignExpr(expr: AssignExpr): string {
+        return `${expr.name.lexeme} = ${expr.value.accept(this)}`;
+    }
+
     visitVariableExpr(expr: VariableExpr): string {
         return expr.name.lexeme;
     }

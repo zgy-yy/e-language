@@ -8,6 +8,7 @@ export interface ExprVisitor<R>{
     visitUnaryExpr(expr: UnaryExpr): R;
     visitLiteralExpr(expr: LiteralExpr): R;
     visitVariableExpr(expr: VariableExpr): R;
+    visitAssignExpr(expr: AssignExpr): R;
 }
 
 export interface Expr{ //表达式 基类
@@ -45,7 +46,6 @@ export class UnaryExpr implements Expr {
 
 }
 
-
 //字面量表达式
 export class LiteralExpr implements Expr {
 
@@ -58,17 +58,26 @@ export class LiteralExpr implements Expr {
     }
 
 }
-
-
 //变量表达式
 export class VariableExpr implements Expr {
     name: Token; //变量名
     constructor(name: Token) {
         this.name = name;
     }
-
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitVariableExpr(this);
+    }
+}
+
+export class AssignExpr implements Expr {
+    name: Token;
+    value: Expr;
+    constructor(name: Token, value: Expr) {
+        this.name = name;
+        this.value = value;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitAssignExpr(this);
     }
 
 }

@@ -6,6 +6,7 @@ import { Parser } from "./Parse/Parse"
 const code = 
 `
 int a=1+3+4;
+a=12;
 print a;
 
 

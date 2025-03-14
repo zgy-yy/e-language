@@ -4,24 +4,12 @@ section .text
 	global main
 	extern printf
 main:
-	mov rax, 5
-	push rax
-	mov rax, 5
+	mov rax, 4
 	push rax
 	mov rax, 3
-	push rax
-	mov rax, 2
-	pop rbx
-	imul rax, rbx
 	pop rbx
 	cqo
 	div rbx
-	push rax
-	mov rax, 1
-	pop rbx
-	add rax, rbx
-	pop rbx
-	sub rax, rbx
 
 
 

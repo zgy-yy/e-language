@@ -49,16 +49,16 @@ export class Parser {
         return expr
     }
     factor(){// * / 运算 表达式
-        let expr = this.primary()//左操作数
+        let expr = this.unary()//左操作数
         while (this.match(Tokenkind.SLASH, Tokenkind.STAR)) {//match会使得 游标前进一步
             const operator = this.previous()//操作符
-            const right = this.primary()
+            const right = this.unary()
             expr = new BinaryExpr(expr,operator,right)
         }
         return expr
     }
     unary() {//一元表达式
-        if (this.match(Tokenkind.BANG, Tokenkind.MINUS)) {
+        if (this.match(Tokenkind.BANG, Tokenkind.MINUS, Tokenkind.PLUS)) {
             const operator = this.previous()
             const right = this.unary()
             return new UnaryExpr(operator, right)

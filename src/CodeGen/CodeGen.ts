@@ -32,7 +32,14 @@ export class CodeGen implements ExprVisitor<void>{
     }
 
     visitUnaryExpr(expr: UnaryExpr) {
-        throw new Error("Method not implemented.");
+        expr.right.accept(this)
+        switch (expr.operator.lexeme) {
+            case "-":
+                this.printAsmCode(`neg rax`)
+                break;
+            case "+":
+                break;
+        }
     }
     visitLiteralExpr(expr: LiteralExpr) {
         this.printAsmCode(`mov rax, ${expr.value}`)

@@ -1,10 +1,9 @@
 import { AstPrinter } from "./Ast/AstPrinter"
 import { CodeGen } from "./CodeGen/CodeGen"
 import { Scanner } from "./Lexer/Lexer"
-import { Token, Tokenkind } from "./Lexer/Token"
 import { Parser } from "./Parse/Parse"
 
-const code =`1+2*3/5-5`
+const code =`3+-+4`
 
 function main() {
     const sanner = new Scanner(code)
@@ -22,6 +21,8 @@ function main() {
     codeGen.generateCode(statements[0])
     new AstPrinter().print(statements[0])
 }
+
+console.log('main',1)
 
 main()
 

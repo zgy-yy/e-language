@@ -1,7 +1,23 @@
-import { BinaryExpr, Expr, ExprVisitor, LiteralExpr, UnaryExpr } from "./Expr";
+import { BinaryExpr, Expr, ExprVisitor, LiteralExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { ExpressionStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "./Stmt";
 
 
-export class AstPrinter implements ExprVisitor<string>{
+export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
+    // Stmt
+    visitExpressionStmt(stmt: ExpressionStmt): string {
+       return stmt.expression.accept(this);
+    }
+    visitPrintStmt(stmt: PrintStmt): string {
+        return `print `+ stmt.expression.accept(this);
+    }
+    visitVarStmt(stmt: VarStmt): string {
+       return stmt.initializer ? `${stmt.name.lexeme} = ${stmt.initializer.accept(this)}` : stmt.name.lexeme;
+    }
+
+    // Expr 
+    visitVariableExpr(expr: VariableExpr): string {
+        return expr.name.lexeme;
+    }
     visitBinaryExpr(expr: BinaryExpr): string {
         return this.parenthesize(expr.operator.lexeme, expr.left, expr.right);
     }
@@ -17,7 +33,9 @@ export class AstPrinter implements ExprVisitor<string>{
         return `(${name} ${exprs.map((expr) => `${expr.accept(this)}`).join(" ")})`;
     }
 
-    print(expr: Expr) {
-        console.log(expr.accept(this));
+    print(stmt: Stmt[]) {
+        for (const s of stmt) {
+            console.log(s.accept(this));
+        }
     }
 }

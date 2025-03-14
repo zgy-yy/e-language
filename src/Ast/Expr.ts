@@ -1,11 +1,13 @@
-import { a } from "vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P";
 import { Token } from "../Lexer/Token"
 
-
+/*
+* 表达式
+*/
 export interface ExprVisitor<R>{
     visitBinaryExpr(expr: BinaryExpr): R;
     visitUnaryExpr(expr: UnaryExpr): R;
     visitLiteralExpr(expr: LiteralExpr): R;
+    visitVariableExpr(expr: VariableExpr): R;
 }
 
 export interface Expr{ //表达式 基类
@@ -53,6 +55,20 @@ export class LiteralExpr implements Expr {
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitLiteralExpr(this);
+    }
+
+}
+
+
+//变量表达式
+export class VariableExpr implements Expr {
+    name: Token; //变量名
+    constructor(name: Token) {
+        this.name = name;
+    }
+
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitVariableExpr(this);
     }
 
 }

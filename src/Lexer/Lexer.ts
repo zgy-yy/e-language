@@ -2,6 +2,7 @@
     将源码中的 字符(char) 识别为 词法单元(Token)
 */
 
+import { El } from "../El/El";
 import { Token, Tokenkind } from "./Token";
 
 export class Scanner {//扫描器，或称为词法分析
@@ -11,6 +12,13 @@ export class Scanner {//扫描器，或称为词法分析
     start: number = 0; //词素中的第一个字符
     current: number = 0;//当前正在处理的字符
     line: number = 1;//跟踪current所在的行数
+
+    static KeyWords = new Map<string, Tokenkind>([
+        ["print", Tokenkind.PRINT],
+        ["int", Tokenkind.INT]
+    ])
+
+
     constructor(source: string) {
         this.source = source
     }
@@ -73,11 +81,33 @@ export class Scanner {//扫描器，或称为词法分析
             //匹配数字
                 if (isDigit(c)) {
                     this.number()
+                } else if(isAlpha(c)){
+                    this.identifier()
+                } else {
+                    El.error(
+                            new Token(Tokenkind.STRING, c, undefined, this.line),
+                            "Unexpected character."
+                        );
+                    
                 }
 
         }
     }
-    
+
+    //匹配标识符
+    private identifier() {
+        while (this.isAlphaNumeric(this.peek())) this.advance();
+        const text = this.source.substring(this.start, this.current);
+        let type = Scanner.KeyWords.get(text);//是否是关键字
+        if(type === undefined){//不是关键字，就是标识符
+            type = Tokenkind.IDENTIFIER;    
+        }
+        
+        this.addToken(type);
+    }
+    isAlphaNumeric(c: string) {
+        return isAlpha(c) || isDigit(c);
+    }
 
     private isAtEnd() {//判断源码是否结束，已经消费完所有的字符
         return this.current >= this.source.length;
@@ -143,4 +173,8 @@ export class Scanner {//扫描器，或称为词法分析
 
 function isDigit(c: string) {
     return c >= "0" && c <= "9";
+}
+
+function isAlpha(c: string) {
+    return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c === "_";
 }

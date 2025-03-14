@@ -1,10 +1,12 @@
-import { BinaryExpr, Expr, LiteralExpr, UnaryExpr } from "../Ast/Expr";
+import { BinaryExpr, Expr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ExpressionStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
 
 export class Parser {
     tokens: Token[]
     current: number = 0;//tokens 游标
+
     constructor(tokens: Token[]) {
         this.tokens = tokens
     }
@@ -12,11 +14,62 @@ export class Parser {
     parse() {
         const statements = [];//语句
         while (!this.isAtEnd()) {
-            statements.push(this.expression())
+            statements.push(this.declaration())
         }
         return statements
     }
 
+    //语句
+
+    declaration(): Stmt {
+        try {
+            if (this.match(Tokenkind.INT)) {
+                return this.varDeclaration()
+            }
+            return this.statement()
+        } catch (error) {
+            if (error instanceof ParseError) {
+                this.synchronize()
+            }
+            return null
+        }
+    }
+
+
+    statement(): Stmt {
+        if (this.match(Tokenkind.PRINT)) 
+            return this.printStatement()
+        if (this.match(Tokenkind.SEMICOLON)) 
+            return this.varDeclaration()
+        
+        return this.expressionStatement()
+    }
+
+    //变量声明语句
+    varDeclaration(): Stmt{ 
+        const name = this.consume(Tokenkind.IDENTIFIER, "Expect variable name.")
+        let initializer = null
+        if (this.match(Tokenkind.EQUAL)) {
+            initializer = this.expression()
+        }
+        this.consume(Tokenkind.SEMICOLON, "Expect ';' after variable declaration.")
+        return new VarStmt (name, initializer)
+    }
+
+    printStatement(): Stmt{
+        const value = this.expression()
+        this.consume(Tokenkind.SEMICOLON, "Expect ';' after value.")
+        return new PrintStmt(value)
+    }
+    expressionStatement(): Stmt{
+        const value = this.expression()
+        this.consume(Tokenkind.SEMICOLON, "Expect ';' after value.")
+        return new ExpressionStmt(value)
+    }
+
+
+
+    //表达式
     expression(): Expr {//表达式
         return this.equality()
     }
@@ -29,7 +82,7 @@ export class Parser {
         }
         return expr
     }
-    comparison() {//比较表达式
+    comparison():Expr {//比较表达式
         let expr = this.term()
         while (this.match(Tokenkind.GREATER, Tokenkind.GREATER_EQUAL, Tokenkind.LESS, Tokenkind.LESS_EQUAL)) {
             const operator = this.previous()
@@ -39,7 +92,7 @@ export class Parser {
         return expr
     
     }
-    term() {//+ - 运算 表达式
+    term():Expr {//+ - 运算 表达式
         let expr = this.factor()//加减运算的优先级 小于 乘除运算；所以加减运算的左操作数是乘除表达式
         while (this.match(Tokenkind.PLUS, Tokenkind.MINUS)) {
             const operator = this.previous();
@@ -48,7 +101,7 @@ export class Parser {
         }
         return expr
     }
-    factor(){// * / 运算 表达式
+    factor():Expr{// * / 运算 表达式
         let expr = this.unary()//左操作数
         while (this.match(Tokenkind.SLASH, Tokenkind.STAR)) {//match会使得 游标前进一步
             const operator = this.previous()//操作符
@@ -57,7 +110,7 @@ export class Parser {
         }
         return expr
     }
-    unary() {//一元表达式
+    unary():Expr {//一元表达式
         if (this.match(Tokenkind.BANG, Tokenkind.MINUS, Tokenkind.PLUS)) {
             const operator = this.previous()
             const right = this.unary()
@@ -70,9 +123,15 @@ export class Parser {
         if (this.match(Tokenkind.NUMBER, Tokenkind.STRING)) {
             return new LiteralExpr(this.previous().literal); //字面量 表达式
         }
+        if (this.match(Tokenkind.IDENTIFIER)) {
+            return new VariableExpr(this.previous())
+        }
+        
         throw this.error(this.peek(), "Expect expression.");
     }
 
+
+    
 
 
 
@@ -113,7 +172,7 @@ export class Parser {
 
 
     // 错误同步
-    consume(kind :Tokenkind, message: string) {//消费当前token，如果不是kind类型的token，抛出异常
+    consume(kind: Tokenkind, message: string) {//消费当前token，如果不是kind类型的token，抛出异常
         if (this.check(kind)) {
             return this.advance()
         }

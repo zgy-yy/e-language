@@ -3,7 +3,13 @@ import { CodeGen } from "./CodeGen/CodeGen"
 import { Scanner } from "./Lexer/Lexer"
 import { Parser } from "./Parse/Parse"
 
-const code =`3+-+4`
+const code = 
+`
+int a=1+3+4;
+print a;
+
+
+ `
 
 function main() {
     const sanner = new Scanner(code)
@@ -17,12 +23,15 @@ function main() {
     const statements = parser.parse()
     console.log('zz', statements)
     
-    const codeGen = new CodeGen()
-    codeGen.generateCode(statements[0])
-    new AstPrinter().print(statements[0])
+   let astPrint = new AstPrinter()
+    astPrint.print(statements)
+
+    // const codeGen = new CodeGen()
+    // codeGen.generateCode(statements[0])
+    // new AstPrinter().print(statements[0])
 }
 
-console.log('main',1)
+console.log('code -> \n', code)
 
 main()
 

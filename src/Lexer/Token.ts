@@ -20,10 +20,17 @@ export enum Tokenkind{
     LESS_EQUAL = "<=",
 
     //literal
-    STRING = "string",
-    NUMBER = "number",
+    IDENTIFIER = "IDENTIFIER",
+    STRING = "STRING",
+    NUMBER = "NUMBER",
 
-    EOF ="EOF"
+    EOF = "EOF",
+    
+
+    //关键字
+    PRINT = "PRINT",
+
+    INT = "INT",
 }
 
 export class Token{

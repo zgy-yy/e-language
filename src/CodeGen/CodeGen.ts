@@ -1,4 +1,4 @@
-import { BinaryExpr, Expr, ExprVisitor, LiteralExpr, UnaryExpr } from "../Ast/Expr";
+import { BinaryExpr, Expr, ExprVisitor, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 
 
 export class CodeGen implements ExprVisitor<void>{
@@ -7,6 +7,10 @@ export class CodeGen implements ExprVisitor<void>{
 
     private stackPtr: number = 0;
     constructor(){
+    }
+
+    visitVariableExpr(expr: VariableExpr): void {
+        throw new Error("Method not implemented.");
     }
 
     visitBinaryExpr(expr: BinaryExpr) {

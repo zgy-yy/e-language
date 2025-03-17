@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, Expr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { ExpressionStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
@@ -61,7 +61,7 @@ export class Parser {
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after value.")
         return new PrintStmt(value)
     }
-    expressionStatement(): Stmt{
+    expressionStatement(): Stmt{//表达式语句，由表达式+分号组成，表达式的值会被丢弃
         const value = this.expression()
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after value.")
         return new ExpressionStmt(value)
@@ -122,7 +122,7 @@ export class Parser {
         }
         return expr
     }
-    unary():Expr {//一元表达式
+    unary():Expr {//一元表达式 
         if (this.match(Tokenkind.BANG, Tokenkind.MINUS, Tokenkind.PLUS)) {
             const operator = this.previous()
             const right = this.unary()
@@ -131,9 +131,14 @@ export class Parser {
         return this.primary()
     }
 
-    primary(): Expr { //住表达式 =>字面量，this  boolean 标识符
+    primary(): Expr { //主表达式 =>字面量，this ， boolean ，标识符(变量名)
         if (this.match(Tokenkind.NUMBER, Tokenkind.STRING)) {
             return new LiteralExpr(this.previous().literal); //字面量 表达式
+        }
+        if (this.match(Tokenkind.LEFT_PAREN)) {
+            const expr = this.expression()
+            this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after expression.")
+            return new GroupingExpr(expr)
         }
         if (this.match(Tokenkind.IDENTIFIER)) {
             return new VariableExpr(this.previous())

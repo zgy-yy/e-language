@@ -35,6 +35,12 @@ export class Scanner {//扫描器，或称为词法分析
         const c = this.advance();//或许当前字符，准备消费；current+1
         // console.log('c->',c)
         switch (c) {
+            case '(':
+                this.addToken(Tokenkind.LEFT_PAREN);
+                break;
+            case ')':
+                this.addToken(Tokenkind.RIGHT_PAREN);
+                break;
             case '+':
                 this.addToken(Tokenkind.PLUS);
                 break;

@@ -1,5 +1,7 @@
 export enum Tokenkind{
     SEMICOLON = ';',
+    LEFT_PAREN = '(',
+    RIGHT_PAREN = ')',
     //算术
     PLUS = "+",
     MINUS = "-",

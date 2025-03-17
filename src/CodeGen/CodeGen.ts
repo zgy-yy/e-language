@@ -1,18 +1,34 @@
-import { AssignExpr, BinaryExpr, Expr, ExprVisitor, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ExpressionStmt, PrintStmt, StmtVisitor, VarStmt } from "../Ast/Stmt";
 
 
-export class CodeGen implements ExprVisitor<void>{
+export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
     static codeText: string = "";
 
     private stackPtr: number = 0;
     constructor(){
     }
+
+    // 语句语法生成 
+    visitExpressionStmt(stmt: ExpressionStmt): void {
+        throw new Error("Method not implemented.");
+    }
+    visitPrintStmt(stmt: PrintStmt): void {
+        throw new Error("Method not implemented.");
+    }
+    visitVarStmt(stmt: VarStmt): void {
+        throw new Error("Method not implemented.");
+    }
+
+
+    // 表达式语法生成
     visitAssignExpr(expr: AssignExpr): void {
         throw new Error("Method not implemented.");
     }
 
     visitVariableExpr(expr: VariableExpr): void {
+
         throw new Error("Method not implemented.");
     }
 
@@ -52,6 +68,10 @@ export class CodeGen implements ExprVisitor<void>{
         this.printAsmCode(`mov rax, ${expr.value}`)
     }
 
+    visitGroupingExpr(expr: GroupingExpr): void {
+        throw new Error("Method not implemented.");
+    }
+
     private push() {
         this.printAsmCode(`push rax`);
         this.stackPtr++;
@@ -64,6 +84,8 @@ export class CodeGen implements ExprVisitor<void>{
 
     generateCode(ast: Expr): void {
         this.program()
+
+        this.main()
         ast.accept(this)
         this.endProgram()
 
@@ -73,7 +95,13 @@ export class CodeGen implements ExprVisitor<void>{
     private program() { 
         this.printLab("section .data")
         this.printAsmCode(`format db "Result: % d", 0x0a, 0`)
+    }
+    private globalDefine() {
+        this.printLab("section .bss")
+        this.printAsmCode(`res resq 1`)
+    }
 
+    private main() {
         this.printLab("section .text")
         this.printAsmCode(`global main`)
         this.printAsmCode(`extern printf`)

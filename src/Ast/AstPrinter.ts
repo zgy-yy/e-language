@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, Expr, ExprVisitor, LiteralExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { ExpressionStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "./Stmt";
 
 
@@ -33,7 +33,11 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     visitLiteralExpr(expr: LiteralExpr): string {
         return expr.value.toString();
     }
-    
+    visitGroupingExpr(expr: GroupingExpr): string {
+        return this.parenthesize("group", expr.expression);
+    }
+
+
     parenthesize(name: string, ...exprs: Expr[]) {
         return `(${name} ${exprs.map((expr) => `${expr.accept(this)}`).join(" ")})`;
     }

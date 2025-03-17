@@ -9,6 +9,7 @@ export interface ExprVisitor<R>{
     visitLiteralExpr(expr: LiteralExpr): R;
     visitVariableExpr(expr: VariableExpr): R;
     visitAssignExpr(expr: AssignExpr): R;
+    visitGroupingExpr(expr: GroupingExpr): R;
 }
 
 export interface Expr{ //表达式 基类
@@ -58,7 +59,7 @@ export class LiteralExpr implements Expr {
     }
 
 }
-//变量表达式
+//变量表达式，一个变量 名
 export class VariableExpr implements Expr {
     name: Token; //变量名
     constructor(name: Token) {
@@ -66,6 +67,18 @@ export class VariableExpr implements Expr {
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitVariableExpr(this);
+    }
+}
+
+//分组表达式
+export class GroupingExpr implements Expr {
+
+    expression: Expr;
+    constructor(expression: Expr) {
+        this.expression = expression;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitGroupingExpr(this);
     }
 }
 

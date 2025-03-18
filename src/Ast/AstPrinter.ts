@@ -12,16 +12,16 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `print `+ stmt.expression.accept(this);
     }
     visitVarStmt(stmt: VarStmt): string {
-       return stmt.initializer ? `${stmt.name.lexeme} = ${stmt.initializer.accept(this)}` : stmt.name.lexeme;
+       return stmt.initializer ? `${stmt.variable.name} = ${stmt.initializer.accept(this)}` : stmt.variable.name;
     }
 
     // Expr 
     visitAssignExpr(expr: AssignExpr): string {
-        return `${expr.name.lexeme} = ${expr.value.accept(this)}`;
+        return `${expr.variable.name} = ${expr.value.accept(this)}`;
     }
 
     visitVariableExpr(expr: VariableExpr): string {
-        return expr.name.lexeme;
+        return expr.variable.name;
     }
     visitBinaryExpr(expr: BinaryExpr): string {
         return this.parenthesize(expr.operator.lexeme, expr.left, expr.right);

@@ -4,14 +4,43 @@ section .text
 	global main
 	extern printf
 main:
-	mov rax, 4
+	push rbp
+	mov rbp, rsp
+	sub rsp, 24
+	lea rax, [rbp -8]
 	push rax
 	mov rax, 3
+	pop rdi
+	mov [rdi], rax
+	lea rax, [rbp -16]
+	push rax
+	mov rax, 2
+	pop rdi
+	mov [rdi], rax
+	lea rax, [rbp -24]
+	push rax
+	lea rax, [rbp -16]
+	mov rax, [rax]
+	push rax
+	lea rax, [rbp -8]
+	mov rax, [rax]
 	pop rbx
-	cqo
-	div rbx
-
-
+	add rax, rbx
+	pop rdi
+	mov [rdi], rax
+	lea rax, [rbp+-8]
+	push rax
+	mov rax, 1
+	push rax
+	lea rax, [rbp -24]
+	mov rax, [rax]
+	pop rbx
+	add rax, rbx
+	pop rdi
+	mov  [rdi], rax
+	push rax
+	lea rax, [rbp -8]
+	mov rax, [rax]
 
 ;调用 printf
 	lea rdi, [rel format]

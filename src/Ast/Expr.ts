@@ -1,4 +1,5 @@
 import { Token } from "../Lexer/Token"
+import { Var } from "../Parse/Symbol";
 
 /*
 * 表达式
@@ -61,9 +62,9 @@ export class LiteralExpr implements Expr {
 }
 //变量表达式，一个变量 名
 export class VariableExpr implements Expr {
-    name: Token; //变量名
-    constructor(name: Token) {
-        this.name = name;
+    variable: Var;
+    constructor(var_: Var) {
+        this.variable = var_;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitVariableExpr(this);
@@ -83,10 +84,10 @@ export class GroupingExpr implements Expr {
 }
 
 export class AssignExpr implements Expr {
-    name: Token;
+    variable: Var;
     value: Expr;
-    constructor(name: Token, value: Expr) {
-        this.name = name;
+    constructor(var_: Var, value: Expr) {
+        this.variable = var_;
         this.value = value;
     }
     accept<R>(visitor: ExprVisitor<R>): R {

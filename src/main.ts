@@ -5,12 +5,11 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-int a=1+3+4;
-int b=2+3;
-a=b=12;
+int a=3;
+int b=2;
+int c=a+b;
+a=c+1;
 print a;
-
-
  `
 
 function main() {
@@ -22,15 +21,15 @@ function main() {
     // new AstPrinter().print(expression)
     const parser = new Parser(tokens)
    
-    const statements = parser.parse()
-    console.log('zz', statements)
+    const program = parser.parse()
+    console.log('zz', program)
     
    let astPrint = new AstPrinter()
-    astPrint.print(statements)
+    astPrint.print(program.stmt)
 
-    // const codeGen = new CodeGen()
-    // codeGen.generateCode(statements[0])
-    // new AstPrinter().print(statements[0])
+    const codeGen = new CodeGen()
+    codeGen.generateCode(program)
+    new AstPrinter().print(program.stmt)
 }
 
 console.log('code -> \n', code)

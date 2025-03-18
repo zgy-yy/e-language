@@ -1,5 +1,6 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { ExpressionStmt, PrintStmt, StmtVisitor, VarStmt } from "../Ast/Stmt";
+import { ExpressionStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "../Ast/Stmt";
+import { Var } from "../Parse/Symbol";
 
 
 export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
@@ -7,29 +8,74 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     static codeText: string = "";
 
     private stackPtr: number = 0;
+    private stackSize=0;
     constructor(){
     }
 
+    generateCode(programAst: {
+        localVars: Map<string, Var>;
+        stmt: Stmt[];
+    }): void {
+
+        for (const [key, value] of programAst.localVars) {
+           this. stackSize += 8;
+            value.offset = -1 * this.stackSize;
+        }
+
+        this.program()
+
+        this.main()
+        for (const stmt of programAst.stmt) {
+            stmt.accept(this)
+        }
+        this.endProgram()
+
+        console.log(CodeGen.codeText);
+    }
+
+
     // 语句语法生成 
     visitExpressionStmt(stmt: ExpressionStmt): void {
-        throw new Error("Method not implemented.");
+        stmt.expression.accept(this)
+        this.push()
     }
     visitPrintStmt(stmt: PrintStmt): void {
-        throw new Error("Method not implemented.");
+        let value = stmt.expression
+        value.accept(this)  
+        this.printLab(``)
+        this.printLab(`;调用 printf`)
+        this.printAsmCode(`lea rdi, [rel format]`)
+        this.printAsmCode(`mov rsi, rax`)//rax存放结果
+        this.printAsmCode(`xor eax, eax`)//清空 eax（表示没有浮点参数）
+        this.printAsmCode(`call printf wrt ..plt`)//通过 PLT 调用 printf
     }
-    visitVarStmt(stmt: VarStmt): void {
-        throw new Error("Method not implemented.");
+    visitVarStmt(stmt: VarStmt): void {//变量声明语句
+        // this.printAsmCode(`lea rax, [rbp ${stmt.variable.offset}]`)
+        // this.printAsmCode(`mov rax, [rax]`)
+        if (stmt.initializer) {
+            this.printAsmCode(`lea rax, [rbp ${stmt.variable.offset}]`)
+            this.push()
+            stmt.initializer.accept(this)
+            this.pop("rdi")
+            this.printAsmCode(`mov [rdi], rax`)
+        }
     }
 
 
     // 表达式语法生成
     visitAssignExpr(expr: AssignExpr): void {
-        throw new Error("Method not implemented.");
+        const left = expr.variable
+        this.printAsmCode(`lea rax, [rbp+${left.offset}]`)//计算左值地址 //结果存放在 rax 寄存器
+        this.push()//将变量地址压栈
+        expr.value.accept(this)
+        this.pop("rdi")
+        this.printAsmCode(`mov  [rdi], rax`)//将计算的右值存入左值变量中
+
     }
 
     visitVariableExpr(expr: VariableExpr): void {
-
-        throw new Error("Method not implemented.");
+        this.printAsmCode(`lea rax, [rbp ${expr.variable.offset}]`) //计算变量地址 //结果存放在 rax 寄存器
+        this.printAsmCode(`mov rax, [rax]`) //将变量值存入 rax 寄存器
     }
 
     visitBinaryExpr(expr: BinaryExpr) {
@@ -69,7 +115,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     }
 
     visitGroupingExpr(expr: GroupingExpr): void {
-        throw new Error("Method not implemented.");
+        expr.expression.accept(this)
     }
 
     private push() {
@@ -82,23 +128,10 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     }
 
 
-    generateCode(ast: Expr): void {
-        this.program()
-
-        this.main()
-        ast.accept(this)
-        this.endProgram()
-
-        console.log(CodeGen.codeText);
-    }
 
     private program() { 
         this.printLab("section .data")
         this.printAsmCode(`format db "Result: % d", 0x0a, 0`)
-    }
-    private globalDefine() {
-        this.printLab("section .bss")
-        this.printAsmCode(`res resq 1`)
     }
 
     private main() {
@@ -106,15 +139,12 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         this.printAsmCode(`global main`)
         this.printAsmCode(`extern printf`)
         this.printLab("main:")
+        this.printAsmCode(`push rbp`)
+        this.printAsmCode(`mov rbp, rsp`)
+        this.printAsmCode(`sub rsp, ${this.stackSize}`)//分配栈空间
     }
 
     private endProgram() {
-        this.printLab(``)
-        this.printLab(`;调用 printf`)
-        this.printAsmCode(`lea rdi, [rel format]`)
-        this.printAsmCode(`mov rsi, rax`)//rax存放结果
-        this.printAsmCode(`xor eax, eax`)//清空 eax（表示没有浮点参数）
-        this.printAsmCode(`call printf wrt ..plt`)//通过 PLT 调用 printf
         this.printLab(``)
         this.printLab(`;退出程序`)
         this.printAsmCode(`mov eax, 60`)//sys_exit

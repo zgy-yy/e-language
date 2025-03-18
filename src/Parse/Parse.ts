@@ -2,10 +2,13 @@ import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, Var
 import { ExpressionStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
+import { Var } from "./Symbol";
 
 export class Parser {
     tokens: Token[]
     current: number = 0;//tokens 游标
+
+    locals = new Map<string, Var>()
 
     constructor(tokens: Token[]) {
         this.tokens = tokens
@@ -16,7 +19,10 @@ export class Parser {
         while (!this.isAtEnd()) {
             statements.push(this.declaration())
         }
-        return statements
+        return { //返回程序的抽象语法树，包含变量表和语句
+            localVars : this.locals,
+            stmt:statements
+        }
     }
 
     //语句
@@ -48,12 +54,18 @@ export class Parser {
     //变量声明语句
     varDeclaration(): Stmt{ 
         const name = this.consume(Tokenkind.IDENTIFIER, "Expect variable name.")
+        if (this.locals.has(name.lexeme)) {
+            this.error(name, "Variable with this name already declared in this scope.")
+        } 
+        const var_ = new Var(name.lexeme)
+        this.locals.set(name.lexeme, var_)
+        
         let initializer = null
         if (this.match(Tokenkind.EQUAL)) {
             initializer = this.expression()
         }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after variable declaration.")
-        return new VarStmt (name, initializer)
+        return new VarStmt(var_, initializer)
     }
 
     printStatement(): Stmt{
@@ -78,7 +90,7 @@ export class Parser {
             const equals = this.previous()
             const value = this.assignment()
             if (expr instanceof VariableExpr) {
-                return new AssignExpr(expr.name,  value)
+                return new AssignExpr(expr.variable,  value)
             }
             El.error(equals, "Invalid assignment target.")
         }
@@ -141,9 +153,13 @@ export class Parser {
             return new GroupingExpr(expr)
         }
         if (this.match(Tokenkind.IDENTIFIER)) {
-            return new VariableExpr(this.previous())
+            const varExpr = this.previous()
+            let varName = varExpr.lexeme
+            if (this.locals.has(varName)) {
+                return new VariableExpr(this.locals.get(varName))
+            }
+          throw  this.error(varExpr, "Undefined variable '" + varName + "'.")
         }
-        
         throw this.error(this.peek(), "Expect expression.");
     }
 

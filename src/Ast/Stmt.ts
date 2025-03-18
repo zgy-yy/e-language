@@ -3,6 +3,7 @@
 */
 
 import { Token } from "../Lexer/Token";
+import { Var } from "../Parse/Symbol";
 import { Expr } from "./Expr";
 
 
@@ -21,6 +22,7 @@ export interface Stmt {
     accept<R>(visitor: StmtVisitor<R>): R;
 
 }
+
 
 
 export class ExpressionStmt implements Stmt {
@@ -49,10 +51,10 @@ export class PrintStmt implements Stmt {
 
 
 export class VarStmt implements Stmt {
-    name: Token;
+    variable: Var;
     initializer?: Expr;
-    constructor(name: Token, initializer?: Expr) {
-        this.name = name;
+    constructor(var_: Var, initializer?: Expr) {
+        this.variable = var_;
         this.initializer = initializer;
     }
     accept<R>(visitor: StmtVisitor<R>): R {

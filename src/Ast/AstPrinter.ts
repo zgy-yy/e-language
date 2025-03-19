@@ -31,7 +31,14 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitLiteralExpr(expr: LiteralExpr): string {
-        return expr.value.toString();
+        if (typeof expr.value === "string") {
+            if (expr.value.length === 1) {
+                return `'${expr.value}'`; 
+            }
+            return `"${expr.value}"`;
+        }
+           
+        return expr.value;
     }
     visitGroupingExpr(expr: GroupingExpr): string {
         return this.parenthesize("group", expr.expression);

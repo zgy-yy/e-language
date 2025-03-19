@@ -5,11 +5,8 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-int a=3;
-int b=2;
-int c=a+b;
-a=c+1;
-print a;
+char b='C';
+print b+1;
  `
 
 function main() {

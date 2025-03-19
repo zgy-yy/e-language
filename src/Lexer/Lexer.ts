@@ -3,7 +3,7 @@
 */
 
 import { El } from "../El/El";
-import { Token, Tokenkind } from "./Token";
+import { Token, Tokenkind, VarType } from "./Token";
 
 export class Scanner {//扫描器，或称为词法分析
     static END = "";//以 \0 作为终止符
@@ -15,7 +15,10 @@ export class Scanner {//扫描器，或称为词法分析
 
     static KeyWords = new Map<string, Tokenkind>([
         ["print", Tokenkind.PRINT],
-        ["int", Tokenkind.INT]
+
+        //数据类型
+        [VarType.int, Tokenkind.INT],
+        [VarType.char, Tokenkind.CHAR]
     ])
 
 
@@ -79,7 +82,9 @@ export class Scanner {//扫描器，或称为词法分析
             case "\n":
                 this.line++;
                 break;
-            
+            case "'":
+                this.char()
+                break
             case '"':
                 this.string();
                 break;
@@ -145,13 +150,26 @@ export class Scanner {//扫描器，或称为词法分析
         return true;
     }
 
+    private char() {
+        while (this.peek() !== "'" && !this.isAtEnd()) {
+            this.advance();
+        }
+        if(this.isAtEnd()){
+            El.error(new Token(Tokenkind.CHARACTER, "", undefined, this.line), "Unterminated char.");
+            return;
+        }
+        this.advance();
+        const value = this.source.substring(this.start + 1, this.current - 1);
+        this.addToken(Tokenkind.CHARACTER, value);
+    }
+
     private string() {
         while (this.peek() !== '"' && !this.isAtEnd()) {
             if (this.peek() === "\n") this.line++;
             this.advance();
         }
         if (this.isAtEnd()) {
-            console.log('error')
+            El.error(new Token(Tokenkind.STRING, "", undefined, this.line), "Unterminated string.");
             return;
         }
         this.advance();

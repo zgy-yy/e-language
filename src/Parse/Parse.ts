@@ -1,7 +1,7 @@
 import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { ExpressionStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
-import { Token, Tokenkind } from "../Lexer/Token";
+import { Token, Tokenkind, VarType } from "../Lexer/Token";
 import { Var } from "./Symbol";
 
 export class Parser {
@@ -30,7 +30,10 @@ export class Parser {
     declaration(): Stmt {
         try {
             if (this.match(Tokenkind.INT)) {
-                return this.varDeclaration()
+                return this.varDeclaration(VarType.int)
+            }
+            if (this.match(Tokenkind.CHAR)) {
+                return this.varDeclaration(VarType.char)
             }
             return this.statement()
         } catch (error) {
@@ -45,19 +48,17 @@ export class Parser {
     statement(): Stmt {
         if (this.match(Tokenkind.PRINT)) 
             return this.printStatement()
-        if (this.match(Tokenkind.SEMICOLON)) 
-            return this.varDeclaration()
         
         return this.expressionStatement()
     }
 
     //变量声明语句
-    varDeclaration(): Stmt{ 
+    varDeclaration(varT:VarType): Stmt{ 
         const name = this.consume(Tokenkind.IDENTIFIER, "Expect variable name.")
         if (this.locals.has(name.lexeme)) {
             this.error(name, "Variable with this name already declared in this scope.")
         } 
-        const var_ = new Var(name.lexeme)
+        const var_ = new Var(name.lexeme, varT)
         this.locals.set(name.lexeme, var_)
         
         let initializer = null
@@ -144,7 +145,7 @@ export class Parser {
     }
 
     primary(): Expr { //主表达式 =>字面量，this ， boolean ，标识符(变量名)
-        if (this.match(Tokenkind.NUMBER, Tokenkind.STRING)) {
+        if (this.match(Tokenkind.NUMBER, Tokenkind.STRING, Tokenkind.CHARACTER)) {
             return new LiteralExpr(this.previous().literal); //字面量 表达式
         }
         if (this.match(Tokenkind.LEFT_PAREN)) {

@@ -25,15 +25,31 @@ export enum Tokenkind{
     IDENTIFIER = "IDENTIFIER",
     STRING = "STRING",
     NUMBER = "NUMBER",
+    CHARACTER = "CHARACTER",
 
     EOF = "EOF",
     
 
     //关键字
-    PRINT = "PRINT",
+    PRINT = "Print",
 
-    INT = "INT",
+
+
+    //数据类型
+    INT = "Int",
+    BOOLEAN = "Boolean",
+    VOID = "Void",
+    CHAR = "Char",
 }
+
+//变量类型
+export enum VarType{
+    int = "int",
+    boolean = "boolean",
+    void = "void",
+    char = "char",
+}
+
 
 export class Token{
     type: Tokenkind

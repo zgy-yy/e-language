@@ -6,41 +6,18 @@ section .text
 main:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 24
-	lea rax, [rbp -8]
+	sub rsp, 1
+	lea rax, [rbp -1]
 	push rax
-	mov rax, 3
+	mov rax, 67
 	pop rdi
 	mov [rdi], rax
-	lea rax, [rbp -16]
-	push rax
-	mov rax, 2
-	pop rdi
-	mov [rdi], rax
-	lea rax, [rbp -24]
-	push rax
-	lea rax, [rbp -16]
-	mov rax, [rax]
-	push rax
-	lea rax, [rbp -8]
-	mov rax, [rax]
-	pop rbx
-	add rax, rbx
-	pop rdi
-	mov [rdi], rax
-	lea rax, [rbp+-8]
-	push rax
 	mov rax, 1
 	push rax
-	lea rax, [rbp -24]
+	lea rax, [rbp -1]
 	mov rax, [rax]
 	pop rbx
 	add rax, rbx
-	pop rdi
-	mov  [rdi], rax
-	push rax
-	lea rax, [rbp -8]
-	mov rax, [rax]
 
 ;调用 printf
 	lea rdi, [rel format]

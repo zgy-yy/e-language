@@ -18,7 +18,14 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     }): void {
 
         for (const [key, value] of programAst.localVars) {
-           this. stackSize += 8;
+            switch (value.type) {
+                case "int":
+                    this.stackSize += 8;
+                    break;
+                case "char":
+                    this.stackSize += 1;
+                    break;
+            }
             value.offset = -1 * this.stackSize;
         }
 
@@ -46,7 +53,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         this.printLab(`;调用 printf`)
         this.printAsmCode(`lea rdi, [rel format]`)
         this.printAsmCode(`mov rsi, rax`)//rax存放结果
-        this.printAsmCode(`xor eax, eax`)//清空 eax（表示没有浮点参数）
+        this.printAsmCode(`xor eax, eax`)//对于 printf 这样的可变参数函数，eax 必须设置为 0，表示没有使用向量寄存器（如 XMM 寄存器）来传递参数。
         this.printAsmCode(`call printf wrt ..plt`)//通过 PLT 调用 printf
     }
     visitVarStmt(stmt: VarStmt): void {//变量声明语句
@@ -111,7 +118,14 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         }
     }
     visitLiteralExpr(expr: LiteralExpr) {
-        this.printAsmCode(`mov rax, ${expr.value}`)
+        if (typeof expr.value === "number") {
+            this.printAsmCode(`mov rax, ${expr.value}`)
+        }
+        if (typeof expr.value === "string") {
+            if (expr.value.length == 1) {
+                this.printAsmCode(`mov rax, ${expr.value.charCodeAt(0)}`)
+            }
+        }
     }
 
     visitGroupingExpr(expr: GroupingExpr): void {

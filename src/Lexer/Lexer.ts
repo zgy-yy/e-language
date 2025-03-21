@@ -44,6 +44,12 @@ export class Scanner {//扫描器，或称为词法分析
             case ')':
                 this.addToken(Tokenkind.RIGHT_PAREN);
                 break;
+            case "{":
+                this.addToken(Tokenkind.LEFT_BRACE);
+                break;
+            case "}":
+                this.addToken(Tokenkind.RIGHT_BRACE);
+                break;
             case '+':
                 this.addToken(Tokenkind.PLUS);
                 break;

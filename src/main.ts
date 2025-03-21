@@ -5,8 +5,12 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-char b='C';
-print b+1;
+int a = 1;
+{
+    int a=2;
+    print a;
+}
+print a;
  `
 
 function main() {
@@ -32,4 +36,3 @@ function main() {
 console.log('code -> \n', code)
 
 main()
-

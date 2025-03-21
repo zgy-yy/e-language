@@ -1,24 +1,28 @@
 import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { ExpressionStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
+import { BlockStmt, ExpressionStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
+import { SymbolTable } from "./Scope";
 import { Var } from "./Symbol";
 
 export class Parser {
     tokens: Token[]
     current: number = 0;//tokens 游标
 
-    locals = new Map<string, Var>()
+    symbolTable :SymbolTable = new SymbolTable();//符号表
+    locals:Var[] = [];//局部变量 
 
     constructor(tokens: Token[]) {
         this.tokens = tokens
     }
 
     parse() {
+        this.symbolTable.enterScope()
         const statements = [];//语句
         while (!this.isAtEnd()) {
             statements.push(this.declaration())
         }
+        this.symbolTable.leaveScope()
         return { //返回程序的抽象语法树，包含变量表和语句
             localVars : this.locals,
             stmt:statements
@@ -48,6 +52,8 @@ export class Parser {
     statement(): Stmt {
         if (this.match(Tokenkind.PRINT)) 
             return this.printStatement()
+        if(this.match(Tokenkind.LEFT_BRACE))
+            return new BlockStmt(this.block())
         
         return this.expressionStatement()
     }
@@ -55,11 +61,12 @@ export class Parser {
     //变量声明语句
     varDeclaration(varT:VarType): Stmt{ 
         const name = this.consume(Tokenkind.IDENTIFIER, "Expect variable name.")
-        if (this.locals.has(name.lexeme)) {
+        if (this.symbolTable.findVariable(name.lexeme)) {
             this.error(name, "Variable with this name already declared in this scope.")
-        } 
+        }
         const var_ = new Var(name.lexeme, varT)
-        this.locals.set(name.lexeme, var_)
+        this.symbolTable.addVariable(name.lexeme, var_)
+        this.locals.push(var_)
         
         let initializer = null
         if (this.match(Tokenkind.EQUAL)) {
@@ -78,6 +85,17 @@ export class Parser {
         const value = this.expression()
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after value.")
         return new ExpressionStmt(value)
+    }
+
+    block(): Stmt[] {
+        this.symbolTable.enterScope()
+        const statements = []
+        while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
+            statements.push(this.declaration())
+        }
+        this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after block.")
+        this.symbolTable.leaveScope()
+        return statements
     }
 
     //表达式
@@ -156,8 +174,8 @@ export class Parser {
         if (this.match(Tokenkind.IDENTIFIER)) {
             const varExpr = this.previous()
             let varName = varExpr.lexeme
-            if (this.locals.has(varName)) {
-                return new VariableExpr(this.locals.get(varName))
+            if (this.symbolTable.findVariable(varName)) {
+                return new VariableExpr(this.symbolTable.findVariable(varName))
             }
           throw  this.error(varExpr, "Undefined variable '" + varName + "'.")
         }

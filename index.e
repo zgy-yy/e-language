@@ -67,6 +67,7 @@ struct BB{
 }
  
 struct C::BA,BB{
+    BB..b=32;
 
 }
 
@@ -95,14 +96,45 @@ class A{
     public
 
 }
-class B <- A,C{
+class B <: A,C{
     Int cc =90
-    void say(){
+    Uint a=1
+    void say(Uint a){
         A..cc=90
         cc =12
+        this.a=a;
+        this.a = this.a
     }
 
 }
+
+
+class A{
+    int age;
+}
+class B::A{
+    int age;
+}
+
+class C{
+    int age;
+
+    void say(){
+        this.a=1
+    }
+}
+
+class D::C,B{
+    int age;
+    static string name;
+    void say(){
+        name ="fefe"
+        age =1;
+        B.age =23;
+        B.A.age =23;
+    }
+}
+
 
 
 void main(){
@@ -111,8 +143,11 @@ void main(){
     AA m = {
         nm : 90,
     }
+    AA n ;
+    n.nm =90, 
+      .cc =23;
 
-    C : {
+   label C {
         print("helloc")
     }
     goto C

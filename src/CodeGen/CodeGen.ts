@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { ExpressionStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "../Ast/Stmt";
+import { BlockStmt, ExpressionStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 
 
@@ -12,12 +12,17 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     constructor(){
     }
 
+    visitBlockStmt(stmt: BlockStmt): void {
+        for (const s of stmt.statements) {
+            s.accept(this)
+        }
+    }
     generateCode(programAst: {
-        localVars: Map<string, Var>;
+        localVars: Var[];
         stmt: Stmt[];
     }): void {
 
-        for (const [key, value] of programAst.localVars) {
+        for (const value of programAst.localVars) {
             switch (value.type) {
                 case "int":
                     this.stackSize += 8;

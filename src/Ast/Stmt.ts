@@ -15,6 +15,7 @@ export interface StmtVisitor<R> {
     visitPrintStmt(stmt: PrintStmt): R;//暂时增加输出语句代替打印
 
     visitVarStmt(stmt: VarStmt): R;
+    visitBlockStmt(stmt: BlockStmt): R;
 }
 
 export interface Stmt {
@@ -46,7 +47,6 @@ export class PrintStmt implements Stmt {
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitPrintStmt(this);
     }
-
 }
 
 
@@ -59,5 +59,19 @@ export class VarStmt implements Stmt {
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitVarStmt(this);
+    }
+}
+
+export class BlockStmt implements Stmt {
+
+    statements: Array<Stmt>;
+
+    constructor(statements: Array<Stmt>) {
+
+        this.statements = statements;
+
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitBlockStmt(this);
     }
 }

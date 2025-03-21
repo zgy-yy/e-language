@@ -2,6 +2,8 @@ export enum Tokenkind{
     SEMICOLON = ';',
     LEFT_PAREN = '(',
     RIGHT_PAREN = ')',
+    LEFT_BRACE = '{',
+    RIGHT_BRACE = '}',
     //算术
     PLUS = "+",
     MINUS = "-",
@@ -22,10 +24,13 @@ export enum Tokenkind{
     LESS_EQUAL = "<=",
 
     //literal
-    IDENTIFIER = "IDENTIFIER",
+    IDENTIFIER = "IDENTIFIER", //标识符 例如变量名
     STRING = "STRING",
     NUMBER = "NUMBER",
     CHARACTER = "CHARACTER",
+    TRUE = "TRUE",
+    FALSE = "FALSE",
+    NULL = "NULL",
 
     EOF = "EOF",
     

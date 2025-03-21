@@ -2,7 +2,7 @@ import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, Var
 import { BlockStmt, ExpressionStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
-import { SymbolTable } from "./Scope";
+import { SymbolTable } from "./SymbolTable";
 import { Var } from "./Symbol";
 
 export class Parser {

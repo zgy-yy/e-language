@@ -5,7 +5,7 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-int a = 1;
+int a=1;
 {
     int a=2;
     print a;

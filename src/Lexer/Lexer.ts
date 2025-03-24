@@ -74,6 +74,15 @@ export class Scanner {//扫描器，或称为词法分析
             case "!":
                 this.addToken(this.match("=") ? Tokenkind.BANG_EQUAL : Tokenkind.BANG);
                 break;
+            case "&":
+                this.addToken(this.match("&") ? Tokenkind.AND : Tokenkind.AND_BIT);
+                break;
+            case "|":
+                this.addToken(this.match("|") ? Tokenkind.OR : Tokenkind.OR_BIT);
+                break;  
+            case "^":
+                this.addToken(Tokenkind.XOR);
+                break;
             case "=":
                 this.addToken(
                     this.match("=") ? Tokenkind.EQUAL_EQUAL : Tokenkind.EQUAL

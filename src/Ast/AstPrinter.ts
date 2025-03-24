@@ -1,8 +1,9 @@
-import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
+   
 
     // Stmt
     visitIfStmt(stmt: IfStmt): string {
@@ -30,6 +31,10 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     // Expr 
+    visitLogicalBinaryExpr(expr: LogicalBinaryExpr): string {
+        return this.parenthesize(expr.operator.lexeme, expr.left, expr.right);
+    }
+
     visitAssignExpr(expr: AssignExpr): string {
         return `${expr.variable.name} = ${expr.value.accept(this)}`;
     }

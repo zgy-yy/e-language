@@ -9,54 +9,36 @@ main:
 	sub rsp, 8
 	lea rax, [rbp -8]
 	push rax
-	mov rax, 15
-	pop rdi
-	mov [rdi], rax
-	mov rax, 20
-	push rax
-	lea rax, [rbp -8]
-	mov rax, [rax]
-	pop rbx
-	cmp rax, rbx
-	setg al
-	movzx rax, al
-	push rax
-
-;if 语句
-	cmp rax, 0
-	je  else0
-	mov rax, 1
-
-;调用 printf
-	lea rdi, [rel format]
-	mov rsi, rax
-	xor eax, eax
-	call printf wrt ..plt
-	jmp end0
-else0:
 	mov rax, 5
 	push rax
-	lea rax, [rbp -8]
-	mov rax, [rax]
+	mov rax, 15
 	pop rbx
 	cmp rax, rbx
-	setg al
+	setl al
 	movzx rax, al
-	push rax
-
-;if 语句
 	cmp rax, 0
-	je  end1
-	mov rax, 2
+	jne  end0
+	mov rax, 3
+	push rax
+	mov rax, 5
+	pop rbx
+	cmp rax, rbx
+	setl al
+	movzx rax, al
+	cmp rax, 0
+	jne  end0
+	mov rax, 0
+end0:
+	pop rdi
+	mov [rdi], rax
+	lea rax, [rbp -8]
+	mov rax, [rax]
 
 ;调用 printf
 	lea rdi, [rel format]
 	mov rsi, rax
 	xor eax, eax
 	call printf wrt ..plt
-	jmp end1
-end1:
-end0:
 
 ;退出程序
 	mov eax, 60

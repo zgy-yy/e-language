@@ -9,13 +9,34 @@ export enum Tokenkind{
     MINUS = "-",
     STAR = "*",
     SLASH = "/",
+    MOD = "%",
+    //位运算
+    AND_BIT = "&",
+    OR_BIT = "|",
+    XOR = "^",
+    LEFT_SHIFT = "<<",
+    RIGHT_SHIFT = ">>",
+    //赋值
+    EQUAL = "=",
+    PLUS_EQUAL = "+=",
+    MINUS_EQUAL = "-=",
+    STAR_EQUAL = "*=",
+    SLASH_EQUAL = "/=",
+    MOD_EQUAL = "%=",
+    AND_EQUAL = "&=",
+    OR_EQUAL = "|=",
+    XOR_EQUAL = "^=",
+    LEFT_SHIFT_EQUAL = "<<=",
+    RIGHT_SHIFT_EQUAL = ">>=",
+    //逗号
+    COMMA = ",",
+
     //逻辑
     BANG = "!",
     AND = "&&",
     OR = "||",
 
     //比较
-    EQUAL = "=",
     BANG_EQUAL = "!=",
     EQUAL_EQUAL = "==",
     GREATER = ">",

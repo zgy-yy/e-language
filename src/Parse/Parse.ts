@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
@@ -118,7 +118,7 @@ export class Parser {
     }
     //赋值表达式
     assignment(): Expr {
-        const expr = this.equality()//表达式得出左值
+        const expr = this.or()//表达式得出左值
         if (this.match(Tokenkind.EQUAL)) {
             const equals = this.previous()
             const value = this.assignment()
@@ -126,6 +126,24 @@ export class Parser {
                 return new AssignExpr(expr.variable,  value)
             }
             El.error(equals, "Invalid assignment target.")
+        }
+        return expr
+    }
+    or() {
+        let expr = this.and()
+        while (this.match(Tokenkind.OR)) {
+            const operator = this.previous()
+            const right = this.and()
+            expr = new LogicalBinaryExpr(expr, operator, right)
+        }
+        return expr
+    }
+    and() {
+        let expr = this.equality()
+        while (this.match(Tokenkind.AND)) {
+            const operator = this.previous()
+            const right = this.equality()
+            expr = new LogicalBinaryExpr(expr, operator, right)
         }
         return expr
     }

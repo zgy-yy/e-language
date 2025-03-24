@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 
@@ -13,6 +13,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     private stackSize=0;
     constructor(){
     }
+
 
     generateCode(programAst: {
         localVars: Var[];
@@ -100,6 +101,34 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
 
     // 表达式语法生成
+
+    visitLogicalBinaryExpr(expr: LogicalBinaryExpr): void { // && 、 ||
+        let n = this.sequence++;
+        expr.left.accept(this)
+
+        switch (expr.operator.lexeme) {
+            case "&&":
+                this.printAsmCode(`cmp rax, 0`)//判断左值是否为0
+                this.printAsmCode(`je  end${n}`)//如果为0，直接跳转到 end 标签
+                expr.right.accept(this)
+                this.printAsmCode(`cmp rax, 0`)
+                this.printAsmCode(`je  end${n}`)
+                this.printAsmCode(`mov rax, 1`)
+
+                break;
+            case "||":
+                this.printAsmCode(`cmp rax, 0`)//判断左值是否为0
+                this.printAsmCode(`jne  end${n}`)//如果不为0，直接跳转到 end 标签
+                expr.right.accept(this)
+                this.printAsmCode(`cmp rax, 0`)
+                this.printAsmCode(`jne  end${n}`)
+                this.printAsmCode(`mov rax, 0`)
+
+                break;
+        }
+        this.printLab(`end${n}:`)
+    }
+
     visitAssignExpr(expr: AssignExpr): void {
         const left = expr.variable
         this.printAsmCode(`lea rax, [rbp+${left.offset}]`)//计算左值地址 //结果存放在 rax 寄存器

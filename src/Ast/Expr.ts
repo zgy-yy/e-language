@@ -11,10 +11,29 @@ export interface ExprVisitor<R>{
     visitVariableExpr(expr: VariableExpr): R;
     visitAssignExpr(expr: AssignExpr): R;
     visitGroupingExpr(expr: GroupingExpr): R;
+    visitLogicalBinaryExpr(expr: LogicalBinaryExpr): R;
 }
 
 export interface Expr{ //表达式 基类
     accept<R>(visitor: ExprVisitor<R>): R;
+}
+
+
+
+export class LogicalBinaryExpr implements Expr {
+
+    left: Expr;
+    operator: Token;
+    right: Expr;
+    constructor(left: Expr, operator: Token, right: Expr) {
+        this.left = left;
+        this.operator = operator;
+        this.right = right;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitLogicalBinaryExpr(this);
+    }
+
 }
 
 // 二元表达式

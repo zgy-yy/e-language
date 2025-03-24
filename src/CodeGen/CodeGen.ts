@@ -109,6 +109,36 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
                 this.printAsmCode(`cqo`)
                 this.printAsmCode(`div rbx`)
                 break;
+            case ">":
+                this.printAsmCode(`cmp rax, rbx`)
+                this.printAsmCode(`setg al`)
+                this.printAsmCode(`movzx rax, al`)
+                break;
+            case "<":
+                this.printAsmCode(`cmp rax, rbx`)
+                this.printAsmCode(`setl al`)
+                this.printAsmCode(`movzx rax, al`)
+                break;
+            case ">=":
+                this.printAsmCode(`cmp rax, rbx`)
+                this.printAsmCode(`setge al`)
+                this.printAsmCode(`movzx rax, al`)
+                break;
+            case "<=":
+                this.printAsmCode(`cmp rax, rbx`)
+                this.printAsmCode(`setle al`)
+                this.printAsmCode(`movzx rax, al`)
+                break;
+            case "==":
+                this.printAsmCode(`cmp rax, rbx`)
+                this.printAsmCode(`sete al`)
+                this.printAsmCode(`movzx rax, al`)
+                break;
+            case "!=":
+                this.printAsmCode(`cmp rax, rbx`)
+                this.printAsmCode(`setne al`)
+                this.printAsmCode(`movzx rax, al`)
+                break;
         }
     }
 

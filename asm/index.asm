@@ -6,25 +6,18 @@ section .text
 main:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 16
+	sub rsp, 8
 	lea rax, [rbp -8]
 	push rax
-	mov rax, 1
-	pop rdi
-	mov [rdi], rax
-	lea rax, [rbp -16]
+	mov rax, 3
 	push rax
-	mov rax, 2
+	mov rax, 15
+	pop rbx
+	cmp rax, rbx
+	setge al
+	movzx rax, al
 	pop rdi
 	mov [rdi], rax
-	lea rax, [rbp -16]
-	mov rax, [rax]
-
-;调用 printf
-	lea rdi, [rel format]
-	mov rsi, rax
-	xor eax, eax
-	call printf wrt ..plt
 	lea rax, [rbp -8]
 	mov rax, [rax]
 

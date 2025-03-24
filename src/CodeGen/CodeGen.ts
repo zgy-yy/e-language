@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, ExpressionStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "../Ast/Stmt";
+import { BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 
 
@@ -7,16 +7,13 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
     static codeText: string = "";
 
+    private sequence: number = 0;
+
     private stackPtr: number = 0;
     private stackSize=0;
     constructor(){
     }
 
-    visitBlockStmt(stmt: BlockStmt): void {
-        for (const s of stmt.statements) {
-            s.accept(this)
-        }
-    }
     generateCode(programAst: {
         localVars: Var[];
         stmt: Stmt[];
@@ -47,6 +44,34 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
 
     // 语句语法生成 
+    visitIfStmt(stmt: IfStmt): void {
+        let n = this.sequence++
+        stmt.condition.accept(this)
+        this.push()
+        this.printLab(``)
+        this.printLab(`;if 语句`)
+        this.printAsmCode(`cmp rax, 0`)
+        if(stmt.elseBranch){
+            this.printAsmCode(`je  else${n}`)
+        }else{
+            this.printAsmCode(`je  end${n}`)
+        }
+
+        stmt.thenBranch.accept(this)
+        this.printAsmCode(`jmp end${n}`)
+        if(stmt.elseBranch){
+            this.printLab(`else${n}:`)
+            stmt.elseBranch.accept(this)
+        }
+        this.printLab(`end${n}:`)
+    }
+
+    visitBlockStmt(stmt: BlockStmt): void {
+        for (const s of stmt.statements) {
+            s.accept(this)
+        }
+    }
+
     visitExpressionStmt(stmt: ExpressionStmt): void {
         stmt.expression.accept(this)
         this.push()

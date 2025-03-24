@@ -16,6 +16,7 @@ export interface StmtVisitor<R> {
 
     visitVarStmt(stmt: VarStmt): R;
     visitBlockStmt(stmt: BlockStmt): R;
+    visitIfStmt(stmt: IfStmt): R;
 }
 
 export interface Stmt {
@@ -63,15 +64,25 @@ export class VarStmt implements Stmt {
 }
 
 export class BlockStmt implements Stmt {
-
     statements: Array<Stmt>;
-
     constructor(statements: Array<Stmt>) {
-
         this.statements = statements;
-
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitBlockStmt(this);
+    }
+}
+
+export class IfStmt implements Stmt {
+    condition: Expr;
+    thenBranch: Stmt;
+    elseBranch?: Stmt;
+    constructor(condition: Expr, thenBranch: Stmt, elseBranch?: Stmt) {
+        this.condition = condition;
+        this.thenBranch = thenBranch;
+        this.elseBranch = elseBranch;
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitIfStmt(this);
     }
 }

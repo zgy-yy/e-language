@@ -1,11 +1,14 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "./Expr";
-import { BlockStmt, ExpressionStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "./Stmt";
+import { BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
-    
+
     // Stmt
-    
+    visitIfStmt(stmt: IfStmt): string {
+        return `if ${stmt.condition.accept(this)} ${stmt.thenBranch.accept(this)} else ${stmt.elseBranch.accept(this)}`;
+    }
+
     visitBlockStmt(stmt: BlockStmt): string {
         let str = "{\n";
         for (const s of stmt.statements) {

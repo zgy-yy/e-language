@@ -37,6 +37,12 @@ export enum Tokenkind{
 
     //关键字
     PRINT = "Print",
+    IF = "If",
+    ELSE = "Else",
+    ELSEIF = "ElseIf",
+    WHILE = "While",
+    FOR = "For",
+    RETURN = "Return",
 
 
 

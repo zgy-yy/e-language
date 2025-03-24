@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, ExpressionStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
+import { BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
@@ -54,6 +54,8 @@ export class Parser {
             return this.printStatement()
         if(this.match(Tokenkind.LEFT_BRACE))
             return new BlockStmt(this.block())
+        if(this.match(Tokenkind.IF))
+            return this.ifStatement()
         
         return this.expressionStatement()
     }
@@ -96,6 +98,18 @@ export class Parser {
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after block.")
         this.symbolTable.leaveScope()
         return statements
+    }
+
+    ifStatement(): IfStmt {
+        this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after 'if'.")
+        const condition = this.expression()
+        this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after if condition.")
+        const thenBranch = this.statement()
+        let elseBranch = null
+        if (this.match(Tokenkind.ELSE)) {
+            elseBranch = this.statement()
+        }
+        return new IfStmt(condition, thenBranch, elseBranch)
     }
 
     //表达式

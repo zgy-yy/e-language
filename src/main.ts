@@ -5,8 +5,13 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-int a=15>=3;
-print a;
+int a=15;
+if(a>10){
+print 1;
+}
+else{
+print 2;
+}
  `
 
 function main() {

@@ -6,10 +6,9 @@ import { Parser } from "./Parse/Parse"
 const code = 
 `
 int a=15;
-if(a>10){
+if(a>20){
 print 1;
-}
-else{
+} else if(a>5){
 print 2;
 }
  `

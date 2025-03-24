@@ -6,7 +6,8 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
     // Stmt
     visitIfStmt(stmt: IfStmt): string {
-        return `if ${stmt.condition.accept(this)} ${stmt.thenBranch.accept(this)} else ${stmt.elseBranch.accept(this)}`;
+        let elseBranch = stmt.elseBranch ?"else " + stmt.elseBranch.accept(this) : "";
+        return `if ${stmt.condition.accept(this)} ${stmt.thenBranch.accept(this)} ${elseBranch}`;
     }
 
     visitBlockStmt(stmt: BlockStmt): string {

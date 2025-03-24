@@ -204,6 +204,11 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
                 break;
             case "+":
                 break;
+            case "!"://逻辑非
+                this.printAsmCode(`cmp rax, 0`)
+                this.printAsmCode(`sete al`)
+                this.printAsmCode(`movzx rax, al`)
+                break;
         }
     }
     visitLiteralExpr(expr: LiteralExpr) {

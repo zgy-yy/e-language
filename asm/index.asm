@@ -14,7 +14,10 @@ main:
 	mov rax, 15
 	pop rbx
 	cmp rax, rbx
-	setl al
+	setg al
+	movzx rax, al
+	cmp rax, 0
+	sete al
 	movzx rax, al
 	cmp rax, 0
 	jne  end0

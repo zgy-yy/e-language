@@ -5,7 +5,7 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-int a=15<5||5<3;
+int a=!(15>5)||5<3;
 print a;
  `
 

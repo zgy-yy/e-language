@@ -60,8 +60,8 @@ export class Parser {
             return this.whileStatement()
         if (this.match(Tokenkind.Do))
             return this.doWhileStatement()
-        // if(this.match(Tokenkind.FOR))
-            // return this.forStatement()
+        if(this.match(Tokenkind.FOR))
+            return this.forStatement()
         
         return this.expressionStatement()
     }
@@ -133,6 +133,42 @@ export class Parser {
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after condition.")
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after do-while statement.")
         return new DoWhileStmt(condition, body)
+    }
+    forStatement() {
+        this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after 'for'.")
+        let initializer = null
+        if (this.match(Tokenkind.SEMICOLON)) {
+            initializer = null
+        } else if (this.match(Tokenkind.INT)) {
+            initializer = this.varDeclaration(VarType.int)
+        } else {
+            initializer = this.expressionStatement()
+        }
+
+        let condition = null
+        if (!this.check(Tokenkind.SEMICOLON)) {
+            condition = this.expression()
+        }
+        this.consume(Tokenkind.SEMICOLON, "Expect ';' after loop condition.")
+
+        let increment = null
+        if (!this.check(Tokenkind.RIGHT_PAREN)) {
+            increment = this.expression()
+        }
+        this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after for clauses.")
+        let  body = this.statement()
+        //脱糖
+        if (increment != null) {
+            body = new BlockStmt([body, new ExpressionStmt(increment)])
+        }
+        if (condition == null) {
+            condition = new LiteralExpr(1)
+        }
+        body = new WhileStmt(condition, body)
+        if (initializer != null) {
+            body = new BlockStmt([initializer, body])
+        }
+        return body
     }
 
     //表达式

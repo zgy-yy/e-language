@@ -6,10 +6,10 @@ import { Parser } from "./Parse/Parse"
 const code = 
 `
 int a = 1;
-do{
-    print(a);
-    a = a + 1;
-}while(a < 2);
+for(int i = 0; i < 10; i = i + 1){
+a = a + 1;
+}
+print a;
 
  `
 
@@ -30,7 +30,6 @@ function main() {
 
     const codeGen = new CodeGen()
     codeGen.generateCode(program)
-    new AstPrinter().print(program.stmt)
 }
 
 console.log('code -> \n', code)

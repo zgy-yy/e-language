@@ -19,6 +19,7 @@ export class Scanner {//扫描器，或称为词法分析
         ["else", Tokenkind.ELSE],
         ["elseif", Tokenkind.ELSEIF],
         ["while", Tokenkind.WHILE],
+        ["do", Tokenkind.Do],
         ["for", Tokenkind.FOR],
         ["return", Tokenkind.RETURN],
         //数据类型

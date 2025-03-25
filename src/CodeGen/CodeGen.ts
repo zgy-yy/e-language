@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "../Ast/Stmt";
+import { BlockStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 
 
@@ -13,6 +13,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     private stackSize=0;
     constructor(){
     }
+
 
 
     generateCode(programAst: {
@@ -45,6 +46,27 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
 
     // 语句语法生成 
+    visitDoWhileStmt(stmt: DoWhileStmt): void {
+        let n = this.sequence++
+        this.printLab(`do${n}:`)
+        stmt.body.accept(this)
+        stmt.condition.accept(this)
+        this.printAsmCode(`cmp rax, 0`)
+        this.printAsmCode(`jne do${n}`)
+    }
+
+    visitWhileStmt(stmt: WhileStmt): void {
+        let n = this.sequence++
+        this.printLab(`while${n}:`)
+        stmt.condition.accept(this)
+        this.printAsmCode(`cmp rax, 0`)
+        this.printAsmCode(`je  end${n}`)
+        stmt.body.accept(this)
+        this.printAsmCode(`jmp while${n}`)
+        this.printLab(`end${n}:`)
+    }
+
+
     visitIfStmt(stmt: IfStmt): void {
         let n = this.sequence++
         stmt.condition.accept(this)

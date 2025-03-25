@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt } from "../Ast/Stmt";
+import { BlockStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
@@ -56,6 +56,12 @@ export class Parser {
             return new BlockStmt(this.block())
         if(this.match(Tokenkind.IF))
             return this.ifStatement()
+        if(this.match(Tokenkind.WHILE))
+            return this.whileStatement()
+        if (this.match(Tokenkind.Do))
+            return this.doWhileStatement()
+        // if(this.match(Tokenkind.FOR))
+            // return this.forStatement()
         
         return this.expressionStatement()
     }
@@ -110,6 +116,23 @@ export class Parser {
             elseBranch = this.statement()
         }
         return new IfStmt(condition, thenBranch, elseBranch)
+    }
+
+    whileStatement() {
+        this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after 'while'.")
+        const condition = this.expression()
+        this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after condition.")
+        const body = this.statement()
+        return new WhileStmt(condition, body)
+    }
+    doWhileStatement() { 
+        const body = this.statement()
+        this.consume(Tokenkind.WHILE, "Expect 'while' after 'do'.")
+        this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after 'while'.")
+        const condition = this.expression()
+        this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after condition.")
+        this.consume(Tokenkind.SEMICOLON, "Expect ';' after do-while statement.")
+        return new DoWhileStmt(condition, body)
     }
 
     //表达式

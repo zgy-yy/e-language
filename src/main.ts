@@ -5,8 +5,12 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-int a=!(15>5)||5<3;
-print a;
+int a = 1;
+do{
+    print(a);
+    a = a + 1;
+}while(a < 2);
+
  `
 
 function main() {
@@ -32,3 +36,5 @@ function main() {
 console.log('code -> \n', code)
 
 main()
+
+

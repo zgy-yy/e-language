@@ -62,6 +62,7 @@ export enum Tokenkind{
     ELSE = "Else",
     ELSEIF = "ElseIf",
     WHILE = "While",
+    Do = "Do",
     FOR = "For",
     RETURN = "Return",
 

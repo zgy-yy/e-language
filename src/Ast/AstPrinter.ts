@@ -1,11 +1,20 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "./Expr";
-import { BlockStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt } from "./Stmt";
+import { BlockStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
-   
 
     // Stmt
+    visitDoWhileStmt(stmt: DoWhileStmt): string {
+        return `do ${stmt.body.accept(this)} while ${stmt.condition.accept(this)}`;
+    }
+
+
+    visitWhileStmt(stmt: WhileStmt): string {
+        return `while ${stmt.condition.accept(this)} ${stmt.body.accept(this)}`;
+    }
+
+
     visitIfStmt(stmt: IfStmt): string {
         let elseBranch = stmt.elseBranch ?"else " + stmt.elseBranch.accept(this) : "";
         return `if ${stmt.condition.accept(this)} ${stmt.thenBranch.accept(this)} ${elseBranch}`;

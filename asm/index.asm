@@ -9,31 +9,10 @@ main:
 	sub rsp, 8
 	lea rax, [rbp -8]
 	push rax
-	mov rax, 5
-	push rax
-	mov rax, 15
-	pop rbx
-	cmp rax, rbx
-	setg al
-	movzx rax, al
-	cmp rax, 0
-	sete al
-	movzx rax, al
-	cmp rax, 0
-	jne  end0
-	mov rax, 3
-	push rax
-	mov rax, 5
-	pop rbx
-	cmp rax, rbx
-	setl al
-	movzx rax, al
-	cmp rax, 0
-	jne  end0
-	mov rax, 0
-end0:
+	mov rax, 1
 	pop rdi
 	mov [rdi], rax
+do0:
 	lea rax, [rbp -8]
 	mov rax, [rax]
 
@@ -42,6 +21,27 @@ end0:
 	mov rsi, rax
 	xor eax, eax
 	call printf wrt ..plt
+	lea rax, [rbp+-8]
+	push rax
+	mov rax, 1
+	push rax
+	lea rax, [rbp -8]
+	mov rax, [rax]
+	pop rbx
+	add rax, rbx
+	pop rdi
+	mov  [rdi], rax
+	push rax
+	mov rax, 2
+	push rax
+	lea rax, [rbp -8]
+	mov rax, [rax]
+	pop rbx
+	cmp rax, rbx
+	setl al
+	movzx rax, al
+	cmp rax, 0
+	jne do0
 
 ;退出程序
 	mov eax, 60

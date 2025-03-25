@@ -17,6 +17,8 @@ export interface StmtVisitor<R> {
     visitVarStmt(stmt: VarStmt): R;
     visitBlockStmt(stmt: BlockStmt): R;
     visitIfStmt(stmt: IfStmt): R;
+    visitWhileStmt(stmt: WhileStmt): R;
+    visitDoWhileStmt(stmt: DoWhileStmt): R;
 }
 
 export interface Stmt {
@@ -86,3 +88,31 @@ export class IfStmt implements Stmt {
         return visitor.visitIfStmt(this);
     }
 }
+
+export class WhileStmt implements Stmt {
+    condition: Expr;
+    body: Stmt;
+    constructor(condition: Expr, body: Stmt) {
+        this.condition = condition;
+        this.body = body;
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitWhileStmt(this);
+    }
+
+}
+
+
+export class DoWhileStmt implements Stmt {
+    condition: Expr;
+    body: Stmt;
+    constructor(condition: Expr, body: Stmt) {
+        this.condition = condition;
+        this.body = body;
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitDoWhileStmt(this);
+    }
+
+}
+

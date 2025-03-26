@@ -64,6 +64,8 @@ export enum Tokenkind{
     WHILE = "While",
     Do = "Do",
     FOR = "For",
+    BREAK = "Break",
+    CONTINUE= "Continue",
     RETURN = "Return",
 
 

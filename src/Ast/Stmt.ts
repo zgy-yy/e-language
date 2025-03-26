@@ -19,6 +19,7 @@ export interface StmtVisitor<R> {
     visitIfStmt(stmt: IfStmt): R;
     visitWhileStmt(stmt: WhileStmt): R;
     visitDoWhileStmt(stmt: DoWhileStmt): R;
+    visitBreakStmt(stmt: BreakStmt): R;
 }
 
 export interface Stmt {
@@ -113,6 +114,10 @@ export class DoWhileStmt implements Stmt {
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitDoWhileStmt(this);
     }
-
 }
 
+export class BreakStmt implements Stmt {
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitBreakStmt(this);
+    }
+}

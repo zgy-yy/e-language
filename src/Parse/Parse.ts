@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
@@ -62,6 +62,8 @@ export class Parser {
             return this.doWhileStatement()
         if(this.match(Tokenkind.FOR))
             return this.forStatement()
+        if (this.match(Tokenkind.BREAK))
+            return this.breakStatement()
         
         return this.expressionStatement()
     }
@@ -169,6 +171,10 @@ export class Parser {
             body = new BlockStmt([initializer, body])
         }
         return body
+    }
+    breakStatement(): BreakStmt {
+        this.consume(Tokenkind.SEMICOLON, "Expect ';' after 'break'.")
+        return new BreakStmt()
     }
 
     //表达式

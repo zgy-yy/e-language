@@ -21,6 +21,8 @@ export class Scanner {//扫描器，或称为词法分析
         ["while", Tokenkind.WHILE],
         ["do", Tokenkind.Do],
         ["for", Tokenkind.FOR],
+        ["break", Tokenkind.BREAK],
+        ["continue", Tokenkind.CONTINUE],
         ["return", Tokenkind.RETURN],
         //数据类型
         [VarType.int, Tokenkind.INT],

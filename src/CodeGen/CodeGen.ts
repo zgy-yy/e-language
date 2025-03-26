@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 
 
@@ -13,8 +13,9 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     private stackSize=0;
     constructor(){
     }
+ 
 
-
+    enclosingBreak =[]
 
     generateCode(programAst: {
         localVars: Var[];
@@ -46,17 +47,25 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
 
     // 语句语法生成 
+    visitBreakStmt(stmt: BreakStmt): void {
+        this.printAsmCode(`jmp ${this.enclosingBreak.at(-1)}`)//跳转到最近的循环结束标签
+    }
+
     visitDoWhileStmt(stmt: DoWhileStmt): void {
         let n = this.sequence++
+        this.enclosingBreak.push(`end${n}`)
         this.printLab(`do${n}:`)
-        stmt.body.accept(this)
+        stmt.body.accept(this)//先执行循环体
         stmt.condition.accept(this)
         this.printAsmCode(`cmp rax, 0`)
         this.printAsmCode(`jne do${n}`)
+        this.printLab(`end${n}:`)
+        this.enclosingBreak.pop()
     }
 
     visitWhileStmt(stmt: WhileStmt): void {
         let n = this.sequence++
+        this.enclosingBreak.push(`end${n}`)
         this.printLab(`while${n}:`)
         stmt.condition.accept(this)
         this.printAsmCode(`cmp rax, 0`)
@@ -64,6 +73,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         stmt.body.accept(this)
         this.printAsmCode(`jmp while${n}`)
         this.printLab(`end${n}:`)
+        this.enclosingBreak.pop()
     }
 
 
@@ -153,7 +163,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
     visitAssignExpr(expr: AssignExpr): void {
         const left = expr.variable
-        this.printAsmCode(`lea rax, [rbp+${left.offset}]`)//计算左值地址 //结果存放在 rax 寄存器
+        this.printAsmCode(`lea rax, [rbp ${left.offset}]`)//计算左值地址 //结果存放在 rax 寄存器
         this.push()//将变量地址压栈
         expr.value.accept(this)
         this.pop("rdi")
@@ -261,7 +271,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
     private program() { 
         this.printLab("section .data")
-        this.printAsmCode(`format db "Result: % d", 0x0a, 0`)
+        this.printAsmCode(`format db "Result: %d", 0x0a, 0`)
     }
 
     private main() {

@@ -1,10 +1,14 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "./Expr";
-import { BlockStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./Stmt";
+import { BlockStmt, BreakStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
+
     // Stmt
+    visitBreakStmt(stmt: BreakStmt): string {
+        return "break";
+    }
     visitDoWhileStmt(stmt: DoWhileStmt): string {
         return `do ${stmt.body.accept(this)} while ${stmt.condition.accept(this)}`;
     }

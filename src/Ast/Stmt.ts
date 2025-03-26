@@ -2,7 +2,7 @@
 * 语句节点
 */
 
-import { Token } from "../Lexer/Token";
+import { Token, VarType } from "../Lexer/Token";
 import { Var } from "../Parse/Symbol";
 import { Expr } from "./Expr";
 
@@ -22,6 +22,7 @@ export interface StmtVisitor<R> {
     visitForStmt(stmt: ForStmt): R;
     visitBreakStmt(stmt: BreakStmt): R;
     visitContinueStmt(stmt: ContinueStmt): R;
+    visitFunctionStmt(stmt: FunctionStmt): R;
 }
 
 export interface Stmt {
@@ -144,4 +145,24 @@ export class ContinueStmt implements Stmt {
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitContinueStmt(this);
     }
+}
+
+
+
+export class FunctionStmt implements Stmt {
+    retType: VarType;
+    name: Token;
+    params: Var[];
+    body: BlockStmt;
+
+    constructor(var_type: VarType, name: Token, params: Var[], body:BlockStmt) {
+        this.retType = var_type;
+        this.name = name;
+        this.params = params;
+        this.body = body;
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitFunctionStmt(this);
+    }
+
 }

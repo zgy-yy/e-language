@@ -82,10 +82,10 @@ export enum Tokenkind{
 
 //变量类型
 export enum VarType{
-    int = "int",
-    boolean = "boolean",
-    void = "void",
-    char = "char",
+    Int = "int",
+    Boolean = "boolean",
+    Void = "void",
+    Char = "char",
 }
 
 

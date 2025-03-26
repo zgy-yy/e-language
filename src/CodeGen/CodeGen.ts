@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PostfixExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 
 type EncloseLoop = {
@@ -17,7 +17,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     private stackSize=0;
     constructor(){
     }
-   
+
 
 
     enclosing: EncloseLoop[] =[]
@@ -53,6 +53,10 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
 
     // 语句语法生成 
+    visitFunctionStmt(stmt: FunctionStmt): void {
+        throw new Error("Method not implemented.");
+    }
+
     visitContinueStmt(stmt: ContinueStmt): void {
        this.printAsmCode(`jmp ${this.enclosing.at(-1).start}`)//跳转到最近的循环开始标签
     }

@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PostfixExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, IfStmt, PrintStmt, Stmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
@@ -10,7 +10,9 @@ export class Parser {
     current: number = 0;//tokens 游标
 
     symbolTable :SymbolTable = new SymbolTable();//符号表
-    locals:Var[] = [];//局部变量 
+    locals: Var[] = [];//局部变量 
+    
+    typeKind = [Tokenkind.INT, Tokenkind.CHAR, Tokenkind.VOID]
 
     constructor(tokens: Token[]) {
         this.tokens = tokens
@@ -33,11 +35,14 @@ export class Parser {
 
     declaration(): Stmt {
         try {
-            if (this.match(Tokenkind.INT)) {
-                return this.varDeclaration(VarType.int)
-            }
-            if (this.match(Tokenkind.CHAR)) {
-                return this.varDeclaration(VarType.char)
+            if (this.match(...this.typeKind)) {
+                let kind = this.previous()//声明的类型
+                let declType = VarType[kind.type]//声明 的类型
+                let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
+                if (this.match(Tokenkind.LEFT_PAREN)) {
+                    return this.funcDeclaration(declType, identifier_name)
+                }
+                return this.varDeclaration(declType, identifier_name)
             }
             return this.statement()
         } catch (error) {
@@ -71,13 +76,13 @@ export class Parser {
     }
 
     //变量声明语句
-    varDeclaration(varT:VarType): Stmt{ 
-        const name = this.consume(Tokenkind.IDENTIFIER, "Expect variable name.")
-        if (this.symbolTable.findVariable(name.lexeme)) {
-            this.error(name, "Variable with this name already declared in this scope.")
+    varDeclaration(varT:VarType,var_name:Token): Stmt{ 
+        // const name = this.consume(Tokenkind.IDENTIFIER, "Expect variable name.")
+        if (this.symbolTable.findVariable(var_name.lexeme)) {
+            this.error(var_name, "Variable with this name already declared in this scope.")
         }
-        const var_ = new Var(name.lexeme, varT)
-        this.symbolTable.addVariable(name.lexeme, var_)
+        const var_ = new Var(var_name.lexeme, varT)
+        this.symbolTable.addVariable(var_name.lexeme, var_)
         this.locals.push(var_)
         
         let initializer = null
@@ -86,6 +91,33 @@ export class Parser {
         }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after variable declaration.")
         return new VarStmt(var_, initializer)
+    }
+
+    paramDeclaration(): Var {
+        if (this.match(...this.typeKind)) {
+            let kind = this.previous()//声明的类型
+            let declType:VarType = VarType[kind.type]//声明 的类型
+            let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
+            return new Var(identifier_name.lexeme, declType)
+        }
+    }
+
+    funcDeclaration(reType: VarType, fun_name: Token): Stmt {
+        this.symbolTable.enterScope()
+        const params:Var[] = []
+        if (!this.check(Tokenkind.RIGHT_PAREN)) {
+            do {
+                if (params.length >= 255) {
+                    this.error(this.peek(), "Can't have more than 255 parameters.")
+                }
+                params.push(this.paramDeclaration())
+            } while (this.match(Tokenkind.COMMA))
+        }
+        this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
+        this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
+        const body = this.block()
+        this.symbolTable.leaveScope()
+        return new FunctionStmt(reType,fun_name, params, new BlockStmt(body))
     }
 
     printStatement(): Stmt{
@@ -145,7 +177,7 @@ export class Parser {
         if (this.match(Tokenkind.SEMICOLON)) {
             initializer = null
         } else if (this.match(Tokenkind.INT)) {
-            initializer = this.varDeclaration(VarType.int)
+            initializer =this.declaration()
         } else {
             initializer = this.expressionStatement()
         }

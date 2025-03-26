@@ -25,8 +25,10 @@ export class Scanner {//扫描器，或称为词法分析
         ["continue", Tokenkind.CONTINUE],
         ["return", Tokenkind.RETURN],
         //数据类型
-        [VarType.int, Tokenkind.INT],
-        [VarType.char, Tokenkind.CHAR],
+        [VarType.Int, Tokenkind.INT],
+        [VarType.Char, Tokenkind.CHAR],
+        [VarType.Boolean, Tokenkind.BOOLEAN],
+        [VarType.Void, Tokenkind.VOID],
  
     ])
 
@@ -58,6 +60,9 @@ export class Scanner {//扫描器，或称为词法分析
                 break;
             case "}":
                 this.addToken(Tokenkind.RIGHT_BRACE);
+                break;
+            case ",":
+                this.addToken(Tokenkind.COMMA);
                 break;
             case '+':
                 this.addToken(this.match("+") ? Tokenkind.PLUS_PLUS : Tokenkind.PLUS);

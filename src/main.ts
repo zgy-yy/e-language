@@ -5,12 +5,14 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-int a=2;
-a =a++;
-for(int i=0;i<10;i++){
-    print i;
-}
+int a = 1;
+a=2;
 print a;
+
+int sum(int a, int b){
+
+}
+
  `
 
 async function main() {

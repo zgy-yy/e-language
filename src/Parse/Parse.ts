@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, IfStmt, PrintStmt, Stmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
@@ -64,6 +64,8 @@ export class Parser {
             return this.forStatement()
         if (this.match(Tokenkind.BREAK))
             return this.breakStatement()
+        if (this.match(Tokenkind.CONTINUE))
+            return this.continueStatement()
         
         return this.expressionStatement()
     }
@@ -137,6 +139,7 @@ export class Parser {
         return new DoWhileStmt(condition, body)
     }
     forStatement() {
+        this.symbolTable.enterScope() //进入新的作用域
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after 'for'.")
         let initializer = null
         if (this.match(Tokenkind.SEMICOLON)) {
@@ -158,23 +161,29 @@ export class Parser {
             increment = this.expression()
         }
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after for clauses.")
-        let  body = this.statement()
+        let body = this.statement()
+        this.symbolTable.leaveScope()
+        return new ForStmt(initializer, condition, increment, body)
         //脱糖
-        if (increment != null) {
-            body = new BlockStmt([body, new ExpressionStmt(increment)])
-        }
-        if (condition == null) {
-            condition = new LiteralExpr(1)
-        }
-        body = new WhileStmt(condition, body)
-        if (initializer != null) {
-            body = new BlockStmt([initializer, body])
-        }
-        return body
+        // if (increment != null) {
+        //     body = new BlockStmt([body, new ExpressionStmt(increment)])
+        // }
+        // if (condition == null) {
+        //     condition = new LiteralExpr(1)
+        // }
+        // body = new WhileStmt(condition, body)
+        // if (initializer != null) {
+        //     body = new BlockStmt([initializer, body])
+        // }
+        // return body
     }
     breakStatement(): BreakStmt {
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after 'break'.")
         return new BreakStmt()
+    }
+    continueStatement(): Stmt {
+        this.consume(Tokenkind.SEMICOLON, "Expect ';' after 'continue'.")
+        return new ContinueStmt()
     }
 
     //表达式

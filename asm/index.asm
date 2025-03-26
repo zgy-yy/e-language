@@ -6,44 +6,13 @@ section .text
 main:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 24
+	sub rsp, 8
 	lea rax, [rbp -8]
 	push rax
 	mov rax, 0
 	pop rdi
 	mov [rdi], rax
-	lea rax, [rbp -16]
-	push rax
-	mov rax, 0
-	pop rdi
-	mov [rdi], rax
-while0:
-	mov rax, 9
-	push rax
-	lea rax, [rbp -16]
-	mov rax, [rax]
-	pop rbx
-	cmp rax, rbx
-	setl al
-	movzx rax, al
-	cmp rax, 0
-	je  end0
-	lea rax, [rbp -24]
-	push rax
-	mov rax, 0
-	pop rdi
-	mov [rdi], rax
-while1:
-	mov rax, 10
-	push rax
-	lea rax, [rbp -24]
-	mov rax, [rax]
-	pop rbx
-	cmp rax, rbx
-	setl al
-	movzx rax, al
-	cmp rax, 0
-	je  end1
+do0:
 	lea rax, [rbp -8]
 	push rax
 	mov rax, 1
@@ -55,6 +24,22 @@ while1:
 	pop rdi
 	mov  [rdi], rax
 	push rax
+
+;if 语句
+	mov rax, 5
+	push rax
+	lea rax, [rbp -8]
+	mov rax, [rax]
+	pop rbx
+	cmp rax, rbx
+	sete al
+	movzx rax, al
+	push rax
+	cmp rax, 0
+	je  if_end1
+	jmp do0
+	jmp if_end1
+if_end1:
 	lea rax, [rbp -8]
 	mov rax, [rax]
 
@@ -63,33 +48,17 @@ while1:
 	mov rsi, rax
 	xor eax, eax
 	call printf wrt ..plt
-	jmp end1
-	lea rax, [rbp -24]
+	mov rax, 10
 	push rax
-	mov rax, 1
-	push rax
-	lea rax, [rbp -24]
+	lea rax, [rbp -8]
 	mov rax, [rax]
 	pop rbx
-	add rax, rbx
-	pop rdi
-	mov  [rdi], rax
-	push rax
-	jmp while1
-end1:
-	lea rax, [rbp -16]
-	push rax
-	mov rax, 1
-	push rax
-	lea rax, [rbp -16]
-	mov rax, [rax]
-	pop rbx
-	add rax, rbx
-	pop rdi
-	mov  [rdi], rax
-	push rax
-	jmp while0
-end0:
+	cmp rax, rbx
+	setl al
+	movzx rax, al
+	cmp rax, 0
+	jne do0
+do_end0:
 
 ;退出程序
 	mov eax, 60

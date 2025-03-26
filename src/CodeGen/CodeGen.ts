@@ -1,7 +1,11 @@
 import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, DoWhileStmt, ExpressionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 
+type EncloseLoop = {
+    start: string, //循环开始标签
+    end: string //循环结束标签
+}
 
 export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
@@ -13,9 +17,9 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     private stackSize=0;
     constructor(){
     }
- 
 
-    enclosingBreak =[]
+
+    enclosing: EncloseLoop[] =[]
 
     generateCode(programAst: {
         localVars: Var[];
@@ -47,56 +51,92 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
 
     // 语句语法生成 
-    visitBreakStmt(stmt: BreakStmt): void {
-        this.printAsmCode(`jmp ${this.enclosingBreak.at(-1)}`)//跳转到最近的循环结束标签
+    visitContinueStmt(stmt: ContinueStmt): void {
+       this.printAsmCode(`jmp ${this.enclosing.at(-1).start}`)//跳转到最近的循环开始标签
     }
+
+    visitBreakStmt(stmt: BreakStmt): void {
+        this.printAsmCode(`jmp ${this.enclosing.at(-1).end}`)//跳转到最近的循环结束标签
+    }
+    visitForStmt(stmt: ForStmt): void {
+        let n = this.sequence++
+        this.enclosing.push({
+            start: `for_increment${n}`,
+            end: `for_end${n}`
+        })
+        this.printLab(`for${n}:`)
+        if (stmt.initializer) {
+            stmt.initializer.accept(this)
+        }
+        this.printLab(`for_condition${n}:`)
+        if (stmt.condition) {
+            stmt.condition.accept(this)
+            this.printAsmCode(`cmp rax, 0`)
+            this.printAsmCode(`je for_end${n}`)
+        }
+        stmt.body.accept(this)
+        this.printLab(`for_increment${n}:`)
+        if (stmt.increment) {
+            stmt.increment.accept(this)
+        }
+        this.printAsmCode(`jmp for_condition${n}`)
+        this.printLab(`for_end${n}:`)
+        this.enclosing.pop()
+    }
+
 
     visitDoWhileStmt(stmt: DoWhileStmt): void {
         let n = this.sequence++
-        this.enclosingBreak.push(`end${n}`)
+        this.enclosing.push({
+            start: `do${n}`,
+            end: `do_end${n}`
+        })
         this.printLab(`do${n}:`)
         stmt.body.accept(this)//先执行循环体
         stmt.condition.accept(this)
         this.printAsmCode(`cmp rax, 0`)
         this.printAsmCode(`jne do${n}`)
-        this.printLab(`end${n}:`)
-        this.enclosingBreak.pop()
+        this.printLab(`do_end${n}:`)
+        this.enclosing.pop()
     }
 
     visitWhileStmt(stmt: WhileStmt): void {
         let n = this.sequence++
-        this.enclosingBreak.push(`end${n}`)
+        this.enclosing.push({
+            start: `while${n}`,
+            end: `while_end${n}`}
+        )
         this.printLab(`while${n}:`)
         stmt.condition.accept(this)
         this.printAsmCode(`cmp rax, 0`)
-        this.printAsmCode(`je  end${n}`)
+        this.printAsmCode(`je  while_end${n}`)
         stmt.body.accept(this)
         this.printAsmCode(`jmp while${n}`)
-        this.printLab(`end${n}:`)
-        this.enclosingBreak.pop()
+        this.printLab(`while_end${n}:`)
+        this.enclosing.pop()
     }
 
 
     visitIfStmt(stmt: IfStmt): void {
         let n = this.sequence++
-        stmt.condition.accept(this)
-        this.push()
         this.printLab(``)
         this.printLab(`;if 语句`)
+        stmt.condition.accept(this)
+        this.push()
         this.printAsmCode(`cmp rax, 0`)
         if(stmt.elseBranch){
             this.printAsmCode(`je  else${n}`)
         }else{
-            this.printAsmCode(`je  end${n}`)
+            this.printAsmCode(`je  if_end${n}`)
         }
 
         stmt.thenBranch.accept(this)
-        this.printAsmCode(`jmp end${n}`)
+        this.printAsmCode(`jmp if_end${n}`)
         if(stmt.elseBranch){
             this.printLab(`else${n}:`)
             stmt.elseBranch.accept(this)
         }
-        this.printLab(`end${n}:`)
+        this.printLab(`if_end${n}:`)
     }
 
     visitBlockStmt(stmt: BlockStmt): void {

@@ -6,14 +6,14 @@ import { Parser } from "./Parse/Parse"
 const code = 
 `
 int a=0;
-for(int i=0;i<9;i=i+1){
-    for (int j=0;j<10;j=j+1){
+do {
+   
     a=a+1;
-    print a;
-    break;
+    if(a==5){
+    continue;
     }
-}
-
+     print a;
+} while (a < 10);
  `
 
 function main() {

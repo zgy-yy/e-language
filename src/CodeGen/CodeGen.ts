@@ -25,7 +25,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     generateCode(programAst: {
         localVars: Var[];
         stmt: Stmt[];
-    }): void {
+    }):string    {
 
         for (const value of programAst.localVars) {
             switch (value.type) {
@@ -48,6 +48,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         this.endProgram()
 
         console.log(CodeGen.codeText);
+        return CodeGen.codeText;
     }
 
 

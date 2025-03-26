@@ -304,10 +304,6 @@ export class Parser {
   
 
 
-    
-
-
-
 
     //工具
     match(...kinds: Tokenkind[]) {//匹配到 TokenKind时，当前token 应该被消费，游标前进

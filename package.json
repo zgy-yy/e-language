@@ -7,12 +7,13 @@
   "main": "",
   "devDependencies": {
     "@types/node": "^22.13.1",
+    "nodemon": "^3.1.9",
     "typescript": "^5.7.3"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
-    "start":"ts-node src/main.ts"
+    "start": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/main.ts"
   },
   "repository": {
     "type": "git",

@@ -60,10 +60,10 @@ export class Scanner {//扫描器，或称为词法分析
                 this.addToken(Tokenkind.RIGHT_BRACE);
                 break;
             case '+':
-                this.addToken(Tokenkind.PLUS);
+                this.addToken(this.match("+") ? Tokenkind.PLUS_PLUS : Tokenkind.PLUS);
                 break;
             case '-':
-                this.addToken(Tokenkind.MINUS)
+                this.addToken(this.match("-") ? Tokenkind.MINUS_MINUS : Tokenkind.MINUS);
                 break;
             case '*':
                 this.addToken(Tokenkind.STAR)

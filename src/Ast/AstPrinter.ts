@@ -1,8 +1,9 @@
-import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PostfixExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
+    
 
     // Stmt
     visitContinueStmt(stmt: ContinueStmt): string {
@@ -70,6 +71,9 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return this.parenthesize(expr.operator.lexeme, expr.right);
     }
 
+    visitPostfixExpers(expr: PostfixExpr): string {
+        return  `${expr.left.accept(this)}${expr.operator.lexeme}`;
+    }
     visitLiteralExpr(expr: LiteralExpr): string {
         if (typeof expr.value === "string") {
             if (expr.value.length === 1) {

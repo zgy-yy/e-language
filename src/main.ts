@@ -5,15 +5,10 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-int a=0;
-do {
-   
-    a=a+1;
-    if(a==5){
-    continue;
-    }
-     print a;
-} while (a < 10);
+int a=2;
+int b = a-- + 1;
+print a;
+print b;
  `
 
 function main() {
@@ -39,9 +34,3 @@ console.log('code -> \n', code)
 
 
 main()
-
-
-
-
-
-

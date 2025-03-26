@@ -6,40 +6,26 @@ section .text
 main:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 8
+	sub rsp, 16
 	lea rax, [rbp -8]
 	push rax
-	mov rax, 0
+	mov rax, 2
 	pop rdi
 	mov [rdi], rax
-do0:
-	lea rax, [rbp -8]
+	lea rax, [rbp -16]
 	push rax
 	mov rax, 1
 	push rax
 	lea rax, [rbp -8]
 	mov rax, [rax]
+	mov rbx, rax
+	dec rbx
+	lea rdi, [rbp -8]
+	mov [rdi], rbx
 	pop rbx
 	add rax, rbx
 	pop rdi
-	mov  [rdi], rax
-	push rax
-
-;if 语句
-	mov rax, 5
-	push rax
-	lea rax, [rbp -8]
-	mov rax, [rax]
-	pop rbx
-	cmp rax, rbx
-	sete al
-	movzx rax, al
-	push rax
-	cmp rax, 0
-	je  if_end1
-	jmp do0
-	jmp if_end1
-if_end1:
+	mov [rdi], rax
 	lea rax, [rbp -8]
 	mov rax, [rax]
 
@@ -48,17 +34,14 @@ if_end1:
 	mov rsi, rax
 	xor eax, eax
 	call printf wrt ..plt
-	mov rax, 10
-	push rax
-	lea rax, [rbp -8]
+	lea rax, [rbp -16]
 	mov rax, [rax]
-	pop rbx
-	cmp rax, rbx
-	setl al
-	movzx rax, al
-	cmp rax, 0
-	jne do0
-do_end0:
+
+;调用 printf
+	lea rdi, [rel format]
+	mov rsi, rax
+	xor eax, eax
+	call printf wrt ..plt
 
 ;退出程序
 	mov eax, 60

@@ -7,6 +7,7 @@ import { Var } from "../Parse/Symbol";
 export interface ExprVisitor<R>{
     visitBinaryExpr(expr: BinaryExpr): R;
     visitUnaryExpr(expr: UnaryExpr): R;
+    visitPostfixExpers(expr: PostfixExpr): R;
     visitLiteralExpr(expr: LiteralExpr): R;
     visitVariableExpr(expr: VariableExpr): R;
     visitAssignExpr(expr: AssignExpr): R;
@@ -50,21 +51,30 @@ export class BinaryExpr implements Expr{
       return visitor.visitBinaryExpr(this)
     }
 }
-export class UnaryExpr implements Expr {
 
+export class UnaryExpr implements Expr {
     operator: Token;
     right: Expr;
-
     constructor(operator: Token, right: Expr) {
         this.operator = operator;
         this.right = right;
-
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitUnaryExpr(this);
-
     }
+}
 
+//后缀表达式
+export class PostfixExpr implements Expr { 
+    left: Expr;
+    operator: Token;
+    constructor(left: Expr, operator: Token) {
+        this.left = left;
+        this.operator = operator;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitPostfixExpers(this);
+    }
 }
 
 //字面量表达式

@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PostfixExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 
@@ -17,6 +17,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     private stackSize=0;
     constructor(){
     }
+   
 
 
     enclosing: EncloseLoop[] =[]
@@ -211,10 +212,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
     }
 
-    visitVariableExpr(expr: VariableExpr): void {
-        this.printAsmCode(`lea rax, [rbp ${expr.variable.offset}]`) //计算变量地址 //结果存放在 rax 寄存器
-        this.printAsmCode(`mov rax, [rax]`) //将变量值存入 rax 寄存器
-    }
+   
 
     visitBinaryExpr(expr: BinaryExpr) {
         expr.right.accept(this)
@@ -270,7 +268,8 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
     visitUnaryExpr(expr: UnaryExpr) {
         expr.right.accept(this)
-        switch (expr.operator.lexeme) {
+        let operator = expr.operator.lexeme
+        switch (operator) {
             case "-":
                 this.printAsmCode(`neg rax`)
                 break;
@@ -281,7 +280,46 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
                 this.printAsmCode(`sete al`)
                 this.printAsmCode(`movzx rax, al`)
                 break;
+            
         }
+        if (operator == "++" || operator == "--") {//前缀自增 ++a
+            let right_var = expr.right as VariableExpr
+            switch (expr.operator.lexeme) {
+                case "++"://前缀自增 ++a
+                    this.printAsmCode(`inc rax`)
+                    this.printAsmCode(`lea rdi, [rbp ${right_var.variable.offset}]`)
+                    this.printAsmCode(`mov [rdi], rax`)
+                    break;
+                case "--":
+                    this.printAsmCode(`dec rax`)
+                    this.printAsmCode(`lea rdi, [rbp ${right_var.variable.offset}]`)
+                    this.printAsmCode(`mov [rdi], rax`)
+                    break;
+            }
+        }
+    }
+
+    visitPostfixExpers(expr: PostfixExpr): void {
+        expr.left.accept(this)//计算左值 结果存放在 rax 寄存器
+        let left_var = expr.left as VariableExpr
+        switch (expr.operator.lexeme) {
+            case "++"://后缀自增 a++
+                this.printAsmCode(`mov rbx, rax`)
+                this.printAsmCode(`inc rbx`)
+                this.printAsmCode(`lea rdi, [rbp ${left_var.variable.offset}]`)
+                this.printAsmCode(`mov [rdi], rbx`)
+                break;
+            case "--":
+                this.printAsmCode(`mov rbx, rax`)
+                this.printAsmCode(`dec rbx`)
+                this.printAsmCode(`lea rdi, [rbp ${left_var.variable.offset}]`)
+                this.printAsmCode(`mov [rdi], rbx`)
+                break;
+        }
+    }
+    visitVariableExpr(expr: VariableExpr): void {
+        this.printAsmCode(`lea rax, [rbp ${expr.variable.offset}]`) //计算变量地址 //结果存放在 rax 寄存器
+        this.printAsmCode(`mov rax, [rax]`) //将变量值存入 rax 寄存器
     }
     visitLiteralExpr(expr: LiteralExpr) {
         if (typeof expr.value === "number") {

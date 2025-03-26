@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PostfixExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, IfStmt, PrintStmt, Stmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
@@ -265,7 +265,21 @@ export class Parser {
             const right = this.unary()
             return new UnaryExpr(operator, right)
         }
-        return this.primary()
+        if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
+            const operator = this.previous()
+            const right = this.primary()
+            return new UnaryExpr(operator, right)
+        }
+        
+        return this.postfix()
+    }
+    postfix() {//后缀自增自减
+        let expr = this.primary()
+        while (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
+            const operator = this.previous()
+            expr = new PostfixExpr(expr, operator)
+        }
+        return expr
     }
 
     primary(): Expr { //主表达式 =>字面量，this ， boolean ，标识符(变量名)
@@ -287,6 +301,7 @@ export class Parser {
         }
         throw this.error(this.peek(), "Expect expression.");
     }
+  
 
 
     

@@ -9,12 +9,13 @@ type EncloseLoop = {
 
 export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
+    private globalVars: Var[] = [];
+    private globalVarStmt: VarStmt[] = [];
     static codeText: string = "";
 
     private sequence: number = 0;
 
     private stackPtr: number = 0;
-    private stackSize=0;
     constructor(){
     }
 
@@ -23,29 +24,25 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     enclosing: EncloseLoop[] =[]
 
     generateCode(programAst: {
-        localVars: Var[];
+        globalVars: Var[];
         stmt: Stmt[];
-    }):string    {
-
-        for (const value of programAst.localVars) {
-            switch (value.type) {
-                case "int":
-                    this.stackSize += 8;
-                    break;
-                case "char":
-                    this.stackSize += 1;
-                    break;
+    }): string    {
+        this.globalVars = programAst.globalVars;
+        programAst.stmt.forEach(stmt => { //全局变量声明
+            if(stmt instanceof VarStmt){
+                this.globalVarStmt.push(stmt)
             }
-            value.offset = -1 * this.stackSize;
-        }
+        })
 
         this.program()
-
         this.main()
         for (const stmt of programAst.stmt) {
-            stmt.accept(this)
+            if (stmt instanceof VarStmt) {   
+            } else {
+                stmt.accept(this)
+            }
         }
-        this.endProgram()
+        this.printLab(`section .note.GNU-stack noalloc noexec nowrite progbits`)
 
         console.log(CodeGen.codeText);
         return CodeGen.codeText;
@@ -54,7 +51,23 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
     // 语句语法生成 
     visitFunctionStmt(stmt: FunctionStmt): void {
-        throw new Error("Method not implemented.");
+        let n = this.sequence++
+        let funcStackSpace = 0;
+        for (const local of stmt.locals) {
+            funcStackSpace += 8;
+            local.offset = -1 * funcStackSpace;
+        }
+
+        this.printLab(``)
+        this.printLab(`;函数声明`)
+        this.printLab(`fn_${stmt.name.lexeme}_${n}:`)
+        this.printAsmCode(`push rbp`)
+        this.printAsmCode(`mov rbp, rsp`)
+        this.printAsmCode(`sub rsp, ${funcStackSpace}`)//分配栈空间
+
+        stmt.body.accept(this)
+        this.printAsmCode(`leave`)
+        this.printAsmCode(`ret`)
     }
 
     visitContinueStmt(stmt: ContinueStmt): void {
@@ -166,14 +179,21 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         this.printAsmCode(`call printf wrt ..plt`)//通过 PLT 调用 printf
     }
     visitVarStmt(stmt: VarStmt): void {//变量声明语句
-        // this.printAsmCode(`lea rax, [rbp ${stmt.variable.offset}]`)
-        // this.printAsmCode(`mov rax, [rax]`)
+
         if (stmt.initializer) {
-            this.printAsmCode(`lea rax, [rbp ${stmt.variable.offset}]`)
-            this.push()
-            stmt.initializer.accept(this)
-            this.pop("rdi")
-            this.printAsmCode(`mov [rdi], rax`)
+            //如何当前变量时全局变量
+            if (this.globalVars.find(v => v === stmt.variable)) {
+                //全局变量
+                stmt.initializer.accept(this)
+                this.printAsmCode(`mov [${stmt.variable.name}], rax`)
+            } else {
+                this.printAsmCode(`lea rax, [rbp ${stmt.variable.offset}]`)
+                this.push()
+                stmt.initializer.accept(this)
+                this.pop("rdi")
+                this.printAsmCode(`mov [rdi], rax`)
+            }
+
         }
     }
 
@@ -209,11 +229,17 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
     visitAssignExpr(expr: AssignExpr): void {
         const left = expr.variable
-        this.printAsmCode(`lea rax, [rbp ${left.offset}]`)//计算左值地址 //结果存放在 rax 寄存器
-        this.push()//将变量地址压栈
-        expr.value.accept(this)
-        this.pop("rdi")
-        this.printAsmCode(`mov  [rdi], rax`)//将计算的右值存入左值变量中
+        if (this.globalVars.find(v => v === left)) {//全局变量
+            expr.value.accept(this)
+            this.printAsmCode(`mov [${left.name}], rax`)
+        } else {
+            this.printAsmCode(`lea rax, [rbp ${left.offset}]`)//计算左值地址 //结果存放在 rax 寄存器
+            this.push()//将变量地址压栈
+            expr.value.accept(this)
+            this.pop("rdi")
+            this.printAsmCode(`mov  [rdi], rax`)//将计算的右值存入左值变量中 
+        }
+
 
     }
 
@@ -323,8 +349,12 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         }
     }
     visitVariableExpr(expr: VariableExpr): void {
-        this.printAsmCode(`lea rax, [rbp ${expr.variable.offset}]`) //计算变量地址 //结果存放在 rax 寄存器
-        this.printAsmCode(`mov rax, [rax]`) //将变量值存入 rax 寄存器
+        if (this.globalVars.find(v => v === expr.variable)) {//全局变量 
+            this.printAsmCode(`mov rax, [${expr.variable.name}]`)
+        } else {
+            this.printAsmCode(`lea rax, [rbp ${expr.variable.offset}]`) //计算变量地址 //结果存放在 rax 寄存器
+            this.printAsmCode(`mov rax, [rax]`) //将变量值存入 rax 寄存器 
+        }
     }
     visitLiteralExpr(expr: LiteralExpr) {
         if (typeof expr.value === "number") {
@@ -355,6 +385,10 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     private program() { 
         this.printLab("section .data")
         this.printAsmCode(`format db "Result: %d", 0x0a, 0`)
+        this.globalVars.forEach((v) => {
+            this.printAsmCode(`${v.name} dq 0`)//初始化全局变量
+        })
+            
     }
 
     private main() {
@@ -362,9 +396,12 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         this.printAsmCode(`global main`)
         this.printAsmCode(`extern printf`)
         this.printLab("main:")
-        this.printAsmCode(`push rbp`)
-        this.printAsmCode(`mov rbp, rsp`)
-        this.printAsmCode(`sub rsp, ${this.stackSize}`)//分配栈空间
+        this.globalVarStmt.forEach(stmt => {
+            stmt.accept(this)
+        })
+        this.printAsmCode(`call fn_main_0`)
+
+        this.endProgram()
     }
 
     private endProgram() {
@@ -373,8 +410,6 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         this.printAsmCode(`mov eax, 60`)//sys_exit
         this.printAsmCode(`xor edi, edi`)//返回值
         this.printAsmCode(`syscall`)
-        
-        this.printLab(`section .note.GNU-stack noalloc noexec nowrite progbits`)
     }
 
 

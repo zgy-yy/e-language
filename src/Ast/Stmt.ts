@@ -154,12 +154,14 @@ export class FunctionStmt implements Stmt {
     name: Token;
     params: Var[];
     body: BlockStmt;
+    locals :Var[] = [];
 
-    constructor(var_type: VarType, name: Token, params: Var[], body:BlockStmt) {
+    constructor(var_type: VarType, name: Token, params: Var[], body:BlockStmt,_locals:Var[]) {
         this.retType = var_type;
         this.name = name;
         this.params = params;
         this.body = body;
+        this.locals = _locals;
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitFunctionStmt(this);

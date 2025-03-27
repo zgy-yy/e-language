@@ -6,11 +6,13 @@ import { Parser } from "./Parse/Parse"
 const code = 
 `
 int a = 1;
-a=2;
+int main(){
+int a = 2;
+{
+int a = 3;
 print a;
-
-int sum(int a, int b){
-
+}
+print a;
 }
 
  `

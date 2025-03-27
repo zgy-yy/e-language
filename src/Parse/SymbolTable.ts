@@ -7,7 +7,8 @@ class Env{
 }
 
 export class SymbolTable {
-    variables: Map<string, Var> = new Map<string,Var>  ()
+    global: Var[] = [];
+    local_variables: Var[] = [];
     private level: number = 0;
     private symTab: Env[] = [];
 
@@ -21,6 +22,11 @@ export class SymbolTable {
     }
 
     addVariable(name: string, var_: Var) {
+        if(this.level === 0){ // 全局变量
+            this.global.push(var_)
+        } else {
+            this.local_variables.push( var_)
+        }
         if (this.symTab.length === 0) {
             this.symTab.push(new Env());
         }
@@ -28,7 +34,7 @@ export class SymbolTable {
         return var_;
     }
 
-    findVariable(name: string): Var {
+    findVariable(name: string): Var {// 从当前作用域开始查找
         for (let i = this.symTab.length - 1; i >= 0; i--) {
             if (this.symTab[i].varEnv.has(name)) {
                 return this.symTab[i].varEnv.get(name);
@@ -37,7 +43,19 @@ export class SymbolTable {
         return null;
     }
 
+    inCurrentScope(name: string): boolean {// 判断当前作用域是否有这个变量
+        if (this.symTab.length === 0) {
+            return false;
+        }
+        return this.symTab[this.symTab.length - 1].varEnv.has(name);
+    }
 
 
+    clearlocal(){
+        this.local_variables = []
+    }
+    getLocal(){
+        return [...this.local_variables]
+    }
 
 }

@@ -9,8 +9,7 @@ export class Parser {
     tokens: Token[]
     current: number = 0;//tokens 游标
 
-    symbolTable :SymbolTable = new SymbolTable();//符号表
-    locals: Var[] = [];//局部变量 
+    symbolTable :SymbolTable = new SymbolTable();//符号表 
     
     typeKind = [Tokenkind.INT, Tokenkind.CHAR, Tokenkind.VOID]
 
@@ -18,15 +17,13 @@ export class Parser {
         this.tokens = tokens
     }
 
-    parse() {
-        this.symbolTable.enterScope()
+    parse() {//解析程序
         const statements = [];//语句
         while (!this.isAtEnd()) {
-            statements.push(this.declaration())
+            statements.push(this.declaration())//程序由多个声明语句组成
         }
-        this.symbolTable.leaveScope()
         return { //返回程序的抽象语法树，包含变量表和语句
-            localVars : this.locals,
+            globalVars : this.symbolTable.global,
             stmt:statements
         }
     }
@@ -44,12 +41,14 @@ export class Parser {
                 }
                 return this.varDeclaration(declType, identifier_name)
             }
-            return this.statement()
+            // this.statement ()
+          throw  this.error(this.peek(), "Expect declaration.")
         } catch (error) {
             if (error instanceof ParseError) {
                 this.synchronize()
+            } else {
+                throw error
             }
-            return null
         }
     }
 
@@ -71,6 +70,16 @@ export class Parser {
             return this.breakStatement()
         if (this.match(Tokenkind.CONTINUE))
             return this.continueStatement()
+
+        if (this.match(...this.typeKind)) {
+            let kind = this.previous()//声明的类型
+            let declType = VarType[kind.type]//声明 的类型
+            let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
+            if (this.match(Tokenkind.LEFT_PAREN)) {
+                return this.funcDeclaration(declType, identifier_name)
+            }
+            return this.varDeclaration(declType, identifier_name)
+        }
         
         return this.expressionStatement()
     }
@@ -78,12 +87,11 @@ export class Parser {
     //变量声明语句
     varDeclaration(varT:VarType,var_name:Token): Stmt{ 
         // const name = this.consume(Tokenkind.IDENTIFIER, "Expect variable name.")
-        if (this.symbolTable.findVariable(var_name.lexeme)) {
+        if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
             this.error(var_name, "Variable with this name already declared in this scope.")
         }
         const var_ = new Var(var_name.lexeme, varT)
         this.symbolTable.addVariable(var_name.lexeme, var_)
-        this.locals.push(var_)
         
         let initializer = null
         if (this.match(Tokenkind.EQUAL)) {
@@ -117,7 +125,9 @@ export class Parser {
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
         const body = this.block()
         this.symbolTable.leaveScope()
-        return new FunctionStmt(reType,fun_name, params, new BlockStmt(body))
+        const _locals = this.symbolTable.getLocal()
+        this.symbolTable.clearlocal()
+        return new FunctionStmt(reType, fun_name, params, new BlockStmt(body), _locals)
     }
 
     printStatement(): Stmt{
@@ -135,7 +145,7 @@ export class Parser {
         this.symbolTable.enterScope()
         const statements = []
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
-            statements.push(this.declaration())
+            statements.push(this.statement())
         }
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after block.")
         this.symbolTable.leaveScope()
@@ -177,7 +187,7 @@ export class Parser {
         if (this.match(Tokenkind.SEMICOLON)) {
             initializer = null
         } else if (this.match(Tokenkind.INT)) {
-            initializer =this.declaration()
+            initializer =this.statement()
         } else {
             initializer = this.expressionStatement()
         }
@@ -391,14 +401,12 @@ export class Parser {
             }
             switch (this.peek().type) {
                 // case Tokenkind.CLASS:
-                // case Tokenkind.FUN:
-                // case Tokenkind.VAR:
-                // case Tokenkind.FOR:
-                // case Tokenkind.IF:
-                // case Tokenkind.WHILE:
-                // case Tokenkind.PRINT:
-                // case Tokenkind.RETURN:
-                    // return
+                case Tokenkind.FOR:
+                case Tokenkind.IF:
+                case Tokenkind.WHILE:
+                case Tokenkind.PRINT:
+                case Tokenkind.RETURN:
+                    return;
             }
             this.advance()
         }

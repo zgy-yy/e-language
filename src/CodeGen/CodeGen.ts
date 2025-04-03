@@ -1,5 +1,5 @@
-import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 import { VarType } from "../Lexer/Token";
 type EncloseLoop = {
@@ -18,6 +18,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     private stackPtr: number = 0;
     constructor(){
     }
+
 
 
 
@@ -190,7 +191,6 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         this.printAsmCode(`call printf wrt ..plt`)//通过 PLT 调用 printf
     }
     visitVarStmt(stmt: VarStmt): void {//变量声明语句
-
         if (stmt.initializer) {
             //如何当前变量是否全局变量
             if (this.globalVars.find(v => v === stmt.variable)) {
@@ -204,9 +204,15 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
                 this.pop("rdi")
                 this.printAsmCode(`mov [rdi], rax`)
             }
-
         }
     }
+
+    visitVarListStmt(stmt: VarListStmt): void {
+        for (const v of stmt.varStmts) {
+           this.visitVarStmt(v)
+        }
+    }
+
 
 
     // 表达式语法生成
@@ -252,6 +258,11 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         }
     }
 
+    visitCommaExpr(expr: CommaExpr): void {
+        expr.left.accept(this)
+        expr.right.accept(this)
+  
+    }
    
 
     visitBinaryExpr(expr: BinaryExpr) {

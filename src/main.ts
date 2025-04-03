@@ -6,11 +6,11 @@ import { Parser } from "./Parse/Parse"
 const code = 
 `
 int main(){
-    int foo(){
-    print 12;
-    }
-}
 
+int b = 12;
+b = (1,2)+3;
+print b;
+}
  `
 
 async function main() {
@@ -45,3 +45,7 @@ console.log('code -> \n', code)
 
 
 main()
+
+let a=1,b=2,c=3;
+a=4,3;
+console.log(a,b,c)

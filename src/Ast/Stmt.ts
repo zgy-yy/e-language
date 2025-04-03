@@ -15,6 +15,7 @@ export interface StmtVisitor<R> {
     visitPrintStmt(stmt: PrintStmt): R;//暂时增加输出语句代替打印
 
     visitVarStmt(stmt: VarStmt): R;
+    visitVarListStmt(stmt: VarListStmt): R;
     visitBlockStmt(stmt: BlockStmt): R;
     visitIfStmt(stmt: IfStmt): R;
     visitWhileStmt(stmt: WhileStmt): R;
@@ -66,6 +67,18 @@ export class VarStmt implements Stmt {
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitVarStmt(this);
+    }
+}
+
+//变量列表语句
+// 例如 int a,b,c = 1,2,3;
+export class VarListStmt implements Stmt {
+    varStmts: VarStmt[];
+    constructor(varStmts: VarStmt[]) {
+        this.varStmts = varStmts;
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitVarListStmt(this);
     }
 }
 

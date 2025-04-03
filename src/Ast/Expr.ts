@@ -14,6 +14,7 @@ export interface ExprVisitor<R>{
     visitGroupingExpr(expr: GroupingExpr): R;
     visitLogicalBinaryExpr(expr: LogicalBinaryExpr): R;
     visitCallExpr(expr: CallExpr): R;
+    visitCommaExpr(expr: CommaExpr): R;
 }
 
 export interface Expr{ //表达式 基类
@@ -140,4 +141,16 @@ export class CallExpr implements Expr {
         return visitor.visitCallExpr(this);
     }
 
+}
+
+export class CommaExpr implements Expr {
+    left: Expr;
+    right: Expr;
+    constructor(left: Expr, right: Expr) {
+        this.left = left;
+        this.right = right;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitCommaExpr(this);
+    }
 }

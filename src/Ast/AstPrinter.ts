@@ -1,11 +1,10 @@
-import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./Stmt";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
-    
-    
+
 
     // Stmt
     visitFunctionStmt(stmt: FunctionStmt): string {
@@ -53,6 +52,9 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     visitPrintStmt(stmt: PrintStmt): string {
         return `print `+ stmt.expression.accept(this);
     }
+    visitVarListStmt(stmt: VarListStmt): string {
+       return `var ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
+    }
     visitVarStmt(stmt: VarStmt): string {
        return stmt.initializer ? `${stmt.variable.name} = ${stmt.initializer.accept(this)}` : stmt.variable.name;
     }
@@ -95,6 +97,10 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
     visitGroupingExpr(expr: GroupingExpr): string {
         return this.parenthesize("group", expr.expression);
+    }
+
+    visitCommaExpr(expr: CommaExpr): string {
+        return `${expr.left.accept(this)}, ${expr.right.accept(this)}`;
     }
 
 

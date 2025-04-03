@@ -5,14 +5,10 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
-int a = 1;
 int main(){
-int a = 2;
-{
-int a = 3;
-print a;
-}
-print a;
+    int foo(){
+    print 12;
+    }
 }
 
  `

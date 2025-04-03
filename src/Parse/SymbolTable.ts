@@ -1,4 +1,3 @@
-import { M } from "vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P";
 import { Var } from "./Symbol";
 
 
@@ -6,9 +5,12 @@ class Env{
     varEnv: Map<string, Var> = new Map<string, Var>();
 }
 
+class FunVar{
+    funVar:Var[]=[]//函数内的变量
+}
 export class SymbolTable {
     global: Var[] = [];
-    local_variables: Var[] = [];
+    fn_local: FunVar[] = [];
     private level: number = 0;
     private symTab: Env[] = [];
 
@@ -21,11 +23,18 @@ export class SymbolTable {
         this.symTab.pop();
     }
 
+    enterFunctionScope() {
+        this.fn_local.push(new FunVar())
+    }
+    leaveFunctionScope() {
+        this.fn_local.pop()
+    }
+
     addVariable(name: string, var_: Var) {
         if(this.level === 0){ // 全局变量
             this.global.push(var_)
         } else {
-            this.local_variables.push( var_)
+            this.fn_local.at(-1).funVar.push( var_)
         }
         if (this.symTab.length === 0) {
             this.symTab.push(new Env());
@@ -49,13 +58,8 @@ export class SymbolTable {
         }
         return this.symTab[this.symTab.length - 1].varEnv.has(name);
     }
-
-
-    clearlocal(){
-        this.local_variables = []
-    }
-    getLocal(){
-        return [...this.local_variables]
+    getLocalFnVar(){
+        return [...this.fn_local.at(-1).funVar]
     }
 
 }

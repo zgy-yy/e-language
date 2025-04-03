@@ -7,12 +7,13 @@ import { Var } from "../Parse/Symbol";
 export interface ExprVisitor<R>{
     visitBinaryExpr(expr: BinaryExpr): R;
     visitUnaryExpr(expr: UnaryExpr): R;
-    visitPostfixExpers(expr: PostfixExpr): R;
+    visitSuffixSelfExpr(expr: SuffixSelfExpr): R;
     visitLiteralExpr(expr: LiteralExpr): R;
     visitVariableExpr(expr: VariableExpr): R;
     visitAssignExpr(expr: AssignExpr): R;
     visitGroupingExpr(expr: GroupingExpr): R;
     visitLogicalBinaryExpr(expr: LogicalBinaryExpr): R;
+    visitCallExpr(expr: CallExpr): R;
 }
 
 export interface Expr{ //表达式 基类
@@ -64,8 +65,8 @@ export class UnaryExpr implements Expr {
     }
 }
 
-//后缀表达式
-export class PostfixExpr implements Expr { 
+//后缀自增自减表达式
+export class SuffixSelfExpr implements Expr { 
     left: Expr;
     operator: Token;
     constructor(left: Expr, operator: Token) {
@@ -73,7 +74,7 @@ export class PostfixExpr implements Expr {
         this.operator = operator;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
-        return visitor.visitPostfixExpers(this);
+        return visitor.visitSuffixSelfExpr(this);
     }
 }
 
@@ -121,6 +122,22 @@ export class AssignExpr implements Expr {
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitAssignExpr(this);
+    }
+
+}
+
+// 函数调用表达式   
+export class CallExpr implements Expr {
+    callee: Expr;
+    paren: Token;
+    args: Array<Expr>;
+    constructor(callee: Expr, paren: Token, args: Array<Expr>) {
+        this.callee = callee;
+        this.paren = paren;
+        this.args = args;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitCallExpr(this);
     }
 
 }

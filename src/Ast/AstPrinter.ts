@@ -1,14 +1,15 @@
-import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PostfixExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
+
     
     
 
     // Stmt
     visitFunctionStmt(stmt: FunctionStmt): string {
-       return `${stmt.retType} ${stmt.name.lexeme}(${stmt.params.map((p) => `${p.type} ${p.name}`).join(", ")}) ${stmt.body.accept(this)}`;
+       return `${stmt.retType} ${stmt.fn_name.name}(${stmt.params.map((p) => `${p.type} ${p.name}`).join(", ")}) ${stmt.body.accept(this)}`;
     }
     visitContinueStmt(stmt: ContinueStmt): string {
         return "continue";
@@ -75,8 +76,12 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return this.parenthesize(expr.operator.lexeme, expr.right);
     }
 
-    visitPostfixExpers(expr: PostfixExpr): string {
+    visitSuffixSelfExpr(expr: SuffixSelfExpr): string {
         return  `${expr.left.accept(this)}${expr.operator.lexeme}`;
+    }
+
+    visitCallExpr(expr: CallExpr): string {
+        return `${expr.callee.accept(this)}(${expr.args.map((arg) => arg.accept(this)).join(", ")})`;
     }
     visitLiteralExpr(expr: LiteralExpr): string {
         if (typeof expr.value === "string") {

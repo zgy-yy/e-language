@@ -151,14 +151,14 @@ export class ContinueStmt implements Stmt {
 
 export class FunctionStmt implements Stmt {
     retType: VarType;
-    name: Token;
+    fn_name: Var;//函数名，变量类型 “fn”
     params: Var[];
     body: BlockStmt;
     locals :Var[] = [];
 
-    constructor(var_type: VarType, name: Token, params: Var[], body:BlockStmt,_locals:Var[]) {
+    constructor(var_type: VarType, name: Var, params: Var[], body:BlockStmt,_locals:Var[]) {
         this.retType = var_type;
-        this.name = name;
+        this.fn_name = name;
         this.params = params;
         this.body = body;
         this.locals = _locals;

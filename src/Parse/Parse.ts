@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PostfixExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, CallExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
@@ -29,17 +29,17 @@ export class Parser {
     }
 
     //语句
-
+// 程序语句 declaration -> varDeclaration | functionDeclaration 
     declaration(): Stmt {
         try {
             if (this.match(...this.typeKind)) {
                 let kind = this.previous()//声明的类型
                 let declType = VarType[kind.type]//声明 的类型
-                let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-                if (this.match(Tokenkind.LEFT_PAREN)) {
-                    return this.funcDeclaration(declType, identifier_name)
+                this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称;声明语句 必须要一个标识符
+                if(this.peek().type == Tokenkind.LEFT_PAREN) {
+                    return this.funcDeclaration(declType)
                 }
-                return this.varDeclaration(declType, identifier_name)
+                return this.varDeclaration(declType)
             }
             // this.statement ()
           throw  this.error(this.peek(), "Expect declaration.")
@@ -52,7 +52,10 @@ export class Parser {
         }
     }
 
-
+/* 语句 statement -> printStatement | block | ifStatement | whileStatement | doWhileStatement | forStatement 
+                    | breakStatement | continueStatement | expressionStatement
+                    ｜ declaration
+ */
     statement(): Stmt {
         if (this.match(Tokenkind.PRINT)) 
             return this.printStatement()
@@ -74,19 +77,19 @@ export class Parser {
         if (this.match(...this.typeKind)) {
             let kind = this.previous()//声明的类型
             let declType = VarType[kind.type]//声明 的类型
-            let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-            if (this.match(Tokenkind.LEFT_PAREN)) {
-                return this.funcDeclaration(declType, identifier_name)
+            this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
+            if(this.peek().type == Tokenkind.LEFT_PAREN) {
+                return this.funcDeclaration(declType)
             }
-            return this.varDeclaration(declType, identifier_name)
+            return this.varDeclaration(declType)
         }
         
         return this.expressionStatement()
     }
 
     //变量声明语句
-    varDeclaration(varT:VarType,var_name:Token): Stmt{ 
-        // const name = this.consume(Tokenkind.IDENTIFIER, "Expect variable name.")
+    varDeclaration(varT:VarType): Stmt{ 
+        const var_name = this.previous()//变量名
         if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
             this.error(var_name, "Variable with this name already declared in this scope.")
         }
@@ -109,9 +112,12 @@ export class Parser {
             return new Var(identifier_name.lexeme, declType)
         }
     }
-
-    funcDeclaration(reType: VarType, fun_name: Token): Stmt {
-        this.symbolTable.enterScope()
+    //函数声明
+    // functionDeclaration -> type IDENTIFIER "(" parameters? ")" block
+    funcDeclaration(reType: VarType): Stmt {
+        this.symbolTable.enterFunctionScope()
+        const fun_name = this.previous()//函数名
+        this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
         const params:Var[] = []
         if (!this.check(Tokenkind.RIGHT_PAREN)) {
             do {
@@ -124,10 +130,11 @@ export class Parser {
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
         const body = this.block()
-        this.symbolTable.leaveScope()
-        const _locals = this.symbolTable.getLocal()
-        this.symbolTable.clearlocal()
-        return new FunctionStmt(reType, fun_name, params, new BlockStmt(body), _locals)
+        const _locals = this.symbolTable.getLocalFnVar()
+        this.symbolTable.leaveFunctionScope()
+        const fun_var= new Var(fun_name.lexeme, VarType.Fun)
+        this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
+        return new FunctionStmt(reType, fun_var, params, new BlockStmt(body), _locals)
     }
 
     printStatement(): Stmt{
@@ -302,26 +309,49 @@ export class Parser {
         return expr
     }
     unary():Expr {//一元表达式 
+        let expr = this.postfix()
         if (this.match(Tokenkind.BANG, Tokenkind.MINUS, Tokenkind.PLUS)) {
             const operator = this.previous()
             const right = this.unary()
             return new UnaryExpr(operator, right)
         }
-        if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
-            const operator = this.previous()
-            const right = this.primary()
-            return new UnaryExpr(operator, right)
-        }
         
-        return this.postfix()
+        return expr
     }
-    postfix() {//后缀自增自减
+    postfix() {//后缀表达式
         let expr = this.primary()
-        while (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
-            const operator = this.previous()
-            expr = new PostfixExpr(expr, operator)
+        // 循环解析后缀操作，直到无法匹配后缀为止
+        while (true) {
+            if (this.match(Tokenkind.LEFT_PAREN)) {
+               expr = this.functionCall(expr)
+            } 
+            // else if (this.match(Tokenkind)) {
+            //     const index = this.expression()
+            //     this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after index.")
+            //     expr = new IndexExpr(expr, index)
+            // } 
+            else if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
+                const operator = this.previous()
+                expr = new SuffixSelfExpr(expr, operator)
+            } else {
+                break
+            }
         }
         return expr
+    }
+    functionCall(callee: Expr): Expr {
+        const args = []
+        if (!this.check(Tokenkind.RIGHT_PAREN)) {
+            do {
+                if (args.length >= 255) {
+                    this.error(this.peek(), "Can't have more than 255 arguments.")
+                }
+                args.push(this.expression())
+            } while (this.match(Tokenkind.COMMA))
+        }
+        // 记录右括号的位置以便定位错误
+        const paren = this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after arguments.")
+        return new CallExpr(callee, paren , args)
     }
 
     primary(): Expr { //主表达式 =>字面量，this ， boolean ，标识符(变量名)
@@ -334,11 +364,15 @@ export class Parser {
             return new GroupingExpr(expr)
         }
         if (this.match(Tokenkind.IDENTIFIER)) {
+            // if (this.peek().type == Tokenkind.LEFT_PAREN) {
+            //     return new VariableExpr(new Var(this.previous().lexeme, VarType.Fun))
+            // }
             const varExpr = this.previous()
             let varName = varExpr.lexeme
             if (this.symbolTable.findVariable(varName)) {
                 return new VariableExpr(this.symbolTable.findVariable(varName))
             }
+
           throw  this.error(varExpr, "Undefined variable '" + varName + "'.")
         }
         throw this.error(this.peek(), "Expect expression.");

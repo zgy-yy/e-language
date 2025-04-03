@@ -86,6 +86,7 @@ export enum VarType{
     Boolean = "boolean",
     Void = "void",
     Char = "char",
+    Fun = "fun",
 }
 
 

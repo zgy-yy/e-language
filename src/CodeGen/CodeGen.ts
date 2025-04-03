@@ -1,7 +1,7 @@
-import { AssignExpr, BinaryExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PostfixExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
-
+import { VarType } from "../Lexer/Token";
 type EncloseLoop = {
     start: string, //循环开始标签
     end: string //循环结束标签
@@ -42,32 +42,43 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
                 stmt.accept(this)
             }
         }
+        // this.endProgram()
         this.printLab(`section .note.GNU-stack noalloc noexec nowrite progbits`)
 
         console.log(CodeGen.codeText);
         return CodeGen.codeText;
     }
 
+    
 
     // 语句语法生成 
     visitFunctionStmt(stmt: FunctionStmt): void {
         let n = this.sequence++
         let funcStackSpace = 0;
         for (const local of stmt.locals) {
+            if(local.type == VarType.Fun){
+                local.name = `fn_${local.name}_${n}`
+                continue
+            }
             funcStackSpace += 8;
             local.offset = -1 * funcStackSpace;
         }
-
         this.printLab(``)
         this.printLab(`;函数声明`)
-        this.printLab(`fn_${stmt.name.lexeme}_${n}:`)
-        this.printAsmCode(`push rbp`)
-        this.printAsmCode(`mov rbp, rsp`)
+        this.printAsmCode(`jmp ${stmt.fn_name.name}_end`) //跳转到函数结束标签
+        this.printLab(`${stmt.fn_name.name}:`)
+        this.printAsmCode(`push rbp`) //保存调用者的 rbp 基指
+        this.printAsmCode(`mov rbp, rsp`) //设置当前栈帧的基址
         this.printAsmCode(`sub rsp, ${funcStackSpace}`)//分配栈空间
 
         stmt.body.accept(this)
-        this.printAsmCode(`leave`)
+        this.printAsmCode(`mov rsp, rbp`) //恢复 rsp
+        this.printAsmCode(`pop rbp`)//恢复调用者的 rbp
+        this.printAsmCode(`mov eax , 0`)//设置返回值
         this.printAsmCode(`ret`)
+        this.printLab(`;函数声明结束`)
+        this.printLab(`${stmt.fn_name.name}_end:`)
+        this.printLab(``)
     }
 
     visitContinueStmt(stmt: ContinueStmt): void {
@@ -181,7 +192,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     visitVarStmt(stmt: VarStmt): void {//变量声明语句
 
         if (stmt.initializer) {
-            //如何当前变量时全局变量
+            //如何当前变量是否全局变量
             if (this.globalVars.find(v => v === stmt.variable)) {
                 //全局变量
                 stmt.initializer.accept(this)
@@ -239,8 +250,6 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
             this.pop("rdi")
             this.printAsmCode(`mov  [rdi], rax`)//将计算的右值存入左值变量中 
         }
-
-
     }
 
    
@@ -330,7 +339,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         }
     }
 
-    visitPostfixExpers(expr: PostfixExpr): void {
+    visitSuffixSelfExpr(expr: SuffixSelfExpr): void {
         expr.left.accept(this)//计算左值 结果存放在 rax 寄存器
         let left_var = expr.left as VariableExpr
         switch (expr.operator.lexeme) {
@@ -348,7 +357,28 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
                 break;
         }
     }
+
+    //函数调用
+    visitCallExpr(expr: CallExpr): void {
+        this.printLab(``)
+        this.printLab(`;函数调用 开始`)
+        expr.callee.accept(this)//计算函数地址
+        expr.args.forEach(arg => {
+            arg.accept(this)
+            this.push()
+        })
+        this.printAsmCode(`call rax`)//调用函数
+        for (let i = 0; i < expr.args.length; i++) {
+            this.pop("rdi")
+        } 
+    }
+
+
     visitVariableExpr(expr: VariableExpr): void {
+        if(expr.variable.type == VarType.Fun){//函数
+            this.printAsmCode(`lea rax, [rel ${expr.variable.name}]`)
+            return
+        }
         if (this.globalVars.find(v => v === expr.variable)) {//全局变量 
             this.printAsmCode(`mov rax, [${expr.variable.name}]`)
         } else {
@@ -386,7 +416,9 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         this.printLab("section .data")
         this.printAsmCode(`format db "Result: %d", 0x0a, 0`)
         this.globalVars.forEach((v) => {
-            this.printAsmCode(`${v.name} dq 0`)//初始化全局变量
+            if(v.type !== VarType.Fun){
+                this.printAsmCode(`${v.name} dq 0`)//初始化全局变量
+            }
         })
             
     }
@@ -395,23 +427,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         this.printLab("section .text")
         this.printAsmCode(`global main`)
         this.printAsmCode(`extern printf`)
-        this.printLab("main:")
-        this.globalVarStmt.forEach(stmt => {
-            stmt.accept(this)
-        })
-        this.printAsmCode(`call fn_main_0`)
-
-        this.endProgram()
     }
-
-    private endProgram() {
-        this.printLab(``)
-        this.printLab(`;退出程序`)
-        this.printAsmCode(`mov eax, 60`)//sys_exit
-        this.printAsmCode(`xor edi, edi`)//返回值
-        this.printAsmCode(`syscall`)
-    }
-
 
     private printLab(l: string) {
         CodeGen.codeText += `${l}\n`

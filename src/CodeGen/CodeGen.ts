@@ -413,7 +413,11 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         }
         expr.callee.accept(this)//计算函数地址
         this.printAsmCode(`call rax`)//调用函数
-        // this.printAsmCode(`add rsp, ${(expr.args.length - paramRegister.length) * 8}`)// 清理栈空间
+        if (expr.args.length - paramRegister.length > 0) {
+            this.printLab(`;函数参数清理`)
+            this.printAsmCode(`add rsp, ${(expr.args.length - paramRegister.length) * 8}`)// 清理栈空间
+        }
+
         this.printLab(`;函数调用 结束`)
     }
 

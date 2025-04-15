@@ -4,9 +4,9 @@ section .text
 	global main
 	extern printf
 
-;函数声明
-	jmp fn_end
-fn:
+;fn_0函数声明
+	jmp fn_0_end
+fn_0:
 	push rbp
 	mov rbp, rsp
 	sub rsp, 48
@@ -22,11 +22,11 @@ fn:
 	mov rsp, rbp
 	pop rbp
 	ret
-fn_end:
-;函数声明结束
+fn_0_end:
+;fn_0函数声明结束
 
 
-;函数声明
+;main函数声明
 	jmp main_end
 main:
 	push rbp
@@ -53,18 +53,56 @@ main:
 	mov rsi, rax
 	mov rax, 1
 	mov rdi, rax
-	lea rax, [rel fn]
+	lea rax, [rel fn_0]
 	call rax
 ;函数参数清理
 	add rsp, 16
 ;函数调用 结束
 	pop rdi
 	mov [rdi], rax
+
+;if 2语句
+	mov rax, 0
+	push rax
+	lea rax, [rbp + -8]
+	mov rax, [rax]
+	pop rbx
+	cmp rax, rbx
+	setg al
+	movzx rax, al
+	push rax
+	cmp rax, 0
+	je  if_end2
+	jmp if_end2
+if_end2:
+
+;if 3语句
+	mov rax, 0
+	push rax
+	lea rax, [rbp + -8]
+	mov rax, [rax]
+	pop rbx
+	cmp rax, rbx
+	setg al
+	movzx rax, al
+	push rax
+	cmp rax, 0
+	je  if_end3
+	lea rax, [rbp + -8]
+	mov rax, [rax]
+
+;调用 printf
+	lea rdi, [rel format]
+	mov rsi, rax
+	xor eax, eax
+	call printf wrt ..plt
+	jmp if_end3
+if_end3:
 	mov rax, 0
 	mov rsp, rbp
 	pop rbp
 	ret
 main_end:
-;函数声明结束
+;main函数声明结束
 
 section .note.GNU-stack noalloc noexec nowrite progbits

@@ -68,6 +68,10 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
     visitFunctionStmt(stmt: FunctionStmt): void {
         let n = this.sequence++
+        if (stmt.fn_name.name !== "main") {
+            stmt.fn_name.name = `${stmt.fn_name.name}_${n}`
+        }
+
         let funcStackSpace = 0;
         //函数参数,寄存器
 
@@ -85,7 +89,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
         }
 
         this.printLab(``)
-        this.printLab(`;函数声明`)
+        this.printLab(`;${stmt.fn_name.name}函数声明`)
         this.printAsmCode(`jmp ${stmt.fn_name.name}_end`) //跳转到函数结束标签
         this.printLab(`${stmt.fn_name.name}:`)
         this.printAsmCode(`push rbp`) //保存调用者的 rbp 基指
@@ -105,7 +109,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
 
         stmt.body.accept(this)
         this.printLab(`${stmt.fn_name.name}_end:`)
-        this.printLab(`;函数声明结束`)
+        this.printLab(`;${stmt.fn_name.name}函数声明结束`)
         this.printLab(``)
     }
 
@@ -179,7 +183,7 @@ export class CodeGen implements ExprVisitor<void>, StmtVisitor<void> {
     visitIfStmt(stmt: IfStmt): void {
         let n = this.sequence++
         this.printLab(``)
-        this.printLab(`;if 语句`)
+        this.printLab(`;if ${n}语句`)
         stmt.condition.accept(this)
         this.push()
         this.printAsmCode(`cmp rax, 0`)

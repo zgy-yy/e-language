@@ -10,6 +10,10 @@ int fn(int n1,int n2,int n3,int n4,int n5,int n6,int n7,int n8) {
 }
 int main(){
   int a=fn(1,2,3,4,5,6,7,8);
+  if(a>0){
+  }
+  if(a>0){
+  print a;}
    return 0;
 }
  `

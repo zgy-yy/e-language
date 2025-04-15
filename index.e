@@ -38,7 +38,6 @@ tup[1]
 
 函数类型
 
-
 //函数类型
 string(Int,string)  funcPlay = (a,b){
 
@@ -58,6 +57,12 @@ string pt(){
     static Int a=90;
     return ""
 }
+
+//参数
+int func(int a,string b,int c=0,int d=4){
+
+}
+func(1,"ddda",d=4)
 
 
 //结构体

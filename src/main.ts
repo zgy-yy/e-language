@@ -5,11 +5,16 @@ import { Parser } from "./Parse/Parse"
 
 const code = 
 `
+int fn(int n1,int n2) {
+    if(n1 > n2) {
+    return n1;
+    }
+    return n2;
+}
 int main(){
-
-int b = 12;
-b = (1,2)+3;
-print b;
+   int a= fn(1,2);
+   print a;
+   return 0;
 }
  `
 

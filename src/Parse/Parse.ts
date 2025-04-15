@@ -1,9 +1,9 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, Stmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, VarType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
-import { Var } from "./Symbol";
+import { ParamVar, Var } from "./Symbol";
 
 export class Parser {
     tokens: Token[]
@@ -73,6 +73,8 @@ export class Parser {
             return this.breakStatement()
         if (this.match(Tokenkind.CONTINUE))
             return this.continueStatement()
+        if (this.match(Tokenkind.RETURN))
+            return this.returnStatement()
 
         if (this.match(...this.typeKind)) {
             let kind = this.previous()//声明的类型
@@ -125,7 +127,12 @@ export class Parser {
             let kind = this.previous()//声明的类型
             let declType: VarType = VarType[kind.type]//声明 的类型
             let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-            return new Var(identifier_name.lexeme, declType)
+            if (this.symbolTable.inCurrentScope(identifier_name.lexeme)) {
+                this.error(identifier_name, "Paramter Variable with this name already declared in this scope.")
+            }
+            const declParamVar = new ParamVar(identifier_name.lexeme, declType)
+            this.symbolTable.addVariable(identifier_name.lexeme, declParamVar)
+            return declParamVar
         }
     }
     //函数声明
@@ -146,7 +153,9 @@ export class Parser {
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
         const body = this.block()
-        const _locals = this.symbolTable.getLocalFnVar()
+        //排除函数体内的函数参数 和 函数声明
+        const _locals = this.symbolTable.getLocalFnVar().filter((v) => v.type != VarType.Fun).filter((v) => !(v instanceof ParamVar))//局部变量
+
         this.symbolTable.leaveFunctionScope()
         const fun_var = new Var(fun_name.lexeme, VarType.Fun)
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
@@ -162,6 +171,16 @@ export class Parser {
         const value = this.expression()
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after value.")
         return new ExpressionStmt(value)
+    }
+
+    returnStatement(): Stmt {
+        const keyword = this.previous()
+        let value = null
+        if (!this.check(Tokenkind.SEMICOLON)) {
+            value = this.expression()
+        }
+        this.consume(Tokenkind.SEMICOLON, "Expect ';' after return value.")
+        return new ReturnStmt(keyword, value)
     }
 
     block(): Stmt[] {
@@ -372,7 +391,7 @@ export class Parser {
                 if (args.length >= 255) {
                     this.error(this.peek(), "Can't have more than 255 arguments.")
                 }
-                args.push(this.expression())
+                args.push(this.assignment())
             } while (this.match(Tokenkind.COMMA))
         }
         // 记录右括号的位置以便定位错误

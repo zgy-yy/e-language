@@ -24,9 +24,11 @@ export class SymbolTable {
     }
 
     enterFunctionScope() {
+        this.level++;
         this.fn_local.push(new FunVar())
     }
     leaveFunctionScope() {
+        this.level--;
         this.fn_local.pop()
     }
 

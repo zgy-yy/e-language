@@ -24,6 +24,7 @@ export interface StmtVisitor<R> {
     visitBreakStmt(stmt: BreakStmt): R;
     visitContinueStmt(stmt: ContinueStmt): R;
     visitFunctionStmt(stmt: FunctionStmt): R;
+    visitReturnStmt(stmt: ReturnStmt): R;
 }
 
 export interface Stmt {
@@ -180,4 +181,16 @@ export class FunctionStmt implements Stmt {
         return visitor.visitFunctionStmt(this);
     }
 
+}
+
+export class ReturnStmt implements Stmt {
+    keyword: Token;
+    value?: Expr;
+    constructor(keyword: Token, value?: Expr) {
+        this.keyword = keyword;
+        this.value = value;
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitReturnStmt(this);
+    }
 }

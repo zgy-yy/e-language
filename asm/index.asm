@@ -17,6 +17,14 @@ fn_0:
 	mov [rbp -32], rcx
 	mov [rbp -40], r8
 	mov [rbp -48], r9
+	lea rax, [rbp + -8]
+	mov rax, [rax]
+
+;调用 printf
+	lea rdi, [rel format]
+	mov rsi, rax
+	xor eax, eax
+	call printf wrt ..plt
 	lea rax, [rbp + -16]
 	mov rax, [rax]
 	mov rsp, rbp
@@ -35,6 +43,9 @@ main:
 ;函数参数
 	lea rax, [rbp -8]
 	push rax
+	lea rax, [rel fn_0]
+	pop rdi
+	mov [rdi], rax
 
 ;函数调用 开始
 	mov rax, 8
@@ -53,51 +64,13 @@ main:
 	mov rsi, rax
 	mov rax, 1
 	mov rdi, rax
-	lea rax, [rel fn_0]
+	lea rax, [rbp + -8]
+	mov rax, [rax]
 	call rax
 ;函数参数清理
 	add rsp, 16
 ;函数调用 结束
-	pop rdi
-	mov [rdi], rax
-
-;if 2语句
-	mov rax, 0
 	push rax
-	lea rax, [rbp + -8]
-	mov rax, [rax]
-	pop rbx
-	cmp rax, rbx
-	setg al
-	movzx rax, al
-	push rax
-	cmp rax, 0
-	je  if_end2
-	jmp if_end2
-if_end2:
-
-;if 3语句
-	mov rax, 0
-	push rax
-	lea rax, [rbp + -8]
-	mov rax, [rax]
-	pop rbx
-	cmp rax, rbx
-	setg al
-	movzx rax, al
-	push rax
-	cmp rax, 0
-	je  if_end3
-	lea rax, [rbp + -8]
-	mov rax, [rax]
-
-;调用 printf
-	lea rdi, [rel format]
-	mov rsi, rax
-	xor eax, eax
-	call printf wrt ..plt
-	jmp if_end3
-if_end3:
 	mov rax, 0
 	mov rsp, rbp
 	pop rbp

@@ -138,7 +138,6 @@ export class Parser {
     //函数声明
     // functionDeclaration -> type IDENTIFIER "(" parameters? ")" block
     funcDeclaration(reType: VarType): Stmt {
-        this.symbolTable.enterFunctionScope()
         const fun_name = this.previous()//函数名
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
         const params: Var[] = []
@@ -153,13 +152,9 @@ export class Parser {
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
         const body = this.block()
-        //排除函数体内的函数参数 和 函数声明
-        const _locals = this.symbolTable.getLocalFnVar().filter((v) => v.type != VarType.Fun).filter((v) => !(v instanceof ParamVar))//局部变量
-
-        this.symbolTable.leaveFunctionScope()
-        const fun_var = new Var(fun_name.lexeme, VarType.Fun)
+        const fun_var = new Var(fun_name.lexeme, VarType.Fun) //函数声明 视为变量
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
-        return new FunctionStmt(reType, fun_var, params, new BlockStmt(body), _locals)
+        return new FunctionStmt(reType, fun_var, params, new BlockStmt(body))
     }
 
     printStatement(): Stmt {

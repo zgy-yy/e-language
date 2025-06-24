@@ -189,12 +189,11 @@ declare i32 @printf(i8*, ...)
             }
         } else {
             // 局部变量
+            this.printIR(`%${stmt.variable.name} = alloca i32`);
             if (stmt.initializer) {
                 const value = stmt.initializer.accept(this);
-                this.printIR(`%${stmt.variable.name} = ${value}`);
-            } else {
-                this.printIR(`%${stmt.variable.name} = 0`);
-            }
+               this.printIR(`store i32 ${value}, i32* %${stmt.variable.name}`);
+            } 
         }
     }
 
@@ -237,45 +236,45 @@ declare i32 @printf(i8*, ...)
     visitBinaryExpr(expr: BinaryExpr): string {
         const left = expr.left.accept(this);
         const right = expr.right.accept(this);
-        let code = ''
+        const n = this.sequence++;
 
         switch (expr.operator.lexeme) {
             case '+':
-                code = `add i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = add i32 ${left}, ${right}`);
                 break;
-            case '-':
-                code = `sub i32 ${left}, ${right}`
+            case '-':   
+                this.printIR(`  %bin${n} = sub i32 ${left}, ${right}`);
                 break;
             case '*':
-                code = `mul i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = mul i32 ${left}, ${right}`);
                 break;
             case '/':
-                code = `sdiv i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = sdiv i32 ${left}, ${right}`);
                 break;
             case '%':
-                code = `srem i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = srem i32 ${left}, ${right}`);
                 break;
             case '==':
-                code = `icmp eq i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = icmp eq i32 ${left}, ${right}`);
                 break;
             case '!=':
-                code = `icmp ne i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = icmp ne i32 ${left}, ${right}`);
                 break;
             case '<':
-                code = `icmp slt i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = icmp slt i32 ${left}, ${right}`);
                 break;
             case '<=':
-                code = `icmp sle i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = icmp sle i32 ${left}, ${right}`);
                 break;
             case '>':
-                code = `icmp sgt i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = icmp sgt i32 ${left}, ${right}`);
                 break;
             case '>=':
-                code = `icmp sge i32 ${left}, ${right}`
+                this.printIR(`  %bin${n} = icmp sge i32 ${left}, ${right}`);
                 break;
         }
 
-        return code;
+        return `%bin${n}`;
     }
 
     visitUnaryExpr(expr: UnaryExpr): string {
@@ -326,14 +325,13 @@ declare i32 @printf(i8*, ...)
     }
 
     visitVariableExpr(expr: VariableExpr): string {
-        let code = ''
         if (this.globalVars.find(v => v === expr.variable)) {
             this.printIR(`  %global_${expr.variable.name} = load i32, i32* @${expr.variable.name}`);
-            code = `%global_${expr.variable.name}`
+            return `%global_${expr.variable.name}`;
         } else {
-            code = `%${expr.variable.name}`
+            this.printIR(` %local_${expr.variable.name} = load i32, i32* %${expr.variable.name}`);
+            return `%local_${expr.variable.name}`;
         }
-        return code;
     }
 
     visitLiteralExpr(expr: LiteralExpr): string {

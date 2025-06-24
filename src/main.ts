@@ -8,12 +8,9 @@ const code =
 int a=1 ,b =4;
 int c=3;
 int main(){
-    print a;
+    int d = 1+c+a+1;
+    print d;
     return 0;
-}
-int sum(int a,int b){
-    int c = a+b;
-    return c;
 }
  `
 

@@ -1,3 +1,4 @@
+#!/bin/bash
 
 # 检查 LLVM 工具链是否安装
 if ! command -v llc &> /dev/null; then
@@ -9,6 +10,12 @@ fi
 # 设置 LLVM IR 文件路径
 LL_FILE="llvm/index.ll"
 OUTPUT_DIR="llvm"
+
+# 清理上一次生成的文件
+echo "清理上一次生成的文件..."
+rm -f "$OUTPUT_DIR/index.s"
+rm -f "$OUTPUT_DIR/index.o"
+rm -f "$OUTPUT_DIR/index"
 
 # 创建输出目录
 mkdir -p "$OUTPUT_DIR"
@@ -34,6 +41,13 @@ if [ $? -eq 0 ]; then
     echo "编译成功！"
     echo "运行程序..."
     "$OUTPUT_DIR/index"
+    
+    # 运行完成后清理所有生成的文件
+    echo "清理生成的文件..."
+    rm -f "$OUTPUT_DIR/index.s"
+    rm -f "$OUTPUT_DIR/index.o"
+    rm -f "$OUTPUT_DIR/index"
+    echo "清理完成！"
 else
     echo "编译失败！"
     exit 1

@@ -11,9 +11,7 @@ import { Expr } from "./Expr";
 export interface StmtVisitor<R> {
 
     visitExpressionStmt(stmt: ExpressionStmt): R;
-
     visitPrintStmt(stmt: PrintStmt): R;//暂时增加输出语句代替打印
-
     visitVarStmt(stmt: VarStmt): R;
     visitVarListStmt(stmt: VarListStmt): R;
     visitBlockStmt(stmt: BlockStmt): R;

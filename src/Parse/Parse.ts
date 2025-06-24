@@ -23,7 +23,6 @@ export class Parser {
             statements.push(this.declaration())//程序由多个声明语句组成
         }
         return { //返回程序的抽象语法树，包含变量表和语句
-            globalVars: this.symbolTable.global,
             stmt: statements
         }
     }
@@ -138,6 +137,7 @@ export class Parser {
     //函数声明
     // functionDeclaration -> type IDENTIFIER "(" parameters? ")" block
     funcDeclaration(reType: VarType): Stmt {
+        this.symbolTable.enterScope()
         const fun_name = this.previous()//函数名
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
         const params: Var[] = []
@@ -154,6 +154,7 @@ export class Parser {
         const body = this.block()
         const fun_var = new Var(fun_name.lexeme, VarType.Fun) //函数声明 视为变量
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
+        this.symbolTable.leaveScope()
         return new FunctionStmt(reType, fun_var, params, new BlockStmt(body))
     }
 

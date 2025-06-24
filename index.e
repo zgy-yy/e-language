@@ -1,4 +1,4 @@
-link "/index.x"
+link "/index.e"
 
 + - * /   数学运算 
 & | ~  ^ 位运算

@@ -5,18 +5,15 @@ import { Parser } from "./Parse/Parse"
 
 const code =
     `
-int a=1;
-int b=2;
+int a=1 ,b =4;
+int c=3;
 int main(){
-    int a=1;
-    {
-        int a=2;
-    }
-    int foo(){
-        int a=3;
-    }
-    foo();
-   return 0;
+    print 1;
+    return 0;
+}
+int sum(int a,int b){
+    int c = a+b;
+    return c;
 }
  `
 
@@ -42,7 +39,7 @@ async function main() {
     if (nodeEnv) {
         const fs = await import('fs')
         const path = await import('path')
-        let asmPath = path.resolve(__dirname, '../asm/index.asm')
+        let asmPath = path.resolve(__dirname, '../llvm/index.ll')
         console.log('asmPath', asmPath)
         fs.writeFileSync(asmPath, asmText)
     }

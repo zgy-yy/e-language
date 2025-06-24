@@ -328,7 +328,8 @@ declare i32 @printf(i8*, ...)
     visitVariableExpr(expr: VariableExpr): string {
         let code = ''
         if (this.globalVars.find(v => v === expr.variable)) {
-            code = `@${expr.variable.name}`
+            this.printIR(`  %global_${expr.variable.name} = load i32, i32* @${expr.variable.name}`);
+            code = `%global_${expr.variable.name}`
         } else {
             code = `%${expr.variable.name}`
         }

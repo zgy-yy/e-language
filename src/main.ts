@@ -8,7 +8,7 @@ const code =
 int a=1 ,b =4;
 int c=3;
 int main(){
-    print 1;
+    print a;
     return 0;
 }
 int sum(int a,int b){

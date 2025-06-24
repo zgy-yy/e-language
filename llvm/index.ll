@@ -9,7 +9,8 @@ declare i32 @printf(i8*, ...)
 @c = global i32 3
 define i32 @main() {
 entry:
-  %print0 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 1)
+  %global_a = load i32, i32* @a
+  %print0 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %global_a)
   ret i32 0
 }
 define i32 @sum(i32 %a, i32 %b) {

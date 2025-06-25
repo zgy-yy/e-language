@@ -10,13 +10,9 @@ declare i32 @printf(i8*, ...)
 define i32 @main() {
 entry:
 %d = alloca i32
-  %global_c = load i32, i32* @c
-  %bin0 = add i32 1, %global_c
-  %global_a = load i32, i32* @a
-  %bin1 = add i32 %bin0, %global_a
-  %bin2 = add i32 %bin1, 1
-store i32 %bin2, i32* %d
+  %bin0 = add i32 1, 2
+store i32 %bin0, i32* %d
  %local_d = load i32, i32* %d
-  %print3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %local_d)
+  %print1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %local_d)
   ret i32 0
 }

@@ -2,3 +2,4 @@ node_modules
 .vscode/
 asm/bin/*
 asm/obj/*
+*.DS_Store

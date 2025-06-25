@@ -95,13 +95,15 @@ export class Parser {
         if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
             this.error(var_name, "Variable with this name already declared in this scope.")
         }
-        const var_ = new Var(var_name.lexeme, varT)
-        this.symbolTable.addVariable(var_name.lexeme, var_)
 
         let initializer = null
         if (this.match(Tokenkind.EQUAL)) {
             initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
         }
+        //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
+        const var_ = new Var(var_name.lexeme, varT)
+        this.symbolTable.addVariable(var_name.lexeme, var_)
+
         varStmt.push(new VarStmt(var_, initializer))
 
         while (this.match(Tokenkind.COMMA)) {

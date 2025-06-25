@@ -8,7 +8,7 @@ const code =
 int a=1 ,b =4;
 int c=3;
 int main(){
-    int d = 1+c+a+1;
+    int d = 1+2;
     print d;
     return 0;
 }

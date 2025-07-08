@@ -1,4 +1,5 @@
-import { Token } from "../Lexer/Token"
+import { El } from "../El/El";
+import {  Token, DataType, Tokenkind } from "../Lexer/Token"
 import { Var } from "../Parse/Symbol";
 
 /*
@@ -18,17 +19,23 @@ export interface ExprVisitor<R>{
 }
 
 export interface Expr{ //表达式 基类
+    exprType: DataType;
     accept<R>(visitor: ExprVisitor<R>): R;
 }
 
 
 
 export class LogicalBinaryExpr implements Expr {
-
+    exprType: DataType;
     left: Expr;
     operator: Token;
     right: Expr;
     constructor(left: Expr, operator: Token, right: Expr) {
+       if(left.exprType === DataType.Boolean && right.exprType === DataType.Boolean){
+        this.exprType = DataType.Boolean; //逻辑运算符的类型为布尔类型
+       }else{
+        El.error(operator, "Logical operator must be used with boolean values.")
+       }
         this.left = left;
         this.operator = operator;
         this.right = right;
@@ -41,10 +48,16 @@ export class LogicalBinaryExpr implements Expr {
 
 // 二元表达式
 export class BinaryExpr implements Expr{
+    exprType: DataType;
     left: Expr
     operator: Token;
     right: Expr;
     constructor(left: Expr, operator: Token, right: Expr) {
+        if(left.exprType === right.exprType){
+            this.exprType = left.exprType; //二元表达式的类型为左操作数和右操作数的类型
+        }else{
+            El.error(operator, "Type mismatch in binary expression.")
+        }
         this.left = left;
         this.operator = operator;
         this.right = right;
@@ -55,9 +68,17 @@ export class BinaryExpr implements Expr{
 }
 
 export class UnaryExpr implements Expr {
+    exprType: DataType;
     operator: Token;
     right: Expr;
     constructor(operator: Token, right: Expr) {
+        if((operator.type === Tokenkind.MINUS || operator.type === Tokenkind.BANG) && right.exprType === DataType.Int){
+            this.exprType = DataType.Int; //一元表达式的类型为Int
+        }else if(operator.type === Tokenkind.BANG && right.exprType === DataType.Boolean){
+            this.exprType = DataType.Boolean; //一元表达式的类型为boolean
+        }else{
+            El.error(operator, "Unary operator must be used with integer or boolean values.")
+        }
         this.operator = operator;
         this.right = right;
     }
@@ -68,9 +89,15 @@ export class UnaryExpr implements Expr {
 
 //后缀自增自减表达式
 export class SuffixSelfExpr implements Expr { 
+    exprType: DataType;
     left: Expr;
     operator: Token;
     constructor(left: Expr, operator: Token) {
+        if(left.exprType === DataType.Int){
+            this.exprType = DataType.Int; //后缀自增自减表达式的类型为Int
+        }else{
+            El.error(operator, "Suffix self operator must be used with integer values.")
+        }
         this.left = left;
         this.operator = operator;
     }
@@ -82,9 +109,23 @@ export class SuffixSelfExpr implements Expr {
 //字面量表达式
 export class LiteralExpr implements Expr {
 
+    exprType:DataType ;
     value: any;
-    constructor(value: any) {
-        this.value = value;
+    constructor( _val: any) {
+        const _valType = typeof _val;
+        if(_valType === 'string'){
+            this.exprType = DataType.String;
+            if(_val.length ===1){
+                this.exprType = DataType.Char;
+            }
+        }else if(_valType === 'number'){
+            this.exprType = DataType.Int;
+        }else if(_valType === 'boolean'){
+            this.exprType = DataType.Boolean;
+        }else{
+            El.error(_val, "Invalid literal value.")
+        }
+        this.value = _val;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitLiteralExpr(this);
@@ -93,8 +134,10 @@ export class LiteralExpr implements Expr {
 }
 //变量表达式，一个变量 名
 export class VariableExpr implements Expr {
+    exprType: DataType;
     variable: Var;
     constructor(var_: Var) {
+        this.exprType = var_.type;
         this.variable = var_;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -104,9 +147,10 @@ export class VariableExpr implements Expr {
 
 //分组表达式
 export class GroupingExpr implements Expr {
-
+    exprType: DataType;
     expression: Expr;
     constructor(expression: Expr) {
+        this.exprType = expression.exprType;
         this.expression = expression;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -115,9 +159,11 @@ export class GroupingExpr implements Expr {
 }
 
 export class AssignExpr implements Expr {
+    exprType: DataType;
     variable: Var;
     value: Expr;
     constructor(var_: Var, value: Expr) {
+        this.exprType = var_.type;
         this.variable = var_;
         this.value = value;
     }
@@ -129,10 +175,16 @@ export class AssignExpr implements Expr {
 
 // 函数调用表达式   
 export class CallExpr implements Expr {
+    exprType: DataType;
     callee: Expr;
     paren: Token;
     args: Array<Expr>;
     constructor(callee: Expr, paren: Token, args: Array<Expr>) {
+        if(callee.exprType === DataType.Fun){
+            this.exprType = callee.exprType;
+        }else{
+            El.error(paren, "Call expression must be used with function.")
+        }
         this.callee = callee;
         this.paren = paren;
         this.args = args;
@@ -144,9 +196,11 @@ export class CallExpr implements Expr {
 }
 
 export class CommaExpr implements Expr {
+    exprType: DataType;
     left: Expr;
     right: Expr;
     constructor(left: Expr, right: Expr) {
+        this.exprType = right.exprType; //逗号表达式的类型为右操作数的类型
         this.left = left;
         this.right = right;
     }

@@ -1,9 +1,9 @@
-import { VarType } from "../Lexer/Token"
+import { DataType } from "../Lexer/Token"
 
 export class Var {
-    type : VarType
+    type : DataType
     name: string
-    constructor(name: string, type_: VarType) { 
+    constructor(name: string, type_: DataType) { 
         this.name = name
         this.type = type_
     }
@@ -11,7 +11,7 @@ export class Var {
 
 // 变量类型  函数参数
 export class ParamVar extends Var {
-    constructor(name: string, type_: VarType) { 
+    constructor(name: string, type_: DataType) { 
         super(name, type_)
     }
 }

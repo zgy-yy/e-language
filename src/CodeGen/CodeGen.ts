@@ -1,7 +1,7 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
-import { VarType } from "../Lexer/Token";
+import { DataType } from "../Lexer/Token";
 
 export class CodeGen implements ExprVisitor<string>, StmtVisitor<void> {
     private globalVars: Var[] = [];
@@ -234,43 +234,43 @@ declare i32 @printf(i8*, ...)
     }
 
     visitBinaryExpr(expr: BinaryExpr): string {
+        const n = this.sequence++;
         const left = expr.left.accept(this);
         const right = expr.right.accept(this);
-        const n = this.sequence++;
 
         switch (expr.operator.lexeme) {
             case '+':
-                this.printIR(`  %bin${n} = add i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = add i32 ${left}, ${right}`);
                 break;
             case '-':   
-                this.printIR(`  %bin${n} = sub i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = sub i32 ${left}, ${right}`);
                 break;
             case '*':
-                this.printIR(`  %bin${n} = mul i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = mul i32 ${left}, ${right}`);
                 break;
             case '/':
-                this.printIR(`  %bin${n} = sdiv i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = sdiv i32 ${left}, ${right}`);
                 break;
             case '%':
-                this.printIR(`  %bin${n} = srem i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = srem i32 ${left}, ${right}`);
                 break;
             case '==':
-                this.printIR(`  %bin${n} = icmp eq i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp eq i32 ${left}, ${right}`);
                 break;
             case '!=':
-                this.printIR(`  %bin${n} = icmp ne i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp ne i32 ${left}, ${right}`);
                 break;
             case '<':
-                this.printIR(`  %bin${n} = icmp slt i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp slt i32 ${left}, ${right}`);
                 break;
             case '<=':
-                this.printIR(`  %bin${n} = icmp sle i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp sle i32 ${left}, ${right}`);
                 break;
             case '>':
-                this.printIR(`  %bin${n} = icmp sgt i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp sgt i32 ${left}, ${right}`);
                 break;
             case '>=':
-                this.printIR(`  %bin${n} = icmp sge i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp sge i32 ${left}, ${right}`);
                 break;
         }
 

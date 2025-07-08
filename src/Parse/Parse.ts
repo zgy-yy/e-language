@@ -1,7 +1,7 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
-import { Token, Tokenkind, VarType } from "../Lexer/Token";
+import { Token, Tokenkind, DataType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
 import { ParamVar, Var } from "./Symbol";
 
@@ -11,7 +11,7 @@ export class Parser {
 
     symbolTable: SymbolTable = new SymbolTable();//符号表 
 
-    typeKind = [Tokenkind.INT, Tokenkind.CHAR, Tokenkind.VOID]
+    typeKind = [Tokenkind.INT, Tokenkind.CHAR, Tokenkind.VOID, Tokenkind.BOOLEAN, Tokenkind.STRING]
 
     constructor(tokens: Token[]) {
         this.tokens = tokens
@@ -33,7 +33,7 @@ export class Parser {
         try {
             if (this.match(...this.typeKind)) {
                 let kind = this.previous()//声明的类型
-                let declType = VarType[kind.type]//声明 的类型
+                let declType = DataType[kind.type]//声明 的类型
                 this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称;声明语句 必须要一个标识符
                 if (this.peek().type == Tokenkind.LEFT_PAREN) {
                     return this.funcDeclaration(declType)
@@ -77,7 +77,7 @@ export class Parser {
 
         if (this.match(...this.typeKind)) {
             let kind = this.previous()//声明的类型
-            let declType = VarType[kind.type]//声明 的类型
+            let declType = DataType[kind.type]//声明 的类型
             this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
             if (this.peek().type == Tokenkind.LEFT_PAREN) {
                 return this.funcDeclaration(declType)
@@ -89,7 +89,7 @@ export class Parser {
     }
 
     //变量声明语句
-    varListDeclaration(varT: VarType): Stmt {
+    varListDeclaration(varT: DataType): Stmt {
         let varStmt: VarStmt[] = []
         const var_name = this.previous()//变量名
         if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
@@ -111,7 +111,7 @@ export class Parser {
             if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
                 this.error(var_name, "Variable with this name already declared in this scope.")
             }
-            const var_ = new Var(var_name.lexeme, VarType.Int)
+            const var_ = new Var(var_name.lexeme, DataType.Int)
             this.symbolTable.addVariable(var_name.lexeme, var_)
             let initializer = null
             if (this.match(Tokenkind.EQUAL)) {
@@ -126,7 +126,7 @@ export class Parser {
     paramDeclaration(): Var {
         if (this.match(...this.typeKind)) {
             let kind = this.previous()//声明的类型
-            let declType: VarType = VarType[kind.type]//声明 的类型
+            let declType: DataType = DataType[kind.type]//声明 的类型
             let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
             if (this.symbolTable.inCurrentScope(identifier_name.lexeme)) {
                 this.error(identifier_name, "Paramter Variable with this name already declared in this scope.")
@@ -138,7 +138,7 @@ export class Parser {
     }
     //函数声明
     // functionDeclaration -> type IDENTIFIER "(" parameters? ")" block
-    funcDeclaration(reType: VarType): Stmt {
+    funcDeclaration(reType: DataType): Stmt {
         this.symbolTable.enterScope()
         const fun_name = this.previous()//函数名
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
@@ -154,7 +154,7 @@ export class Parser {
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
         const body = this.block()
-        const fun_var = new Var(fun_name.lexeme, VarType.Fun) //函数声明 视为变量
+        const fun_var = new Var(fun_name.lexeme, DataType.Fun) //函数声明 视为变量
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
         this.symbolTable.leaveScope()
         return new FunctionStmt(reType, fun_var, params, new BlockStmt(body))
@@ -398,7 +398,7 @@ export class Parser {
     }
 
     primary(): Expr { //主表达式 =>字面量，this ， boolean ，标识符(变量名)
-        if (this.match(Tokenkind.NUMBER, Tokenkind.STRING, Tokenkind.CHARACTER)) {
+        if (this.match(Tokenkind.NUMBER, Tokenkind.STRING, Tokenkind.CHARACTER, Tokenkind.TRUE, Tokenkind.FALSE, Tokenkind.NULL)) {
             return new LiteralExpr(this.previous().literal); //字面量 表达式
         }
         if (this.match(Tokenkind.LEFT_PAREN)) {
@@ -408,7 +408,7 @@ export class Parser {
         }
         if (this.match(Tokenkind.IDENTIFIER)) {
             // if (this.peek().type == Tokenkind.LEFT_PAREN) {
-            //     return new VariableExpr(new Var(this.previous().lexeme, VarType.Fun))
+            //     return new VariableExpr(new Var(this.previous().lexeme, DataType.Fun))
             // }
             const varExpr = this.previous()
             let varName = varExpr.lexeme

@@ -3,7 +3,7 @@
 */
 
 import { El } from "../El/El";
-import { Token, Tokenkind, VarType } from "./Token";
+import { Token, Tokenkind, DataType } from "./Token";
 
 export class Scanner {//扫描器，或称为词法分析
     static END = "";//以 \0 作为终止符
@@ -25,10 +25,10 @@ export class Scanner {//扫描器，或称为词法分析
         ["continue", Tokenkind.CONTINUE],
         ["return", Tokenkind.RETURN],
         //数据类型
-        [VarType.Int, Tokenkind.INT],
-        [VarType.Char, Tokenkind.CHAR],
-        [VarType.Boolean, Tokenkind.BOOLEAN],
-        [VarType.Void, Tokenkind.VOID],
+        [DataType.Int, Tokenkind.INT],
+        [DataType.Char, Tokenkind.CHAR],
+        [DataType.Boolean, Tokenkind.BOOLEAN],
+        [DataType.Void, Tokenkind.VOID],
  
     ])
 

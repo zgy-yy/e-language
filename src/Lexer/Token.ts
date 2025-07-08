@@ -48,13 +48,13 @@ export enum Tokenkind{
     LESS_EQUAL = "<=",
 
     //literal
-    IDENTIFIER = "IDENTIFIER", //标识符 例如变量名
-    STRING = "STRING",
-    NUMBER = "NUMBER",
-    CHARACTER = "CHARACTER",
-    TRUE = "TRUE",
-    FALSE = "FALSE",
-    NULL = "NULL",
+    IDENTIFIER = "Identifier", //标识符 例如变量名
+    STRING = "String",
+    NUMBER = "Number",
+    CHARACTER = "Character",
+    TRUE = "True",
+    FALSE = "False",
+    NULL = "Null",
 
     EOF = "EOF",
     
@@ -81,12 +81,14 @@ export enum Tokenkind{
 }
 
 //变量类型
-export enum VarType{
+export enum DataType  {
     Int = "int",
-    Boolean = "boolean",
+    Boolean = "bool",
     Void = "void",
     Char = "char",
     Fun = "fun",
+    Null = "null",
+    String = "string",
 }
 
 

@@ -70,11 +70,11 @@ declare i32 @printf(i8*, ...)
     }
 
     visitContinueStmt(stmt: ContinueStmt): void {
-        this.printIR(`  br label %continue`);
+        this.printIR(`br label %continue`);
     }
 
     visitBreakStmt(stmt: BreakStmt): void {
-        this.printIR(`  br label %break`);
+        this.printIR(`br label %break`);
     }
 
     visitForStmt(stmt: ForStmt): void {
@@ -144,6 +144,7 @@ declare i32 @printf(i8*, ...)
         this.printIR(`while${n}_end:`);
     }
 
+    //if 语句生成
     visitIfStmt(stmt: IfStmt): void {
         const n = this.sequence++;
         const cond = stmt.condition.accept(this);
@@ -167,12 +168,14 @@ declare i32 @printf(i8*, ...)
         }
     }
 
+    //块语句生成
     visitBlockStmt(stmt: BlockStmt): void {
         for (const s of stmt.statements) {
             s.accept(this);
         }
     }
 
+    //表达式语句生成
     visitExpressionStmt(stmt: ExpressionStmt): void {
         stmt.expression.accept(this);
     }

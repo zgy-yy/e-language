@@ -3,12 +3,19 @@ import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStm
 import { Var } from "../Parse/Symbol";
 import { DataType } from "../Lexer/Token";
 
+
+type EncloseLoop = {
+    start: string, //循环开始标签
+    end: string //循环结束标签
+}
+
 export class CodeGen implements ExprVisitor<string>, StmtVisitor<void> {
     private globalVars: Var[] = [];
     private globalVarListStmt: VarListStmt[] = []; //全局变量列表
     private globalFunctionStmt: FunctionStmt[] = []; //全局变量
     static codeText: string = "";
     private sequence: number = 0;
+    private enclosing: EncloseLoop[] = []
     private paramVars: Map<string, number> = new Map();
     private functionDeclarations: string[] = []; //函数声明
     private functionDefinitions: string[] = []; //函数定义
@@ -74,7 +81,8 @@ declare i32 @printf(i8*, ...)
     }
 
     visitBreakStmt(stmt: BreakStmt): void {
-        this.printIR(`br label %break`);
+        const endLabel = this.enclosing.at(-1)?.end
+        this.printIR(`br label %${endLabel}`);
     }
 
     visitForStmt(stmt: ForStmt): void {
@@ -86,7 +94,7 @@ declare i32 @printf(i8*, ...)
             stmt.initializer.accept(this);
         }
 
-        this.printIR(`  br label %for${n}_cond`);
+        this.printIR(`br label %for${n}_cond`);
         this.printIR(`for${n}_cond:`);
 
         if (stmt.condition) {
@@ -113,12 +121,12 @@ declare i32 @printf(i8*, ...)
 
     visitDoWhileStmt(stmt: DoWhileStmt): void {
         const n = this.sequence++;
-        this.printIR(`  br label %do${n}_body`);
+        this.printIR(`br label %do${n}_body`);
         this.printIR(`do${n}_body:`);
 
         stmt.body.accept(this);
 
-        this.printIR(`  br label %do${n}_cond`);
+        this.printIR(`br label %do${n}_cond`);
         this.printIR(`do${n}_cond:`);
 
         const cond = stmt.condition.accept(this);
@@ -130,18 +138,30 @@ declare i32 @printf(i8*, ...)
 
     visitWhileStmt(stmt: WhileStmt): void {
         const n = this.sequence++;
-        this.printIR(`  br label %while${n}_cond`);
-        this.printIR(`while${n}_cond:`);
+        //标签名
+        const startLabel = `while${n}_start_cond`
+        const bodyLabel = `while${n}_body`
+        const endLabel = `while${n}_end`
+
+        this.enclosing.push({
+            start: startLabel,
+            end: endLabel
+        })
+
+        this.printIR(`br label %${startLabel}`);
+        this.printIR(`${startLabel}:`);
 
         const cond = stmt.condition.accept(this);
-        this.printIR(`  %while${n}_cond_val = icmp ne i32 ${cond}, 0`);
-        this.printIR(`  br i1 %while${n}_cond_val, label %while${n}_body, label %while${n}_end`);
+        this.printIR(`%while${n}_cond_val = icmp ne i1 ${cond}, 0`);
+        this.printIR(`br i1 %while${n}_cond_val, label %${bodyLabel}, label %${endLabel}`);
 
-        this.printIR(`while${n}_body:`);
+        this.printIR(`${bodyLabel}:`);
         stmt.body.accept(this);
 
-        this.printIR(`  br label %while${n}_cond`);
-        this.printIR(`while${n}_end:`);
+        this.printIR(`br label %${startLabel}`);
+        this.printIR(`${endLabel}:`);
+
+        this.enclosing.pop()
     }
 
     //if 语句生成

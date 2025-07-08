@@ -49,19 +49,23 @@ declare i32 @printf(i8*, ...)
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
-        const fnName = stmt.fn_name.name
-        this.printIR(`define i32 @${fnName}(${stmt.params.map(p => 'i32 %' + p.name).join(', ')}) {`)
+        const fnName = stmt.fn_name.name //函数名
+        const retType = typeToLLVM(stmt.retType);
+        this.printIR(`define ${retType} @${fnName}(${stmt.params.map(p => typeToLLVM(p.type) + ' %' + p.name).join(', ')}) {`)
         this.printIR(`entry:`)
         stmt.body.accept(this);
         this.printIR(`}`)
     }
     // 语句生成
     visitReturnStmt(stmt: ReturnStmt): void {
+        //todo 根据函数类型 返回值类型 和 函数返回值类型 不一致 需要处理
+
+        const _retType = typeToLLVM(stmt.value?.exprType);
         if (stmt.value) {
             const value = stmt.value.accept(this);
-            this.printIR(`  ret i32 ${value}`);
+            this.printIR(`  ret ${_retType} ${value}`);
         } else {
-            this.printIR(`  ret i32 0`);
+            this.printIR(`  ret ${_retType} 0`);
         }
     }
 
@@ -174,26 +178,30 @@ declare i32 @printf(i8*, ...)
     }
 
     visitPrintStmt(stmt: PrintStmt): void {
+        const _type = typeToLLVM(stmt.expression.exprType);
         const value = stmt.expression.accept(this);
-        this.printIR(`  %print${this.sequence++} = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 ${value})`);
+        this.printIR(`  %print${this.sequence++} = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), ${_type} ${value})`);
     }
 
     visitVarStmt(stmt: VarStmt): void {
         if (this.globalVars.find(v => v === stmt.variable)) {
             // 全局变量
+            const varType = typeToLLVM(stmt.variable.type);
+
             if (stmt.initializer) {
                 const value = stmt.initializer.accept(this);
-                this.printIR(`@${stmt.variable.name} = global i32 ${value}`);
+                this.printIR(`@${stmt.variable.name} = global ${varType} ${value}`);
             } else {
-                this.printIR(`@${stmt.variable.name} = global i32 0`);
+                this.printIR(`@${stmt.variable.name} = global ${varType} 0`);
             }
         } else {
+            const varType = typeToLLVM(stmt.variable.type);
             // 局部变量
-            this.printIR(`%${stmt.variable.name} = alloca i32`);
+            this.printIR(`%${stmt.variable.name} = alloca ${varType}`);
             if (stmt.initializer) {
                 const value = stmt.initializer.accept(this);
-               this.printIR(`store i32 ${value}, i32* %${stmt.variable.name}`);
-            } 
+                this.printIR(`store ${varType} ${value}, ${varType}* %${stmt.variable.name}`);
+            }
         }
     }
 
@@ -203,21 +211,21 @@ declare i32 @printf(i8*, ...)
         }
     }
 
-    // 表达式生成
+    // 逻辑表达式生成
     visitLogicalBinaryExpr(expr: LogicalBinaryExpr): string {
         const left = expr.left.accept(this);
         const right = expr.right.accept(this);
         const n = this.sequence++;
 
         if (expr.operator.lexeme === '&&') {
-            this.printIR(`  %logical${n} = and i32 ${left}, ${right}`);
+            this.printIR(`%logical${n} = and i1 ${left}, ${right}`);
         } else {
-            this.printIR(`  %logical${n} = or i32 ${left}, ${right}`);
+            this.printIR(`%logical${n} = or i1 ${left}, ${right}`);
         }
 
         return `%logical${n}`;
     }
-
+    //赋值表达式生成
     visitAssignExpr(expr: AssignExpr): string {
         const value = expr.value.accept(this);
         if (this.globalVars.find(v => v === expr.variable)) {
@@ -228,11 +236,13 @@ declare i32 @printf(i8*, ...)
         return value;
     }
 
+    //逗号表达式生成
     visitCommaExpr(expr: CommaExpr): string {
         expr.left.accept(this);
         return expr.right.accept(this);
     }
 
+    //二元表达式生成
     visitBinaryExpr(expr: BinaryExpr): string {
         const n = this.sequence++;
         const left = expr.left.accept(this);
@@ -242,7 +252,7 @@ declare i32 @printf(i8*, ...)
             case '+':
                 this.printIR(`%bin${n} = add i32 ${left}, ${right}`);
                 break;
-            case '-':   
+            case '-':
                 this.printIR(`%bin${n} = sub i32 ${left}, ${right}`);
                 break;
             case '*':
@@ -277,6 +287,7 @@ declare i32 @printf(i8*, ...)
         return `%bin${n}`;
     }
 
+    //一元表达式生成
     visitUnaryExpr(expr: UnaryExpr): string {
         const right = expr.right.accept(this);
         const n = this.sequence++;
@@ -286,32 +297,33 @@ declare i32 @printf(i8*, ...)
                 this.printIR(`  %unary${n} = sub i32 0, ${right}`);
                 break;
             case '!':
-                this.printIR(`  %unary${n} = icmp eq i32 ${right}, 0`);
+                this.printIR(`  %unary${n} = icmp eq i1 ${right}, 0`);
                 break;
         }
 
         return `%unary${n}`;
     }
 
+    //后缀自增自减表达式生成
     visitSuffixSelfExpr(expr: SuffixSelfExpr): string {
         const n = this.sequence++;
         const left = expr.left as VariableExpr;
         if (this.globalVars.find(v => v === left.variable)) {
-            this.printIR(`  %old${n} = load i32, i32* @${left.variable.name}`);
+            this.printIR(`%old${n} = load i32, i32* @${left.variable.name}`);
             if (expr.operator.lexeme === '++') {
-                this.printIR(`  %new${n} = add i32 %old${n}, 1`);
+                this.printIR(`%new${n} = add i32 %old${n}, 1`);
             } else {
-                this.printIR(`  %new${n} = sub i32 %old${n}, 1`);
+                this.printIR(`%new${n} = sub i32 %old${n}, 1`);
             }
-            this.printIR(`  store i32 %new${n}, i32* @${left.variable.name}`);
+            this.printIR(`%store i32 %new${n}, i32* @${left.variable.name}`);
         } else {
-            this.printIR(`  %old${n} = load i32, i32* %${left.variable.name}`);
+            this.printIR(`%old${n} = load i32, i32* %${left.variable.name}`);
             if (expr.operator.lexeme === '++') {
-                this.printIR(`  %new${n} = add i32 %old${n}, 1`);
+                this.printIR(`%new${n} = add i32 %old${n}, 1`);
             } else {
-                this.printIR(`  %new${n} = sub i32 %old${n}, 1`);
+                this.printIR(`%new${n} = sub i32 %old${n}, 1`);
             }
-            this.printIR(`  store i32 %new${n}, i32* %${left.variable.name}`);
+            this.printIR(`store i32 %new${n}, i32* %${left.variable.name}`);
         }
         return `%old${n}`;
     }
@@ -320,17 +332,22 @@ declare i32 @printf(i8*, ...)
         const n = this.sequence++;
         const args = expr.args.map(arg => arg.accept(this));
         const callee = expr.callee as VariableExpr;
-        this.printIR(`  %call${n} = call i32 @${callee.variable.name}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
+        this.printIR(`%call${n} = call i32 @${callee.variable.name}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
         return `%call${n}`;
     }
 
+    //变量表达式生成
     visitVariableExpr(expr: VariableExpr): string {
+        let varName = expr.variable.name;
+        let varType = typeToLLVM(expr.variable.type);
+
+
         if (this.globalVars.find(v => v === expr.variable)) {
-            this.printIR(`  %global_${expr.variable.name} = load i32, i32* @${expr.variable.name}`);
-            return `%global_${expr.variable.name}`;
+            this.printIR(`%global_${varName} = load ${varType}, ${varType}* @${varName}`);
+            return `%global_${varName}`;
         } else {
-            this.printIR(` %local_${expr.variable.name} = load i32, i32* %${expr.variable.name}`);
-            return `%local_${expr.variable.name}`;
+            this.printIR(`%local_${varName} = load ${varType}, ${varType}* %${varName}`);
+            return `%local_${varName}`;
         }
     }
 
@@ -347,3 +364,13 @@ declare i32 @printf(i8*, ...)
     }
 }
 
+
+
+function typeToLLVM(type: DataType): string {
+    switch (type) {
+        case DataType.Int:
+            return "i32";
+        case DataType.Boolean:
+            return "i1";
+    }
+}

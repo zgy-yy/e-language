@@ -6,9 +6,9 @@ import { Parser } from "./Parse/Parse"
 const code =
     `
 int main(){
-    int a=1;
-    bool b = a>0;
-    print b;
+    int a=1,c=34;
+    bool b = true;
+    print c;
     return 0;
 }
  `

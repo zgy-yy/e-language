@@ -8,7 +8,7 @@ import { Token, Tokenkind, DataType } from "./Token";
 export class Scanner {//扫描器，或称为词法分析
     static END = "";//以 \0 作为终止符
     source: string
-    tokens: Token[]=[];
+    tokens: Token[] = [];
     start: number = 0; //词素中的第一个字符
     current: number = 0;//当前正在处理的字符
     line: number = 1;//跟踪current所在的行数
@@ -24,12 +24,20 @@ export class Scanner {//扫描器，或称为词法分析
         ["break", Tokenkind.BREAK],
         ["continue", Tokenkind.CONTINUE],
         ["return", Tokenkind.RETURN],
+
+
+        //字面量
+        [DataType.Null, Tokenkind.NULL],
+        ['true', Tokenkind.TRUE],
+        ['false', Tokenkind.FALSE],
+
         //数据类型
         [DataType.Int, Tokenkind.INT],
         [DataType.Char, Tokenkind.CHAR],
         [DataType.Boolean, Tokenkind.BOOLEAN],
         [DataType.Void, Tokenkind.VOID],
- 
+        [DataType.String, Tokenkind.STRING],
+
     ])
 
 
@@ -37,12 +45,12 @@ export class Scanner {//扫描器，或称为词法分析
         this.source = source
     }
 
-    public scanTokens(): Token[]{
+    public scanTokens(): Token[] {
         while (!this.isAtEnd()) {
             this.start = this.current
             this.scanToken()
         }
-        this.tokens.push(new Token(Tokenkind.EOF,"",undefined,this.line))
+        this.tokens.push(new Token(Tokenkind.EOF, "", undefined, this.line))
         return this.tokens
     }
     private scanToken() { //扫描出Token
@@ -87,7 +95,7 @@ export class Scanner {//扫描器，或称为词法分析
                 break;
             case "|":
                 this.addToken(this.match("|") ? Tokenkind.OR : Tokenkind.OR_BIT);
-                break;  
+                break;
             case "^":
                 this.addToken(Tokenkind.XOR);
                 break;
@@ -118,17 +126,17 @@ export class Scanner {//扫描器，或称为词法分析
                 this.string();
                 break;
             default:
-            //匹配数字
+                //匹配数字
                 if (isDigit(c)) {
                     this.number()
-                } else if(isAlpha(c)){
+                } else if (isAlpha(c)) {
                     this.identifier()
                 } else {
                     El.error(
-                            new Token(Tokenkind.STRING, c, undefined, this.line),
-                            "Unexpected character."
-                        );
-                    
+                        new Token(Tokenkind.STRING, c, undefined, this.line),
+                        "Unexpected character."
+                    );
+
                 }
 
         }
@@ -139,11 +147,18 @@ export class Scanner {//扫描器，或称为词法分析
         while (this.isAlphaNumeric(this.peek())) this.advance();
         const text = this.source.substring(this.start, this.current);
         let type = Scanner.KeyWords.get(text);//是否是关键字
-        if(type === undefined){//不是关键字，就是标识符
-            type = Tokenkind.IDENTIFIER;    
+        if (type === undefined) {//不是关键字，就是标识符
+            type = Tokenkind.IDENTIFIER;
         }
-        
-        this.addToken(type);
+        if (type === Tokenkind.TRUE) {
+            this.addToken(type, true);
+        } else if (type === Tokenkind.FALSE) {
+            this.addToken(type, false);
+        } else if (type === Tokenkind.NULL) {
+            this.addToken(type, null);
+        } else {
+            this.addToken(type);
+        }
     }
     isAlphaNumeric(c: string) {
         return isAlpha(c) || isDigit(c);
@@ -158,7 +173,13 @@ export class Scanner {//扫描器，或称为词法分析
     }
     private addToken(tokenType: Tokenkind): void;
     private addToken(tokenType: Tokenkind, literal: any): void;
-    private addToken(tokenType: Tokenkind, literal?: any): void{
+    private addToken(tokenType: Tokenkind, literal?: any): void {
+        /*
+         * tokenType 词法单元类型
+         * literal 词法单元值
+         * line 词法单元所在行数
+         * lexeme 词法单元字符串
+         */
         const lexeme = this.source.substring(this.start, this.current);
         const token = new Token(tokenType, lexeme, literal, this.line)
         this.tokens.push(token)
@@ -167,12 +188,12 @@ export class Scanner {//扫描器，或称为词法分析
         if (this.isAtEnd()) return Scanner.END;
         return this.source.charAt(this.current);
     }
-   private peekNext() {
+    private peekNext() {
         if (this.current + 1 >= this.source.length) return Scanner.END;
         return this.source.charAt(this.current + 1);
     }
     //匹配当前字符，如果匹配成功，current+1
-    private  match(expected: string): boolean {
+    private match(expected: string): boolean {
         if (this.isAtEnd()) return false;
         if (this.source.charAt(this.current) !== expected) return false;
         this.current++;
@@ -183,7 +204,7 @@ export class Scanner {//扫描器，或称为词法分析
         while (this.peek() !== "'" && !this.isAtEnd()) {
             this.advance();
         }
-        if(this.isAtEnd()){
+        if (this.isAtEnd()) {
             El.error(new Token(Tokenkind.CHARACTER, "", undefined, this.line), "Unterminated char.");
             return;
         }
@@ -218,7 +239,7 @@ export class Scanner {//扫描器，或称为词法分析
             while (isDigit(this.peek())) {
                 this.advance();
             }
-        } 
+        }
         const literal = this.source.substring(this.start, this.current)
         this.addToken(Tokenkind.NUMBER, Number(literal))
     }

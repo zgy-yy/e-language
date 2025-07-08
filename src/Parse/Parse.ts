@@ -99,6 +99,9 @@ export class Parser {
         let initializer = null
         if (this.match(Tokenkind.EQUAL)) {
             initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
+            if(varT !== initializer.exprType){
+                El.error(this.previous(), "Initializer type does not match variable type.")
+            }
         }
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
         const var_ = new Var(var_name.lexeme, varT)
@@ -111,11 +114,14 @@ export class Parser {
             if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
                 this.error(var_name, "Variable with this name already declared in this scope.")
             }
-            const var_ = new Var(var_name.lexeme, DataType.Int)
+            const var_ = new Var(var_name.lexeme, varT)
             this.symbolTable.addVariable(var_name.lexeme, var_)
             let initializer = null
             if (this.match(Tokenkind.EQUAL)) {
                 initializer = this.assignment()
+                if(varT !== initializer.exprType){
+                    El.error(this.previous(), "Initializer type does not match variable type.")
+                }
             }
             varStmt.push(new VarStmt(var_, initializer))
         }
@@ -172,6 +178,14 @@ export class Parser {
     }
 
     returnStatement(): Stmt {
+        /*
+         * todo 返回值类型 和 函数返回值类型 不一致 需要处理
+         * 
+         * 
+         * 
+         * 
+         */
+
         const keyword = this.previous()
         let value = null
         if (!this.check(Tokenkind.SEMICOLON)) {

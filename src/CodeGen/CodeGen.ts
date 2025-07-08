@@ -147,22 +147,22 @@ declare i32 @printf(i8*, ...)
     visitIfStmt(stmt: IfStmt): void {
         const n = this.sequence++;
         const cond = stmt.condition.accept(this);
-        this.printIR(`  %if${n}_cond = icmp ne i32 ${cond}, 0`);
+        this.printIR(`%if${n}_cond = icmp ne i1 ${cond}, 0`);
 
         if (stmt.elseBranch) {
-            this.printIR(`  br i1 %if${n}_cond, label %if${n}_then, label %if${n}_else`);
+            this.printIR(`br i1 %if${n}_cond, label %if${n}_then, label %if${n}_else`);
             this.printIR(`if${n}_then:`);
             stmt.thenBranch.accept(this);
-            this.printIR(`  br label %if${n}_end`);
+            this.printIR(`br label %if${n}_end`);
             this.printIR(`if${n}_else:`);
             stmt.elseBranch.accept(this);
-            this.printIR(`  br label %if${n}_end`);
+            this.printIR(`br label %if${n}_end`);
             this.printIR(`if${n}_end:`);
         } else {
-            this.printIR(`  br i1 %if${n}_cond, label %if${n}_then, label %if${n}_end`);
+            this.printIR(`br i1 %if${n}_cond, label %if${n}_then, label %if${n}_end`);
             this.printIR(`if${n}_then:`);
             stmt.thenBranch.accept(this);
-            this.printIR(`  br label %if${n}_end`);
+            this.printIR(`br label %if${n}_end`);
             this.printIR(`if${n}_end:`);
         }
     }
@@ -180,7 +180,7 @@ declare i32 @printf(i8*, ...)
     visitPrintStmt(stmt: PrintStmt): void {
         const _type = typeToLLVM(stmt.expression.exprType);
         const value = stmt.expression.accept(this);
-        this.printIR(`  %print${this.sequence++} = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), ${_type} ${value})`);
+        this.printIR(`%print${this.sequence++} = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), ${_type} ${value})`);
     }
 
     visitVarStmt(stmt: VarStmt): void {
@@ -340,14 +340,13 @@ declare i32 @printf(i8*, ...)
     visitVariableExpr(expr: VariableExpr): string {
         let varName = expr.variable.name;
         let varType = typeToLLVM(expr.variable.type);
-
-
+        let n = this.sequence++;
         if (this.globalVars.find(v => v === expr.variable)) {
-            this.printIR(`%global_${varName} = load ${varType}, ${varType}* @${varName}`);
-            return `%global_${varName}`;
+            this.printIR(`%global_${varName}_${n} = load ${varType}, ${varType}* @${varName}`);
+            return `%global_${varName}_${n}`;
         } else {
-            this.printIR(`%local_${varName} = load ${varType}, ${varType}* %${varName}`);
-            return `%local_${varName}`;
+            this.printIR(`%local_${varName}_${n} = load ${varType}, ${varType}* %${varName}`);
+            return `%local_${varName}_${n}`;
         }
     }
 

@@ -18,10 +18,17 @@ while0_body:
 %local_a_4 = load i32, i32* %a
 %bin3 = add i32 %local_a_4, 1
   store i32 %bin3, i32* %a
-br label %while0_end
+%local_a_7 = load i32, i32* %a
+%bin6 = icmp eq i32 %local_a_7, 5
+%if5_cond = icmp ne i1 %bin6, 0
+br i1 %if5_cond, label %if5_then, label %if5_end
+if5_then:
+br label %while0_start_cond
+br label %if5_end
+if5_end:
+%local_a_8 = load i32, i32* %a
+%print9 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %local_a_8)
 br label %while0_start_cond
 while0_end:
-%local_a_5 = load i32, i32* %a
-%print6 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %local_a_5)
   ret i32 0
 }

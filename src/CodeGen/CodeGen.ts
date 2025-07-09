@@ -77,7 +77,8 @@ declare i32 @printf(i8*, ...)
     }
 
     visitContinueStmt(stmt: ContinueStmt): void {
-        this.printIR(`br label %continue`);
+        const startLabel = this.enclosing.at(-1)?.start
+        this.printIR(`br label %${startLabel}`);
     }
 
     visitBreakStmt(stmt: BreakStmt): void {

@@ -6,12 +6,10 @@ import { Parser } from "./Parse/Parse"
 const code =
     `
 int main(){
-int a=1,b,c=3;
-
-for(int d = 1;a<10;a++){
-    print a+1;
-}
-
+int a=1;
+int b=2+3;
+b--;
+print b;
     return 0;
 }
  `

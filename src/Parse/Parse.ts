@@ -243,8 +243,10 @@ export class Parser {
         let initializer = null
         if (this.match(Tokenkind.SEMICOLON)) {
             initializer = null
-        } else if (this.match(Tokenkind.INT)) {
-            initializer = this.varListDeclaration(DataType.Int)
+        } else if (this.match(...this.typeKind)) {
+            const kind = this.previous()
+            let declType = DataType[kind.type]//声明 的类型
+            initializer = this.varListDeclaration(declType)
         } else {
             initializer = this.expressionStatement()
         }

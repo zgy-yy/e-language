@@ -88,36 +88,47 @@ declare i32 @printf(i8*, ...)
 
     visitForStmt(stmt: ForStmt): void {
         const n = this.sequence++;
-        this.printIR(`  br label %for${n}_init`);
-        this.printIR(`for${n}_init:`);
+        const initLabel = `for${n}_init`
+        const condLabel = `for${n}_cond`
+        const incLabel = `for${n}_inc`
+        const bodyLabel = `for${n}_body`
+        const endLabel = `for${n}_end`
+        this.enclosing.push({
+            start: incLabel,
+            end: endLabel
+        })
+        this.printIR(`br label %${initLabel}`);
+        this.printIR(`${initLabel}:`);
 
         if (stmt.initializer) {
             stmt.initializer.accept(this);
         }
 
-        this.printIR(`br label %for${n}_cond`);
-        this.printIR(`for${n}_cond:`);
+        this.printIR(`br label %${condLabel}`);
+        this.printIR(`${condLabel}:`);
 
         if (stmt.condition) {
             const cond = stmt.condition.accept(this);
-            this.printIR(`  %for${n}_cond_val = icmp ne i32 ${cond}, 0`);
-            this.printIR(`  br i1 %for${n}_cond_val, label %for${n}_body, label %for${n}_end`);
+            this.printIR(`%for${n}_cond_val = icmp ne i1 ${cond}, 0`);
+            this.printIR(`br i1 %for${n}_cond_val, label %${bodyLabel}, label %${endLabel}`);
         } else {
-            this.printIR(`  br label %for${n}_body`);
+            this.printIR(`br label %${bodyLabel}`);
         }
 
-        this.printIR(`for${n}_body:`);
+        this.printIR(`${bodyLabel}:`);
         stmt.body.accept(this);
 
-        this.printIR(`  br label %for${n}_inc`);
-        this.printIR(`for${n}_inc:`);
+        this.printIR(`br label %${incLabel}`);
+        this.printIR(`${incLabel}:`);
 
         if (stmt.increment) {
             stmt.increment.accept(this);
         }
 
-        this.printIR(`  br label %for${n}_cond`);
-        this.printIR(`for${n}_end:`);
+        this.printIR(`br label %${condLabel}`);
+        this.printIR(`${endLabel}:`);
+
+        this.enclosing.pop()
     }
 
     visitDoWhileStmt(stmt: DoWhileStmt): void {
@@ -131,7 +142,7 @@ declare i32 @printf(i8*, ...)
         this.printIR(`do${n}_cond:`);
 
         const cond = stmt.condition.accept(this);
-        this.printIR(`  %do${n}_cond_val = icmp ne i32 ${cond}, 0`);
+        this.printIR(`  %do${n}_cond_val = icmp ne i1 ${cond}, 0`);
         this.printIR(`  br i1 %do${n}_cond_val, label %do${n}_body, label %do${n}_end`);
 
         this.printIR(`do${n}_end:`);
@@ -252,10 +263,11 @@ declare i32 @printf(i8*, ...)
     //赋值表达式生成
     visitAssignExpr(expr: AssignExpr): string {
         const value = expr.value.accept(this);
+        const varType = typeToLLVM(expr.variable.type)
         if (this.globalVars.find(v => v === expr.variable)) {
-            this.printIR(`  store i32 ${value}, i32* @${expr.variable.name}`);
+            this.printIR(`  store ${varType} ${value}, ${varType}* @${expr.variable.name}`);
         } else {
-            this.printIR(`  store i32 ${value}, i32* %${expr.variable.name}`);
+            this.printIR(`  store ${varType} ${value}, ${varType}* %${expr.variable.name}`);
         }
         return value;
     }
@@ -272,39 +284,42 @@ declare i32 @printf(i8*, ...)
         const left = expr.left.accept(this);
         const right = expr.right.accept(this);
 
+        const leftType = typeToLLVM(expr.left.exprType)
+        const rightType = typeToLLVM(expr.right.exprType)
+
         switch (expr.operator.lexeme) {
             case '+':
-                this.printIR(`%bin${n} = add i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = add ${leftType} ${left}, ${right}`);
                 break;
             case '-':
-                this.printIR(`%bin${n} = sub i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = sub ${leftType} ${left}, ${right}`);
                 break;
             case '*':
-                this.printIR(`%bin${n} = mul i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = mul ${leftType} ${left}, ${right}`);
                 break;
             case '/':
-                this.printIR(`%bin${n} = sdiv i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = sdiv ${leftType} ${left}, ${right}`);
                 break;
             case '%':
-                this.printIR(`%bin${n} = srem i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = srem ${leftType} ${left}, ${right}`);
                 break;
             case '==':
-                this.printIR(`%bin${n} = icmp eq i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp eq ${leftType} ${left}, ${right}`);
                 break;
             case '!=':
-                this.printIR(`%bin${n} = icmp ne i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp ne ${leftType} ${left}, ${right}`);
                 break;
             case '<':
-                this.printIR(`%bin${n} = icmp slt i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp slt ${leftType} ${left}, ${right}`);
                 break;
             case '<=':
-                this.printIR(`%bin${n} = icmp sle i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp sle ${leftType} ${left}, ${right}`);
                 break;
             case '>':
-                this.printIR(`%bin${n} = icmp sgt i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp sgt ${leftType} ${left}, ${right}`);
                 break;
             case '>=':
-                this.printIR(`%bin${n} = icmp sge i32 ${left}, ${right}`);
+                this.printIR(`%bin${n} = icmp sge ${leftType} ${left}, ${right}`);
                 break;
         }
 
@@ -313,15 +328,16 @@ declare i32 @printf(i8*, ...)
 
     //一元表达式生成
     visitUnaryExpr(expr: UnaryExpr): string {
+        const rightType = typeToLLVM(expr.right.exprType)
         const right = expr.right.accept(this);
         const n = this.sequence++;
 
         switch (expr.operator.lexeme) {
             case '-':
-                this.printIR(`  %unary${n} = sub i32 0, ${right}`);
+                this.printIR(`%unary${n} = sub ${rightType} 0, ${right}`);
                 break;
             case '!':
-                this.printIR(`  %unary${n} = icmp eq i1 ${right}, 0`);
+                this.printIR(`%unary${n} = icmp eq ${rightType} ${right}, 0`);
                 break;
         }
 

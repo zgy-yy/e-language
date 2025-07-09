@@ -10,6 +10,7 @@ export class Parser {
     current: number = 0;//tokens 游标
 
     symbolTable: SymbolTable = new SymbolTable();//符号表 
+    loopEnclosing: string[] = []//循环嵌套
 
     typeKind = [Tokenkind.INT, Tokenkind.CHAR, Tokenkind.VOID, Tokenkind.BOOLEAN, Tokenkind.STRING]
 
@@ -59,7 +60,7 @@ export class Parser {
         if (this.match(Tokenkind.PRINT))
             return this.printStatement()
         if (this.match(Tokenkind.LEFT_BRACE))
-            return new BlockStmt(this.block())
+            return this.blockStatement()
         if (this.match(Tokenkind.IF))
             return this.ifStatement()
         if (this.match(Tokenkind.WHILE))
@@ -144,7 +145,7 @@ export class Parser {
     }
     //函数声明
     // functionDeclaration -> type IDENTIFIER "(" parameters? ")" block
-    funcDeclaration(reType: DataType): Stmt {
+      funcDeclaration(reType: DataType): Stmt {
         this.symbolTable.enterScope()
         const fun_name = this.previous()//函数名
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
@@ -159,11 +160,11 @@ export class Parser {
         }
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
-        const body = this.block()
+        const body = this.blockStatement()
         const fun_var = new Var(fun_name.lexeme, DataType.Fun) //函数声明 视为变量
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
         this.symbolTable.leaveScope()
-        return new FunctionStmt(reType, fun_var, params, new BlockStmt(body))
+        return new FunctionStmt(reType, fun_var, params, body)
     }
 
     printStatement(): Stmt {
@@ -195,7 +196,7 @@ export class Parser {
         return new ReturnStmt(keyword, value)
     }
 
-    block(): Stmt[] {
+    blockStatement(): BlockStmt {
         this.symbolTable.enterScope()
         const statements = []
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
@@ -203,7 +204,7 @@ export class Parser {
         }
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after block.")
         this.symbolTable.leaveScope()
-        return statements
+        return new BlockStmt(statements)
     }
 
     ifStatement(): IfStmt {
@@ -222,11 +223,15 @@ export class Parser {
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after 'while'.")
         const condition = this.expression()
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after condition.")
+        this.loopEnclosing.push('while')
         const body = this.statement()
+        this.loopEnclosing.pop()
         return new WhileStmt(condition, body)
     }
     doWhileStatement() {
+        this.loopEnclosing.push('do-while')
         const body = this.statement()
+        this.loopEnclosing.pop()
         this.consume(Tokenkind.WHILE, "Expect 'while' after 'do'.")
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after 'while'.")
         const condition = this.expression()
@@ -257,7 +262,9 @@ export class Parser {
             increment = this.expression()
         }
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after for clauses.")
+        this.loopEnclosing.push('for')
         let body = this.statement()
+        this.loopEnclosing.pop()
         this.symbolTable.leaveScope()
         return new ForStmt(initializer, condition, increment, body)
         //脱糖
@@ -274,6 +281,10 @@ export class Parser {
         // return body
     }
     breakStatement(): BreakStmt {
+        //todo 跳出多层循环
+        if(this.loopEnclosing.length === 0){
+            this.error(this.previous(), "Cannot use 'break' outside of a loop.")
+        }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after 'break'.")
         return new BreakStmt()
     }

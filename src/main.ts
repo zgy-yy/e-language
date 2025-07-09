@@ -6,13 +6,11 @@ import { Parser } from "./Parse/Parse"
 const code =
     `
 int main(){
-    int a=12;
-    int b=- ++a +1;
-    print a;
-    print b;
-    bool c=true;
-    bool d = !!!!!c;
-    print d;
+    if(true){
+        print 1;
+    }else{
+        print 2;
+    }
     return 0;
 }
  `

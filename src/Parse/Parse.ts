@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, DataType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
@@ -68,6 +68,8 @@ export class Parser {
             return this.doWhileStatement()
         if (this.match(Tokenkind.FOR))
             return this.forStatement()
+        if (this.match(Tokenkind.LOOP))
+            return this.loopStatement()
         if (this.match(Tokenkind.BREAK))
             return this.breakStatement()
         if (this.match(Tokenkind.CONTINUE))
@@ -217,7 +219,7 @@ export class Parser {
         return new IfStmt(condition, thenBranch, elseBranch)
     }
 
-    whileStatement() {
+    whileStatement(): WhileStmt {
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after 'while'.")
         const condition = this.expression()
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after condition.")
@@ -226,7 +228,7 @@ export class Parser {
         this.loopEnclosing.pop()
         return new WhileStmt(condition, body)
     }
-    doWhileStatement() {
+    doWhileStatement(): DoWhileStmt {
         this.loopEnclosing.push('do-while')
         const body = this.statement()
         this.loopEnclosing.pop()
@@ -237,7 +239,7 @@ export class Parser {
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after do-while statement.")
         return new DoWhileStmt(condition, body)
     }
-    forStatement() {
+    forStatement(): ForStmt {
         this.symbolTable.enterScope() //进入新的作用域
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after 'for'.")
         let initializer = null
@@ -267,18 +269,12 @@ export class Parser {
         this.loopEnclosing.pop()
         this.symbolTable.leaveScope()
         return new ForStmt(initializer, condition, increment, body)
-        //脱糖
-        // if (increment != null) {
-        //     body = new BlockStmt([body, new ExpressionStmt(increment)])
-        // }
-        // if (condition == null) {
-        //     condition = new LiteralExpr(1)
-        // }
-        // body = new WhileStmt(condition, body)
-        // if (initializer != null) {
-        //     body = new BlockStmt([initializer, body])
-        // }
-        // return body
+    }
+    loopStatement(): LoopStmt {
+        this.loopEnclosing.push('loop')
+        const body = this.statement()
+        this.loopEnclosing.pop()
+        return new LoopStmt(body)
     }
     breakStatement(): BreakStmt {
         //todo 跳出多层循环

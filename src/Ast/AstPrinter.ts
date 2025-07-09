@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
@@ -22,6 +22,11 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     visitBreakStmt(stmt: BreakStmt): string {
         return "break";
     }
+
+    visitLoopStmt(stmt: LoopStmt): string {
+        return `loop ${stmt.body.accept(this)}`;
+    }
+
     visitForStmt(stmt: ForStmt): string {
         return `for(${stmt.initializer.accept(this)}; ${stmt.condition.accept(this)}; ${stmt.increment.accept(this)}) ${stmt.body.accept(this)}`;
     }

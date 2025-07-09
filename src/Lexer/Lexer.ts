@@ -21,6 +21,7 @@ export class Scanner {//扫描器，或称为词法分析
         ["while", Tokenkind.WHILE],
         ["do", Tokenkind.Do],
         ["for", Tokenkind.FOR],
+        ["loop", Tokenkind.LOOP],
         ["break", Tokenkind.BREAK],
         ["continue", Tokenkind.CONTINUE],
         ["return", Tokenkind.RETURN],

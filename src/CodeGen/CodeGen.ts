@@ -1,5 +1,5 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 import { DataType } from "../Lexer/Token";
 
@@ -86,6 +86,21 @@ declare i32 @printf(i8*, ...)
         this.printIR(`br label %${endLabel}`);
     }
 
+    visitLoopStmt(stmt: LoopStmt): void {
+        const n = this.sequence++;
+        const bodyLabel = `loop${n}_body`
+        const endLabel = `loop${n}_end`
+        this.enclosing.push({
+            start: bodyLabel,
+            end: endLabel
+        })
+        this.printIR(`br label %${bodyLabel}`);
+        this.printIR(`${bodyLabel}:`);
+        stmt.body.accept(this);
+        this.printIR(`br label %${bodyLabel}`);
+        this.printIR(`${endLabel}:`);
+        this.enclosing.pop()
+    }
     visitForStmt(stmt: ForStmt): void {
         const n = this.sequence++;
         const initLabel = `for${n}_init`

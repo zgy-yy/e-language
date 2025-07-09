@@ -7,11 +7,14 @@ const code =
     `
 int main(){
     int a=1;
-    while(a<10){
-        print a;
+    loop{
         a++;
         if(a==5){
             continue;
+        }
+        print a;
+        if(a==10){
+            break;
         }
     }
     return 0;

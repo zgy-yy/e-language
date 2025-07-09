@@ -67,10 +67,10 @@ export enum Tokenkind{
     WHILE = "While",
     Do = "Do",
     FOR = "For",
+    LOOP = "Loop",//增加无条件循环
     BREAK = "Break",
     CONTINUE= "Continue",
     RETURN = "Return",
-
 
 
     //数据类型

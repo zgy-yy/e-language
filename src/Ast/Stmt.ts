@@ -19,6 +19,7 @@ export interface StmtVisitor<R> {
     visitWhileStmt(stmt: WhileStmt): R;
     visitDoWhileStmt(stmt: DoWhileStmt): R;
     visitForStmt(stmt: ForStmt): R;
+    visitLoopStmt(stmt: LoopStmt): R;
     visitBreakStmt(stmt: BreakStmt): R;
     visitContinueStmt(stmt: ContinueStmt): R;
     visitFunctionStmt(stmt: FunctionStmt): R;
@@ -144,6 +145,16 @@ export class ForStmt implements Stmt {
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitForStmt(this);
+    }
+}
+
+export class LoopStmt implements Stmt {
+    body: Stmt;
+    constructor(body: Stmt) {
+        this.body = body;
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitLoopStmt(this);
     }
 }
 

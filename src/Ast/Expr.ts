@@ -9,6 +9,7 @@ export interface ExprVisitor<R>{
     visitBinaryExpr(expr: BinaryExpr): R;
     visitUnaryExpr(expr: UnaryExpr): R;
     visitSuffixSelfExpr(expr: SuffixSelfExpr): R;
+    visitPrefixSelfExpr(expr: PrefixSelfExpr): R;
     visitLiteralExpr(expr: LiteralExpr): R;
     visitVariableExpr(expr: VariableExpr): R;
     visitAssignExpr(expr: AssignExpr): R;
@@ -84,6 +85,25 @@ export class UnaryExpr implements Expr {
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitUnaryExpr(this);
+    }
+}
+
+//前缀自增自减表达式
+export class PrefixSelfExpr implements Expr { 
+    exprType: DataType;
+    right: Expr;
+    operator: Token;
+    constructor(operator: Token, right: Expr) {
+        if(right.exprType === DataType.Int){
+            this.exprType = DataType.Int; //前缀自增自减表达式的类型为Int
+        }else{
+            El.error(operator, "Prefix self operator must be used with integer values.")
+        }
+        this.right = right;
+        this.operator = operator;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitPrefixSelfExpr(this);
     }
 }
 

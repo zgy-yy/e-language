@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { Var } from "../Parse/Symbol";
 import { DataType } from "../Lexer/Token";
@@ -369,28 +369,62 @@ declare i32 @printf(i8*, ...)
         return `%unary${n}`;
     }
 
+    //前缀自增自减表达式生成
+    visitPrefixSelfExpr(expr: PrefixSelfExpr): string {
+        const n = this.sequence++;
+        const var_ = expr.right as VariableExpr;//变量自身
+        let ir_var_name = '' //ir中变量
+        const right_value = expr.right.accept(this);
+        const rightType = typeToLLVM(expr.right.exprType)
+        let new_value = `%new${n}`
+
+        if (this.globalVars.find(v => v === var_.variable)) {
+            ir_var_name = `@${var_.variable.name}`
+            if (expr.operator.lexeme === '++') {
+                this.printIR(`${new_value} = add ${rightType} ${right_value}, 1`);
+            } else {
+                this.printIR(`${new_value} = sub ${rightType} ${right_value}, 1`);
+            }
+        } else {
+            ir_var_name = `%${var_.variable.name}`
+            if (expr.operator.lexeme === '++') {
+                this.printIR(`${new_value} = add ${rightType} ${right_value}, 1`);
+            } else {
+                this.printIR(`${new_value} = sub ${rightType} ${right_value}, 1`);
+            }
+        }
+        this.printIR(`store ${rightType} ${new_value}, ${rightType}* ${ir_var_name}`);
+
+        return new_value;
+    }
+
     //后缀自增自减表达式生成
     visitSuffixSelfExpr(expr: SuffixSelfExpr): string {
         const n = this.sequence++;
         const left = expr.left as VariableExpr;
+        let ir_var_name = ''
+        const left_value = left.accept(this)
+        const leftType = typeToLLVM(left.exprType)
+        let new_value = `%new${n}`
+ 
         if (this.globalVars.find(v => v === left.variable)) {
-            this.printIR(`%old${n} = load i32, i32* @${left.variable.name}`);
+            ir_var_name = `@${left.variable.name}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`%new${n} = add i32 %old${n}, 1`);
+                this.printIR(`${new_value} = add ${leftType} ${left_value}, 1`);
             } else {
-                this.printIR(`%new${n} = sub i32 %old${n}, 1`);
+                this.printIR(`${new_value} = sub ${leftType} ${left_value}, 1`);
             }
-            this.printIR(`%store i32 %new${n}, i32* @${left.variable.name}`);
+            this.printIR(`store ${leftType} ${new_value}, ${leftType}* ${ir_var_name}`);
         } else {
-            this.printIR(`%old${n} = load i32, i32* %${left.variable.name}`);
+            ir_var_name = `%${left.variable.name}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`%new${n} = add i32 %old${n}, 1`);
+                this.printIR(`${new_value} = add ${leftType} ${left_value}, 1`);
             } else {
-                this.printIR(`%new${n} = sub i32 %old${n}, 1`);
+                this.printIR(`${new_value} = sub ${leftType} ${left_value}, 1`);
             }
-            this.printIR(`store i32 %new${n}, i32* %${left.variable.name}`);
+            this.printIR(`store ${leftType} ${new_value}, ${leftType}* ${ir_var_name}`);
         }
-        return `%old${n}`;
+        return left_value;
     }
 
     visitCallExpr(expr: CallExpr): string {

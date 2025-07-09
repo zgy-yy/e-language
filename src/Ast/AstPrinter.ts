@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
@@ -88,8 +88,12 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return this.parenthesize(expr.operator.lexeme, expr.right);
     }
 
+    visitPrefixSelfExpr(expr: PrefixSelfExpr): string {
+        return this.parenthesize(expr.operator.lexeme, expr.right);
+    }
+
     visitSuffixSelfExpr(expr: SuffixSelfExpr): string {
-        return  `${expr.left.accept(this)}${expr.operator.lexeme}`;
+        return `${expr.left.accept(this)} ${expr.operator.lexeme}`;
     }
 
     visitCallExpr(expr: CallExpr): string {

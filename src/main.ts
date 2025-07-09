@@ -6,17 +6,13 @@ import { Parser } from "./Parse/Parse"
 const code =
     `
 int main(){
-    int a=1;
-    loop{
-        a++;
-        if(a==5){
-            continue;
-        }
-        print a;
-        if(a==10){
-            break;
-        }
-    }
+    int a=12;
+    int b=- ++a +1;
+    print a;
+    print b;
+    bool c=true;
+    bool d = !!!!!c;
+    print d;
     return 0;
 }
  `
@@ -53,3 +49,8 @@ console.log('code -> \n', code)
 
 
 main()
+
+let a=12;
+let b = - a-- +1
+
+console.log(a,b)

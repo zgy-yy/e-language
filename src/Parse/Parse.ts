@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind, DataType } from "../Lexer/Token";
@@ -375,13 +375,23 @@ export class Parser {
     unary(): Expr {//一元表达式 
         if (this.match(Tokenkind.BANG, Tokenkind.MINUS, Tokenkind.PLUS)) {
             const operator = this.previous()
-            const right = this.unary()
-            return new UnaryExpr(operator, right)
+            const expr = this.unary()
+            return new UnaryExpr(operator, expr)
         }
-        let expr = this.postfix()
-
-        return expr
+        return this.prefix()
     }
+
+
+    prefix(): Expr {
+        if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
+            const operator = this.previous()
+            console.log('prefix', operator)
+            const expr = this.primary()
+            return new PrefixSelfExpr(operator, expr)
+        }
+        return this.postfix()
+    }
+
     postfix() {//后缀表达式
         let expr = this.primary()
         // 循环解析后缀操作，直到无法匹配后缀为止
@@ -401,8 +411,13 @@ export class Parser {
                 break
             }
         }
+        console.log('postfix', expr)
         return expr
     }
+
+
+
+   
     functionCall(callee: Expr): Expr {
         const args = []
         if (!this.check(Tokenkind.RIGHT_PAREN)) {

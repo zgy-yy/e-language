@@ -6,15 +6,12 @@ import { Parser } from "./Parse/Parse"
 const code =
     `
 int main(){
-int a=1;
-while(a<10){
-a=a+1;
-if(a==5){
-    continue;
+int a=1,b,c=3;
+
+for(int d = 1;a<10;a++){
+    print a+1;
 }
-    print a;
-}
- 
+
     return 0;
 }
  `
@@ -51,4 +48,3 @@ console.log('code -> \n', code)
 
 
 main()
-

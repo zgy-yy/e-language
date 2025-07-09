@@ -35,8 +35,7 @@ export class Parser {
             if (this.match(...this.typeKind)) {
                 let kind = this.previous()//声明的类型
                 let declType = DataType[kind.type]//声明 的类型
-                this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称;声明语句 必须要一个标识符
-                if (this.peek().type == Tokenkind.LEFT_PAREN) {
+                if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
                     return this.funcDeclaration(declType)
                 }
                 return this.varListDeclaration(declType)
@@ -79,8 +78,7 @@ export class Parser {
         if (this.match(...this.typeKind)) {
             let kind = this.previous()//声明的类型
             let declType = DataType[kind.type]//声明 的类型
-            this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-            if (this.peek().type == Tokenkind.LEFT_PAREN) {
+            if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
                 return this.funcDeclaration(declType)
             }
             return this.varListDeclaration(declType)
@@ -92,7 +90,7 @@ export class Parser {
     //变量声明语句
     varListDeclaration(varT: DataType): Stmt {
         let varStmt: VarStmt[] = []
-        const var_name = this.previous()//变量名
+        const var_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.")//变量名
         if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
             this.error(var_name, "Variable with this name already declared in this scope.")
         }
@@ -146,8 +144,8 @@ export class Parser {
     //函数声明
     // functionDeclaration -> type IDENTIFIER "(" parameters? ")" block
       funcDeclaration(reType: DataType): Stmt {
+        const fun_name = this.consume(Tokenkind.IDENTIFIER, "Expect function name.")//函数名
         this.symbolTable.enterScope()
-        const fun_name = this.previous()//函数名
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
         const params: Var[] = []
         if (!this.check(Tokenkind.RIGHT_PAREN)) {
@@ -246,7 +244,7 @@ export class Parser {
         if (this.match(Tokenkind.SEMICOLON)) {
             initializer = null
         } else if (this.match(Tokenkind.INT)) {
-            initializer = this.statement()
+            initializer = this.varListDeclaration(DataType.Int)
         } else {
             initializer = this.expressionStatement()
         }
@@ -478,6 +476,12 @@ export class Parser {
     }
     private peek(): Token {
         return this.tokens[this.current]
+    }
+    private peekNext() { //往前多看一个token
+        if (this.isAtEnd()) {
+            return null
+        }
+        return this.tokens[this.current + 1]
     }
     private previous() {//上一个token
         return this.tokens[this.current - 1];

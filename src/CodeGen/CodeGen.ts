@@ -133,35 +133,45 @@ declare i32 @printf(i8*, ...)
 
     visitDoWhileStmt(stmt: DoWhileStmt): void {
         const n = this.sequence++;
-        this.printIR(`br label %do${n}_body`);
-        this.printIR(`do${n}_body:`);
+        const bodyLabel = `do${n}_body`
+        const condLabel = `do${n}_cond`
+        const endLabel = `do${n}_end`
+
+        this.enclosing.push({
+            start: condLabel,
+            end: endLabel
+        })
+
+        this.printIR(`br label %${bodyLabel}`);
+        this.printIR(`${bodyLabel}:`);
 
         stmt.body.accept(this);
 
-        this.printIR(`br label %do${n}_cond`);
-        this.printIR(`do${n}_cond:`);
+        this.printIR(`br label %${condLabel}`);
+        this.printIR(`${condLabel}:`);
 
         const cond = stmt.condition.accept(this);
         this.printIR(`  %do${n}_cond_val = icmp ne i1 ${cond}, 0`);
-        this.printIR(`  br i1 %do${n}_cond_val, label %do${n}_body, label %do${n}_end`);
+        this.printIR(`  br i1 %do${n}_cond_val, label %${bodyLabel}, label %${endLabel}`);
 
-        this.printIR(`do${n}_end:`);
+        this.printIR(`${endLabel}:`);
+        this.enclosing.pop()
     }
 
     visitWhileStmt(stmt: WhileStmt): void {
         const n = this.sequence++;
         //标签名
-        const startLabel = `while${n}_start_cond`
+        const condLabel = `while${n}_cond`
         const bodyLabel = `while${n}_body`
         const endLabel = `while${n}_end`
 
         this.enclosing.push({
-            start: startLabel,
+            start: condLabel,
             end: endLabel
         })
 
-        this.printIR(`br label %${startLabel}`);
-        this.printIR(`${startLabel}:`);
+        this.printIR(`br label %${condLabel}`);
+        this.printIR(`${condLabel}:`);
 
         const cond = stmt.condition.accept(this);
         this.printIR(`%while${n}_cond_val = icmp ne i1 ${cond}, 0`);
@@ -170,7 +180,7 @@ declare i32 @printf(i8*, ...)
         this.printIR(`${bodyLabel}:`);
         stmt.body.accept(this);
 
-        this.printIR(`br label %${startLabel}`);
+        this.printIR(`br label %${condLabel}`);
         this.printIR(`${endLabel}:`);
 
         this.enclosing.pop()

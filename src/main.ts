@@ -6,10 +6,14 @@ import { Parser } from "./Parse/Parse"
 const code =
     `
 int main(){
-int a=1;
-int b=2+3;
-b--;
-print b;
+    int a=1;
+    while(a<10){
+        print a;
+        a++;
+        if(a==5){
+            continue;
+        }
+    }
     return 0;
 }
  `

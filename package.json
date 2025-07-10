@@ -14,7 +14,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
-    "start": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/main.ts",
+    "start": "nodemon",
     "format": "npx ts-node llvm_formatter.ts ./llvm/index.ll --in-place"
   },
   "repository": {

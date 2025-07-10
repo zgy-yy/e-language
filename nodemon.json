@@ -1,0 +1,5 @@
+{
+    "watch": ["public/**/*.e", "src/**/*.ts"],
+    "ext": "e,ts",
+    "exec": "ts-node src/main.ts"
+  }

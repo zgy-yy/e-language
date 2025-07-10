@@ -5,12 +5,19 @@ import { Token, Tokenkind, DataType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
 import { ParamVar, Var } from "./Symbol";
 
+type funcEnclosing = {
+    funcName: string,
+    params: Var[]
+    retType: DataType //应返回值类型
+    retExpr?: Expr //实际返回值表达式
+}
 export class Parser {
     tokens: Token[]
     current: number = 0;//tokens 游标
 
     symbolTable: SymbolTable = new SymbolTable();//符号表 
-    loopEnclosing: string[] = []//循环嵌套
+    funcEnclosing: funcEnclosing[] = []//函数块
+    loopEnclosing: string[] = []//循环块
 
     typeKind = [Tokenkind.INT, Tokenkind.CHAR, Tokenkind.VOID, Tokenkind.BOOLEAN, Tokenkind.STRING]
 
@@ -100,7 +107,7 @@ export class Parser {
         let initializer = null
         if (this.match(Tokenkind.EQUAL)) {
             initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
-            if(varT !== initializer.exprType){
+            if (varT !== initializer.exprType) {
                 El.error(this.previous(), "Initializer type does not match variable type.")
             }
         }
@@ -120,7 +127,7 @@ export class Parser {
             let initializer = null
             if (this.match(Tokenkind.EQUAL)) {
                 initializer = this.assignment()
-                if(varT !== initializer.exprType){
+                if (varT !== initializer.exprType) {
                     El.error(this.previous(), "Initializer type does not match variable type.")
                 }
             }
@@ -145,7 +152,7 @@ export class Parser {
     }
     //函数声明
     // functionDeclaration -> type IDENTIFIER "(" parameters? ")" block
-      funcDeclaration(reType: DataType): Stmt {
+    funcDeclaration(retType: DataType): Stmt {
         const fun_name = this.consume(Tokenkind.IDENTIFIER, "Expect function name.")//函数名
         this.symbolTable.enterScope()
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
@@ -158,13 +165,25 @@ export class Parser {
                 params.push(this.paramDeclaration())
             } while (this.match(Tokenkind.COMMA))
         }
+        const funcEn: funcEnclosing = {
+            funcName: fun_name.lexeme,
+            params: params,
+            retType: retType
+        }
+        this.funcEnclosing.push(funcEn)
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
         const body = this.blockStatement()
+        // 如果函数返回值类型不为void，且没有返回值，则抛出错误
+        if (retType !== DataType.Void && !funcEn.retExpr) {
+            this.error(this.previous(), "Function must have a return value.")
+        }
+
         const fun_var = new Var(fun_name.lexeme, DataType.Fun) //函数声明 视为变量
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
         this.symbolTable.leaveScope()
-        return new FunctionStmt(reType, fun_var, params, body)
+        this.funcEnclosing.pop()
+        return new FunctionStmt(retType, fun_var, params, body)
     }
 
     printStatement(): Stmt {
@@ -179,20 +198,23 @@ export class Parser {
     }
 
     returnStatement(): Stmt {
-        /*
-         * todo 返回值类型 和 函数返回值类型 不一致 需要处理
-         * 
-         * 
-         * 
-         * 
-         */
+        const funcEn = this.funcEnclosing.at(-1)
+        // 如果函数不存在，则抛出错误 如果函数不存在，则抛出错误
+        if (!funcEn) {
+            El.error(this.previous(), "Cannot return from top-level code.")
+        }
 
         const keyword = this.previous()
         let value = null
         if (!this.check(Tokenkind.SEMICOLON)) {
             value = this.expression()
         }
+        // 如果返回值类型和函数返回值类型不一致，则抛出错误
+        if (funcEn.retType !== value.exprType) {
+            El.error(value, "Return type does not match function return type.")
+        }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after return value.")
+        funcEn.retExpr = value
         return new ReturnStmt(keyword, value)
     }
 
@@ -278,7 +300,7 @@ export class Parser {
     }
     breakStatement(): BreakStmt {
         //todo 跳出多层循环
-        if(this.loopEnclosing.length === 0){
+        if (this.loopEnclosing.length === 0) {
             this.error(this.previous(), "Cannot use 'break' outside of a loop.")
         }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after 'break'.")
@@ -415,7 +437,7 @@ export class Parser {
 
 
 
-   
+
     functionCall(callee: Expr): Expr {
         const args = []
         if (!this.check(Tokenkind.RIGHT_PAREN)) {

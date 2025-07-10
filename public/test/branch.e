@@ -7,5 +7,10 @@ int main(){
         print a;
     }
 
+    do{
+        a--;
+    }while(a>1);
+    print a;
+
     return 0;
 }

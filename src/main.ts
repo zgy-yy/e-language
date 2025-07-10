@@ -6,19 +6,22 @@ import { Parser } from "./Parse/Parse"
 let code =""
 
 async function main() {
-    const text_file_path = './test/print.e'
-    const text_file_url = `${text_file_path}?raw`
+    const test_path ="./test/print.e"
     // 读取测试文件
     if (checkEnv() == 'node') {
         const fs = await import('fs')
         const path = await import('path')
-        let sourceCodePath = path.resolve(__dirname,text_file_path)
+        let sourceCodePath = path.resolve(__dirname,'../public',test_path)
+        console.log('sourceCodePath', sourceCodePath)
         const sourceCode = fs.readFileSync(sourceCodePath, 'utf-8')
         code = sourceCode
     } else {
-        const file = await import(text_file_url)
-        code = file.default
+        const file = await fetch(test_path)
+        const text = await file.text()
+        code = text
     }
+
+    console.log('source code:\n', code)
     
 
 

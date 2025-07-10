@@ -56,7 +56,7 @@ declare i32 @printf(i8*, ...)
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
-        const fnName = stmt.fn_name.name //函数名
+        const fnName = stmt.fn_name.name === "main" ? "main" : stmt.fn_name._id //函数名
         const retType = typeToLLVM(stmt.retType);
         this.printIR(`define ${retType} @${fnName}(${stmt.params.map(p => typeToLLVM(p.type) + ' %' + p.name).join(', ')}) {`)
         this.printIR(`entry:`)
@@ -65,14 +65,12 @@ declare i32 @printf(i8*, ...)
     }
     // 语句生成
     visitReturnStmt(stmt: ReturnStmt): void {
-        //todo 根据函数类型 返回值类型 和 函数返回值类型 不一致 需要处理
-
         const _retType = typeToLLVM(stmt.value?.exprType);
         if (stmt.value) {
             const value = stmt.value.accept(this);
-            this.printIR(`  ret ${_retType} ${value}`);
+            this.printIR(`ret ${_retType} ${value}`);
         } else {
-            this.printIR(`  ret ${_retType} 0`);
+            this.printIR(`ret void`);
         }
     }
 
@@ -255,7 +253,7 @@ declare i32 @printf(i8*, ...)
         if (this.globalVars.find(v => v === stmt.variable)) {
             // 全局变量
             const varType = typeToLLVM(stmt.variable.type);
-            
+
 
             if (stmt.initializer) {
                 const value = stmt.initializer.accept(this);
@@ -404,7 +402,7 @@ declare i32 @printf(i8*, ...)
             } else {
                 this.printIR(`%${new_val} = sub ${rightType} ${right_value}, 1`);
             }
-        }   
+        }
         this.printIR(`store ${rightType} %${new_val}, ${rightType}* ${ir_var_name}`);
 
         return `%${new_val}`;
@@ -418,7 +416,7 @@ declare i32 @printf(i8*, ...)
         const left_value = left.accept(this)
         const leftType = typeToLLVM(left.exprType)
         let new_val = `new${n}`
- 
+
         if (this.globalVars.find(v => v === left.variable)) {
             ir_var_name = `@${left.variable._id}`
             if (expr.operator.lexeme === '++') {

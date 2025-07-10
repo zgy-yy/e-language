@@ -174,12 +174,20 @@ export class Parser {
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
         const body = this.blockStatement()
-        if (!funcEn.retExprType) {
-            this.error(this.previous(), "Function must have a return value.")
+        if (dclRetType !== DataType.Void) {
+            if (!funcEn.retExprType) {
+                this.error(this.previous(), "Function must have a return value.")
+            }
+        } else {
+            // 如果函数返回值类型为void，切没有明确返回值，则添加一个返回值为void的返回语句
+            if (!funcEn.retExprType) {
+                body.statements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, 0), null))
+            }
         }
         const fun_var = new Var(fun_name.lexeme, DataType.Fun) //函数声明 视为变量
-        this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
         this.symbolTable.leaveScope()
+
+        this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
         this.funcEnclosing.pop()
         return new FunctionStmt(dclRetType, fun_var, params, body)
     }

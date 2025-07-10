@@ -3,19 +3,25 @@ import { CodeGen } from "./CodeGen/CodeGen"
 import { Scanner } from "./Lexer/Lexer"
 import { Parser } from "./Parse/Parse"
 
-const code =
-    `
-int main(){
-    if(true){
-        print 1;
-    }else{
-        print 2;
-    }
-    return 0;
-}
- `
+let code =""
 
 async function main() {
+    const text_file_path = './test/print.e'
+    const text_file_url = `${text_file_path}?raw`
+    // 读取测试文件
+    if (checkEnv() == 'node') {
+        const fs = await import('fs')
+        const path = await import('path')
+        let sourceCodePath = path.resolve(__dirname,text_file_path)
+        const sourceCode = fs.readFileSync(sourceCodePath, 'utf-8')
+        code = sourceCode
+    } else {
+        const file = await import(text_file_url)
+        code = file.default
+    }
+    
+
+
     const sanner = new Scanner(code)
     const tokens = sanner.scanTokens()
     console.log(tokens)
@@ -33,8 +39,7 @@ async function main() {
     const codeGen = new CodeGen()
     const asmText = codeGen.generateCode(program)
     // 判断是否是node环境
-    const nodeEnv = typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
-    if (nodeEnv) {
+    if (checkEnv() == 'node') {
         const fs = await import('fs')
         const path = await import('path')
         let asmPath = path.resolve(__dirname, '../llvm/index.ll')
@@ -43,12 +48,14 @@ async function main() {
     }
 }
 
-console.log('code -> \n', code)
-
 
 main()
 
-let a=12;
-let b = - a-- +1
 
-console.log(a,b)
+function checkEnv(): 'node' | 'browser' {
+    const nodeEnv = typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
+    if (nodeEnv) {
+        return 'node'
+    }
+    return 'browser'
+}

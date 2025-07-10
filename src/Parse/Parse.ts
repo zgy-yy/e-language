@@ -385,7 +385,6 @@ export class Parser {
     prefix(): Expr {
         if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
             const operator = this.previous()
-            console.log('prefix', operator)
             const expr = this.primary()
             return new PrefixSelfExpr(operator, expr)
         }
@@ -411,7 +410,6 @@ export class Parser {
                 break
             }
         }
-        console.log('postfix', expr)
         return expr
     }
 

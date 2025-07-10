@@ -251,7 +251,7 @@ declare i32 @printf(i8*, ...)
     }
 
     visitVarStmt(stmt: VarStmt): void {
-        const var_name = stmt.variable.name
+        const var_name = stmt.variable._id
         if (this.globalVars.find(v => v === stmt.variable)) {
             // 全局变量
             const varType = typeToLLVM(stmt.variable.type);
@@ -299,7 +299,7 @@ declare i32 @printf(i8*, ...)
     visitAssignExpr(expr: AssignExpr): string {
         const value = expr.value.accept(this);
         const varType = typeToLLVM(expr.variable.type)
-        const var_name = expr.variable.name
+        const var_name = expr.variable._id
         if (this.globalVars.find(v => v === expr.variable)) {
             this.printIR(`store ${varType} ${value}, ${varType}* @${var_name}`);
         } else {
@@ -391,14 +391,14 @@ declare i32 @printf(i8*, ...)
         let new_val = `new${n}`
 
         if (this.globalVars.find(v => v === var_.variable)) {
-            ir_var_name = `@${var_.variable.name}`
+            ir_var_name = `@${var_.variable._id}`
             if (expr.operator.lexeme === '++') {
                 this.printIR(`%${new_val} = add ${rightType} ${right_value}, 1`);
             } else {
                 this.printIR(`%${new_val} = sub ${rightType} ${right_value}, 1`);
             }
         } else {
-            ir_var_name = `%${var_.variable.name}`
+            ir_var_name = `%${var_.variable._id}`
             if (expr.operator.lexeme === '++') {
                 this.printIR(`%${new_val} = add ${rightType} ${right_value}, 1`);
             } else {
@@ -420,14 +420,14 @@ declare i32 @printf(i8*, ...)
         let new_val = `new${n}`
  
         if (this.globalVars.find(v => v === left.variable)) {
-            ir_var_name = `@${left.variable.name}`
+            ir_var_name = `@${left.variable._id}`
             if (expr.operator.lexeme === '++') {
                 this.printIR(`%${new_val} = add ${leftType} ${left_value}, 1`);
             } else {
                 this.printIR(`%${new_val} = sub ${leftType} ${left_value}, 1`);
             }
         } else {
-            ir_var_name = `%${left.variable.name}`
+            ir_var_name = `%${left.variable._id}`
             if (expr.operator.lexeme === '++') {
                 this.printIR(`%${new_val} = add ${leftType} ${left_value}, 1`);
             } else {
@@ -443,13 +443,13 @@ declare i32 @printf(i8*, ...)
         const args = expr.args.map(arg => arg.accept(this));
         const callee = expr.callee as VariableExpr;
         const call_name = `call${n}`
-        this.printIR(`%${call_name} = call i32 @${callee.variable.name}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
+        this.printIR(`%${call_name} = call i32 @${callee.variable._id}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
         return `%${call_name}`;
     }
 
     //变量表达式生成
     visitVariableExpr(expr: VariableExpr): string {
-        const var_name = expr.variable.name;
+        const var_name = expr.variable._id;
         const varType = typeToLLVM(expr.variable.type);
         const n = this.sequence++;
         const var_name_n = `${var_name}_${n}`

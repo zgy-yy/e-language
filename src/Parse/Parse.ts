@@ -8,8 +8,8 @@ import { ParamVar, Var } from "./Symbol";
 type funcEnclosing = {
     funcName: string,
     params: Var[]
-    retType: DataType //应返回值类型
-    retExpr?: Expr //实际返回值表达式
+    dclRetType: DataType //声明的返回值类型
+    retExprType?: DataType //实际返回值类型
 }
 export class Parser {
     tokens: Token[]
@@ -152,7 +152,7 @@ export class Parser {
     }
     //函数声明
     // functionDeclaration -> type IDENTIFIER "(" parameters? ")" block
-    funcDeclaration(retType: DataType): Stmt {
+    funcDeclaration(dclRetType: DataType): Stmt {
         const fun_name = this.consume(Tokenkind.IDENTIFIER, "Expect function name.")//函数名
         this.symbolTable.enterScope()
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
@@ -168,22 +168,20 @@ export class Parser {
         const funcEn: funcEnclosing = {
             funcName: fun_name.lexeme,
             params: params,
-            retType: retType
+            dclRetType: dclRetType
         }
         this.funcEnclosing.push(funcEn)
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
         const body = this.blockStatement()
-        // 如果函数返回值类型不为void，且没有返回值，则抛出错误
-        if (retType !== DataType.Void && !funcEn.retExpr) {
+        if (!funcEn.retExprType) {
             this.error(this.previous(), "Function must have a return value.")
         }
-
         const fun_var = new Var(fun_name.lexeme, DataType.Fun) //函数声明 视为变量
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
         this.symbolTable.leaveScope()
         this.funcEnclosing.pop()
-        return new FunctionStmt(retType, fun_var, params, body)
+        return new FunctionStmt(dclRetType, fun_var, params, body)
     }
 
     printStatement(): Stmt {
@@ -205,16 +203,17 @@ export class Parser {
         }
 
         const keyword = this.previous()
-        let value = null
+        let value: Expr = null
         if (!this.check(Tokenkind.SEMICOLON)) {
             value = this.expression()
         }
+        const retType = value ? value.exprType : DataType.Void //返回值类型
         // 如果返回值类型和函数返回值类型不一致，则抛出错误
-        if (funcEn.retType !== value.exprType) {
-            El.error(value, "Return type does not match function return type.")
+        if (funcEn.dclRetType !== retType) {
+            El.error(keyword, "Return type does not match function return type.")
         }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after return value.")
-        funcEn.retExpr = value
+        funcEn.retExprType = retType
         return new ReturnStmt(keyword, value)
     }
 

@@ -4,3 +4,8 @@ int main(){
     print a;
     return a;
 }
+
+void foo(){
+    int a=2;
+    return;
+}

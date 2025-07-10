@@ -13,3 +13,9 @@ store i32 1, i32* %a_int_0
 %local_a_int_0_2 = load i32, i32* %a_int_0
   ret i32 %local_a_int_0_2
 }
+define void @foo() {
+entry:
+%a_int_2 = alloca i32
+store i32 2, i32* %a_int_2
+  ret undefined 0
+}

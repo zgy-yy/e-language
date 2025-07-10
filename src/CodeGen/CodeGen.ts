@@ -483,5 +483,7 @@ function typeToLLVM(type: DataType): string {
             return "i32";
         case DataType.Boolean:
             return "i1";
+        case DataType.Void:
+            return "void";
     }
 }

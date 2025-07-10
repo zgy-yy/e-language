@@ -2,7 +2,21 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-    plugins: [],
+    plugins: [
+        {
+            name: 'watch-public-files',
+            configureServer(server) {
+              const chokidar = require('chokidar');
+              // 监听 public 目录中的文件变化
+              chokidar.watch('public/**/*.e').on('change', (path) => {
+                console.log(`File changed: ${path}`);
+                server.ws.send({
+                  type: 'full-reload',
+                });
+              });
+            },
+          },
+    ],
     server: {
         watch: {
             ignored: ['!**/public/**'],

@@ -1,8 +1,5 @@
 
 int main(){
-    int a=12;
-    bool b = a>1;
-    print b;
-    print a;
+    print 1;
     return 0;
 }

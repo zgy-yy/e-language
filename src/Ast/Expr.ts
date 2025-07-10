@@ -1,11 +1,11 @@
 import { El } from "../El/El";
-import {  Token, DataType, Tokenkind } from "../Lexer/Token"
+import { Token, DataType, Tokenkind } from "../Lexer/Token"
 import { Var } from "../Parse/Symbol";
 
 /*
 * 表达式
 */
-export interface ExprVisitor<R>{
+export interface ExprVisitor<R> {
     visitBinaryExpr(expr: BinaryExpr): R;
     visitUnaryExpr(expr: UnaryExpr): R;
     visitSuffixSelfExpr(expr: SuffixSelfExpr): R;
@@ -19,7 +19,7 @@ export interface ExprVisitor<R>{
     visitCommaExpr(expr: CommaExpr): R;
 }
 
-export interface Expr{ //表达式 基类
+export interface Expr { //表达式 基类
     exprType: DataType;
     accept<R>(visitor: ExprVisitor<R>): R;
 }
@@ -32,11 +32,11 @@ export class LogicalBinaryExpr implements Expr {
     operator: Token;
     right: Expr;
     constructor(left: Expr, operator: Token, right: Expr) {
-       if(left.exprType === DataType.Boolean && right.exprType === DataType.Boolean){
-        this.exprType = DataType.Boolean; //逻辑运算符的类型为布尔类型
-       }else{
-        El.error(operator, "Logical operator must be used with boolean values.")
-       }
+        if (left.exprType === DataType.Boolean && right.exprType === DataType.Boolean) {
+            this.exprType = DataType.Boolean; //逻辑运算符的类型为布尔类型
+        } else {
+            El.error(operator, "Logical operator must be used with boolean values.")
+        }
         this.left = left;
         this.operator = operator;
         this.right = right;
@@ -48,15 +48,21 @@ export class LogicalBinaryExpr implements Expr {
 }
 
 // 二元表达式
-export class BinaryExpr implements Expr{
+export class BinaryExpr implements Expr {
     exprType: DataType;
     left: Expr
     operator: Token;
     right: Expr;
     constructor(left: Expr, operator: Token, right: Expr) {
-        if(left.exprType === right.exprType){
-            this.exprType = left.exprType; //二元表达式的类型为左操作数和右操作数的类型
-        }else{
+        if (left.exprType === right.exprType) {
+            if (operator.type === Tokenkind.PLUS || operator.type === Tokenkind.MINUS || operator.type === Tokenkind.STAR || operator.type === Tokenkind.SLASH) {
+                this.exprType = left.exprType;
+            } else if (operator.type === Tokenkind.GREATER || operator.type === Tokenkind.GREATER_EQUAL || operator.type === Tokenkind.LESS || operator.type === Tokenkind.LESS_EQUAL || operator.type === Tokenkind.EQUAL_EQUAL || operator.type === Tokenkind.BANG_EQUAL) {
+                this.exprType = DataType.Boolean;
+            } else {
+                El.error(operator, "Invalid operator in binary expression.")
+            }
+        } else {
             El.error(operator, "Type mismatch in binary expression.")
         }
         this.left = left;
@@ -64,7 +70,7 @@ export class BinaryExpr implements Expr{
         this.right = right;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
-      return visitor.visitBinaryExpr(this)
+        return visitor.visitBinaryExpr(this)
     }
 }
 
@@ -73,11 +79,11 @@ export class UnaryExpr implements Expr {
     operator: Token;
     right: Expr;
     constructor(operator: Token, right: Expr) {
-        if((operator.type === Tokenkind.MINUS || operator.type === Tokenkind.BANG) && right.exprType === DataType.Int){
+        if ((operator.type === Tokenkind.MINUS || operator.type === Tokenkind.BANG) && right.exprType === DataType.Int) {
             this.exprType = DataType.Int; //一元表达式的类型为Int
-        }else if(operator.type === Tokenkind.BANG && right.exprType === DataType.Boolean){
+        } else if (operator.type === Tokenkind.BANG && right.exprType === DataType.Boolean) {
             this.exprType = DataType.Boolean; //一元表达式的类型为boolean
-        }else{
+        } else {
             El.error(operator, "Unary operator must be used with integer or boolean values.")
         }
         this.operator = operator;
@@ -89,14 +95,14 @@ export class UnaryExpr implements Expr {
 }
 
 //前缀自增自减表达式
-export class PrefixSelfExpr implements Expr { 
+export class PrefixSelfExpr implements Expr {
     exprType: DataType;
     right: Expr;
     operator: Token;
     constructor(operator: Token, right: Expr) {
-        if(right.exprType === DataType.Int){
+        if (right.exprType === DataType.Int) {
             this.exprType = DataType.Int; //前缀自增自减表达式的类型为Int
-        }else{
+        } else {
             El.error(operator, "Prefix self operator must be used with integer values.")
         }
         this.right = right;
@@ -108,14 +114,14 @@ export class PrefixSelfExpr implements Expr {
 }
 
 //后缀自增自减表达式
-export class SuffixSelfExpr implements Expr { 
+export class SuffixSelfExpr implements Expr {
     exprType: DataType;
     left: Expr;
     operator: Token;
     constructor(left: Expr, operator: Token) {
-        if(left.exprType === DataType.Int){
+        if (left.exprType === DataType.Int) {
             this.exprType = DataType.Int; //后缀自增自减表达式的类型为Int
-        }else{
+        } else {
             El.error(operator, "Suffix self operator must be used with integer values.")
         }
         this.left = left;
@@ -129,20 +135,20 @@ export class SuffixSelfExpr implements Expr {
 //字面量表达式
 export class LiteralExpr implements Expr {
 
-    exprType:DataType ;
+    exprType: DataType;
     value: any;
-    constructor( _val: any) {
+    constructor(_val: any) {
         const _valType = typeof _val;
-        if(_valType === 'string'){
+        if (_valType === 'string') {
             this.exprType = DataType.String;
-            if(_val.length ===1){
+            if (_val.length === 1) {
                 this.exprType = DataType.Char;
             }
-        }else if(_valType === 'number'){
+        } else if (_valType === 'number') {
             this.exprType = DataType.Int;
-        }else if(_valType === 'boolean'){
+        } else if (_valType === 'boolean') {
             this.exprType = DataType.Boolean;
-        }else{
+        } else {
             El.error(_val, "Invalid literal value.")
         }
         this.value = _val;
@@ -200,9 +206,9 @@ export class CallExpr implements Expr {
     paren: Token;
     args: Array<Expr>;
     constructor(callee: Expr, paren: Token, args: Array<Expr>) {
-        if(callee.exprType === DataType.Fun){
+        if (callee.exprType === DataType.Fun) {
             this.exprType = callee.exprType;
-        }else{
+        } else {
             El.error(paren, "Call expression must be used with function.")
         }
         this.callee = callee;

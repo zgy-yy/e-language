@@ -6,7 +6,7 @@ import { Parser } from "./Parse/Parse"
 let code =""
 
 async function main() {
-    const test_path ="./test/print.e"
+    const test_path ="./test/expression.e"
     // 读取测试文件
     if (checkEnv() == 'node') {
         const fs = await import('fs')
@@ -62,3 +62,7 @@ function checkEnv(): 'node' | 'browser' {
     }
     return 'browser'
 }
+
+let a = 12
+let  b=a++ +1;
+console.log(b)

@@ -435,7 +435,7 @@ declare i32 @printf(i8*, ...)
             }
         }
         this.printIR(`store ${leftType} %${new_val}, ${leftType}* ${ir_var_name}`);
-        return `%${new_val}`;
+        return `${left_value}`;
     }
 
     visitCallExpr(expr: CallExpr): string {

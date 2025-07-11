@@ -4,9 +4,6 @@ import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStm
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
-
-
-
     // Stmt
     visitReturnStmt(stmt: ReturnStmt): string {
         return `return ${stmt.value ? stmt.value.accept(this) : 'void'}`;

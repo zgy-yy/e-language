@@ -7,17 +7,17 @@
 ; 函数定义
 define i32 @foo_fun_2(i32 %a_int_0, i32 %b_int_1) {
 entry:
-    %bin0 = add i32 %a_int_0, %b_int_1
-    ret i32 %bin0  ; 返回
+    %reg_bin_0 = add i32 %a_int_0, %b_int_1
+    ret i32 %reg_bin_0  ; 返回
     }
 
 ; 函数定义
 define void @main() {
 entry:
     %b_int_3 = alloca i32  ; 分配局部变量
-    %call_var3 = call i32 @foo_fun_2(i32 1, i32 3)  ; 函数调用
-    store i32 %call_var3, i32* %b_int_3  ; 存储值到变量
-    %local_b_int_3_5 = load i32, i32* %b_int_3  ; 加载变量值
-    %print6 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %local_b_int_3_5)  ; 函数调用
+    %reg_call_3 = call i32 @foo_fun_2(i32 1, i32 3)  ; 函数调用
+    store i32 %reg_call_3, i32* %b_int_3  ; 存储值到变量
+    %local_reg_b_int_3_5 = load i32, i32* %b_int_3  ; 加载变量值
+    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %local_reg_b_int_3_5)  ; 函数调用
     ret void  ; 返回
     }

@@ -62,7 +62,3 @@ function checkEnv(): 'node' | 'browser' {
     }
     return 'browser'
 }
-
-let a = 12
-let  b=a++ +1;
-console.log(b)

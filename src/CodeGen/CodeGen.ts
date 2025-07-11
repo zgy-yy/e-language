@@ -14,7 +14,17 @@ export class CodeGen implements ExprVisitor<string>, StmtVisitor<void> {
     private globalVarListStmt: VarListStmt[] = []; //全局变量列表
     private globalFunctionStmt: FunctionStmt[] = []; //全局变量
     static codeText: string = "";
-    private sequence: number = 0;
+    private sequence = {
+        function: 0,
+        loop: 0,
+        for: 0,
+        doWhile: 0,
+        while: 0,
+        if: 0,
+        else: 0,
+        block: 0,
+        reg: 0
+    };
     private enclosing: EncloseLoop[] = []
     private paramVars: Map<string, number> = new Map();
     private functionDeclarations: string[] = []; //函数声明
@@ -85,9 +95,9 @@ declare i32 @printf(i8*, ...)
     }
 
     visitLoopStmt(stmt: LoopStmt): void {
-        const n = this.sequence++;
-        const body_label = `loop${n}_body`
-        const end_label = `loop${n}_end`
+        const n = this.sequence.loop++;
+        const body_label = `loop_body_${n}`
+        const end_label = `loop_end_${n}`
         this.enclosing.push({
             start: body_label,
             end: end_label
@@ -100,12 +110,12 @@ declare i32 @printf(i8*, ...)
         this.enclosing.pop()
     }
     visitForStmt(stmt: ForStmt): void {
-        const n = this.sequence++;
-        const initLabel = `for${n}_init`
-        const cond_label = `for${n}_cond`
-        const inc_label = `for${n}_inc`
-        const body_label = `for${n}_body`
-        const end_label = `for${n}_end`
+        const n = this.sequence.for++;
+        const initLabel = `for_init_${n}`
+        const cond_label = `for_cond_${n}`
+        const inc_label = `for_inc_${n}`
+        const body_label = `for_body_${n}`
+        const end_label = `for_end_${n}`
         this.enclosing.push({
             start: inc_label,
             end: end_label
@@ -122,7 +132,7 @@ declare i32 @printf(i8*, ...)
 
         if (stmt.condition) {
             const cond = stmt.condition.accept(this);
-            const cond_val = `for${n}_cond_val`
+            const cond_val = `reg_forCond_${n}`
             this.printIR(`%${cond_val} = icmp ne i1 ${cond}, 0`);
             this.printIR(`br i1 %${cond_val}, label %${body_label}, label %${end_label}`);
         } else {
@@ -146,10 +156,10 @@ declare i32 @printf(i8*, ...)
     }
 
     visitDoWhileStmt(stmt: DoWhileStmt): void {
-        const n = this.sequence++;
-        const body_label = `do${n}_body`
-        const cond_label = `do${n}_cond`
-        const end_label = `do${n}_end`
+        const n = this.sequence.doWhile++;
+        const body_label = `do_body_${n}`
+        const cond_label = `do_cond_${n}`
+        const end_label = `do_end_${n}`
 
         this.enclosing.push({
             start: cond_label,
@@ -165,7 +175,7 @@ declare i32 @printf(i8*, ...)
         this.printIR(`${cond_label}:`);
 
         const cond = stmt.condition.accept(this);
-        const cond_val = `do${n}_cond_val`
+        const cond_val = `reg_doCond_${n}`
         this.printIR(`%${cond_val} = icmp ne i1 ${cond}, 0`);
         this.printIR(`br i1 %${cond_val}, label %${body_label}, label %${end_label}`);
 
@@ -174,11 +184,11 @@ declare i32 @printf(i8*, ...)
     }
 
     visitWhileStmt(stmt: WhileStmt): void {
-        const n = this.sequence++;
+        const n = this.sequence.while++;
         //标签名
-        const cond_label = `while${n}_cond`
-        const body_label = `while${n}_body`
-        const end_label = `while${n}_end`
+        const cond_label = `while_cond_${n}`
+        const body_label = `while_body_${n}`
+        const end_label = `while_end_${n}`
 
         this.enclosing.push({
             start: cond_label,
@@ -189,7 +199,7 @@ declare i32 @printf(i8*, ...)
         this.printIR(`${cond_label}:`);
 
         const cond = stmt.condition.accept(this);
-        const cond_val = `while${n}_cond_val`
+        const cond_val = `reg_whileCond_${n}`
         this.printIR(`%${cond_val} = icmp ne i1 ${cond}, 0`);
         this.printIR(`br i1 %${cond_val}, label %${body_label}, label %${end_label}`);
 
@@ -204,12 +214,12 @@ declare i32 @printf(i8*, ...)
 
     //if 语句生成
     visitIfStmt(stmt: IfStmt): void {
-        const n = this.sequence++;
+        const n = this.sequence.if++;
         const cond = stmt.condition.accept(this);
-        const cond_val = `if${n}_cond_val`
-        const then_label = `if${n}_then`
-        const else_label = `if${n}_else`
-        const end_label = `if${n}_end`
+        const cond_val = `reg_ifCond_${n}`
+        const then_label = `if_then_${n}`
+        const else_label = `if_else_${n}`
+        const end_label = `if_end_${n}`
         this.printIR(`%${cond_val} = icmp ne i1 ${cond}, 0`);
 
         if (stmt.elseBranch) {
@@ -245,7 +255,7 @@ declare i32 @printf(i8*, ...)
     visitPrintStmt(stmt: PrintStmt): void {
         const _type = typeToLLVM(stmt.expression.exprType);
         const value = stmt.expression.accept(this);
-        this.printIR(`%print${this.sequence++} = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), ${_type} ${value})`);
+        this.printIR(`call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), ${_type} ${value})`);
     }
 
     visitVarStmt(stmt: VarStmt): void {
@@ -282,8 +292,8 @@ declare i32 @printf(i8*, ...)
     visitLogicalBinaryExpr(expr: LogicalBinaryExpr): string {
         const left = expr.left.accept(this);
         const right = expr.right.accept(this);
-        const n = this.sequence++;
-        const logical_val = `logical${n}`
+        const n = this.sequence.reg++;
+        const logical_val = `reg_logical_${n}`
 
         if (expr.operator.lexeme === '&&') {
             this.printIR(`%${logical_val} = and i1 ${left}, ${right}`);
@@ -314,13 +324,13 @@ declare i32 @printf(i8*, ...)
 
     //二元表达式生成
     visitBinaryExpr(expr: BinaryExpr): string {
-        const n = this.sequence++;
+        const n = this.sequence.reg++;
         const left = expr.left.accept(this);
         const right = expr.right.accept(this);
 
         const leftType = typeToLLVM(expr.left.exprType)
         const rightType = typeToLLVM(expr.right.exprType)
-        const bin_val = `bin${n}`
+        const bin_val = `reg_bin_${n}`
 
         switch (expr.operator.lexeme) {
             case '+':
@@ -365,8 +375,8 @@ declare i32 @printf(i8*, ...)
     visitUnaryExpr(expr: UnaryExpr): string {
         const rightType = typeToLLVM(expr.right.exprType)
         const right = expr.right.accept(this);
-        const n = this.sequence++;
-        const unary_val = `unary${n}`
+        const n = this.sequence.reg++;
+        const unary_val = `reg_unary_${n}`
         switch (expr.operator.lexeme) {
             case '-':
                 this.printIR(`%${unary_val} = sub ${rightType} 0, ${right}`);
@@ -381,12 +391,12 @@ declare i32 @printf(i8*, ...)
 
     //前缀自增自减表达式生成
     visitPrefixSelfExpr(expr: PrefixSelfExpr): string {
-        const n = this.sequence++;
+        const n = this.sequence.reg++;
         const var_ = expr.right as VariableExpr;//变量自身
         let ir_var_name = '' //ir中变量
         const right_value = expr.right.accept(this);
         const rightType = typeToLLVM(expr.right.exprType)
-        let new_val = `new${n}`
+        let new_val = `reg_prefix_${n}`
 
         if (this.globalVars.find(v => v === var_.variable)) {
             ir_var_name = `@${var_.variable._id}`
@@ -410,12 +420,12 @@ declare i32 @printf(i8*, ...)
 
     //后缀自增自减表达式生成
     visitSuffixSelfExpr(expr: SuffixSelfExpr): string {
-        const n = this.sequence++;
+        const n = this.sequence.reg++;
         const left = expr.left as VariableExpr;
         let ir_var_name = ''
         const left_value = left.accept(this)
         const leftType = typeToLLVM(left.exprType)
-        let new_val = `new${n}`
+        let new_val = `reg_suffix_${n}`
 
         if (this.globalVars.find(v => v === left.variable)) {
             ir_var_name = `@${left.variable._id}`
@@ -437,12 +447,11 @@ declare i32 @printf(i8*, ...)
     }
 
     visitCallExpr(expr: CallExpr): string {
-        const n = this.sequence++;
+        const n = this.sequence.reg++;
         const args = expr.args.map(arg => arg.accept(this));
         const callee = expr.callee.accept(this);
         const retType = typeToLLVM(expr.exprType)
-        const var_name = `call_var${n}`
-        console.log(9627, "callee", callee, retType)
+        const var_name = `reg_call_${n}`
         this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `${typeToLLVM(expr.exprType)} ${arg}`).join(', ')})`);
         return `%${var_name}`;
     }
@@ -451,20 +460,20 @@ declare i32 @printf(i8*, ...)
     visitVariableExpr(expr: VariableExpr): string {
         const var_name = expr.variable._id;
         const varType = typeToLLVM(expr.variable.type);
-        const n = this.sequence++;
-        const var_name_n = `${var_name}_${n}`
+        const n = this.sequence.reg++;
+        const var_name_n = `reg_${var_name}_${n}`
 
         //函数类型的变量
         if (expr.exprType === DataType.Fun) {
             const funVar = expr.variable as FuncVar
             const retType = funVar.retType //函数变量 的返回值类型
-            if(retType===DataType.Fun){
+            if (retType === DataType.Fun) {
                 // this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
                 // return `%${var_name}`;
-            }else{
+            } else {
                 return `@${var_name}`;
             }
-            
+
         } else if (expr.variable instanceof ParamVar) {
             //参数类型的变量 直接加载
             // this.printIR(`%${var_name_n} = load ${varType}, ${varType}* %${var_name}`);

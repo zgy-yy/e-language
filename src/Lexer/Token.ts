@@ -86,9 +86,9 @@ export enum DataType  {
     Boolean = "bool",
     Void = "void",
     Char = "char",
-    Fun = "fun",
     Null = "null",
     String = "string",
+    Fun = "fun",
 }
 
 

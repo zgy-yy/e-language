@@ -1,6 +1,6 @@
 import { El } from "../El/El";
 import { Token, DataType, Tokenkind } from "../Lexer/Token"
-import { Var } from "../Parse/Symbol";
+import { FuncVar, Var } from "../Parse/Symbol";
 
 /*
 * 表达式
@@ -201,19 +201,20 @@ export class AssignExpr implements Expr {
 
 // 函数调用表达式   
 export class CallExpr implements Expr {
-    exprType: DataType;
+    exprType: DataType; //函数调用表达式的类型为函数的返回值类型
     callee: Expr;
     paren: Token;
     args: Array<Expr>;
     constructor(callee: Expr, paren: Token, args: Array<Expr>) {
-        if (callee.exprType === DataType.Fun) {
-            this.exprType = callee.exprType;
+        if (callee instanceof VariableExpr && callee.variable instanceof FuncVar) {
+            this.exprType = callee.variable.retType;
         } else {
             El.error(paren, "Call expression must be used with function.")
         }
         this.callee = callee;
         this.paren = paren;
         this.args = args;
+        console.log("this.exprType", this)
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitCallExpr(this);

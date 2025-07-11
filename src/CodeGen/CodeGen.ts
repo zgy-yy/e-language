@@ -1,6 +1,6 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
-import { Var } from "../Parse/Symbol";
+import { FuncVar, ParamVar, Var } from "../Parse/Symbol";
 import { DataType } from "../Lexer/Token";
 
 
@@ -439,10 +439,12 @@ declare i32 @printf(i8*, ...)
     visitCallExpr(expr: CallExpr): string {
         const n = this.sequence++;
         const args = expr.args.map(arg => arg.accept(this));
-        const callee = expr.callee as VariableExpr;
-        const call_name = `call${n}`
-        this.printIR(`%${call_name} = call i32 @${callee.variable._id}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
-        return `%${call_name}`;
+        const callee = expr.callee.accept(this);
+        const retType = typeToLLVM(expr.exprType)
+        const var_name = `call_var${n}`
+        console.log(9627, "callee", callee, retType)
+        this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
+        return `%${var_name}`;
     }
 
     //变量表达式生成
@@ -451,12 +453,31 @@ declare i32 @printf(i8*, ...)
         const varType = typeToLLVM(expr.variable.type);
         const n = this.sequence++;
         const var_name_n = `${var_name}_${n}`
-        if (this.globalVars.find(v => v === expr.variable)) {
-            this.printIR(`%global_${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
-            return `%global_${var_name_n}`;
+
+        //函数类型的变量
+        if (expr.exprType === DataType.Fun) {
+            const funVar = expr.variable as FuncVar
+            const retType = funVar.retType //函数变量 的返回值类型
+            if(retType===DataType.Fun){
+                // this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
+                // return `%${var_name}`;
+            }else{
+                return `@${var_name}`;
+            }
+            
+        } else if (expr.variable instanceof ParamVar) {
+            //参数类型的变量 直接加载
+            // this.printIR(`%${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
+            // return `%${var_name_n}`;
         } else {
-            this.printIR(`%local_${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
-            return `%local_${var_name_n}`;
+
+            if (this.globalVars.find(v => v === expr.variable)) {
+                this.printIR(`%global_${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
+                return `%global_${var_name_n}`;
+            } else {
+                this.printIR(`%local_${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
+                return `%local_${var_name_n}`;
+            }
         }
     }
 

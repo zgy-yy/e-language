@@ -8,3 +8,5 @@ https://readonly.link/books/https://raw.githubusercontent.com/GuoYaxiang/craftin
 https://github.com/Evian-Zhang/llvm-ir-tutorial
 
 https://readonly.link/books/https://raw.githubusercontent.com/GuoYaxiang/craftinginterpreters_zh/main/book.json
+
+https://evian-zhang.github.io/llvm-ir-tutorial/index.html

@@ -1,15 +1,11 @@
 
 
-void foo(){
-    int a=2;
-    print a;
-    return;
+int  foo(){
+    return 1;
 }
 
-int main(){
-    int a=1;
-    print a;
-    foo();
-    return a;
+void main(){
+    int  b= foo();
+    print b;
 }
 

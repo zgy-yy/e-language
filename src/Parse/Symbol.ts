@@ -2,7 +2,7 @@ import { DataType } from "../Lexer/Token"
 
 export class Var {
     static incremental = 0
-    type: DataType
+    type: DataType //变量类型
     name: string
     _id: string
     constructor(name: string, type_: DataType) {
@@ -16,5 +16,13 @@ export class Var {
 export class ParamVar extends Var {
     constructor(name: string, type_: DataType) {
         super(name, type_)
+    }
+}
+
+export class FuncVar extends Var {
+    retType: DataType //返回值类型
+    constructor(name: string, _retType: DataType) {
+        super(name, DataType.Fun) //函数类型为变量类型
+        this.retType = _retType //返回值类型
     }
 }

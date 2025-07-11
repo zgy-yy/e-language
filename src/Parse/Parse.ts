@@ -3,7 +3,7 @@ import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStm
 import { El } from "../El/El";
 import { Token, Tokenkind, DataType } from "../Lexer/Token";
 import { SymbolTable } from "./SymbolTable";
-import { ParamVar, Var } from "./Symbol";
+import { FuncVar, ParamVar, Var } from "./Symbol";
 
 type funcEnclosing = {
     funcName: string,
@@ -184,7 +184,7 @@ export class Parser {
                 body.statements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, 0), null))
             }
         }
-        const fun_var = new Var(fun_name.lexeme, DataType.Fun) //函数声明 视为变量
+        const fun_var = new FuncVar(fun_name.lexeme, dclRetType) //函数声明 视为变量
         this.symbolTable.leaveScope()
 
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表

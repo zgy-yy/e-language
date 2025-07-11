@@ -58,7 +58,7 @@ declare i32 @printf(i8*, ...)
     visitFunctionStmt(stmt: FunctionStmt): void {
         const fnName = stmt.fn_name.name === "main" ? "main" : stmt.fn_name._id //函数名
         const retType = typeToLLVM(stmt.retType);
-        this.printIR(`define ${retType} @${fnName}(${stmt.params.map(p => typeToLLVM(p.type) + ' %' + p.name).join(', ')}) {`)
+        this.printIR(`define ${retType} @${fnName}(${stmt.params.map(p => typeToLLVM(p.type) + ' %' + p._id).join(', ')}) {`)
         this.printIR(`entry:`)
         stmt.body.accept(this);
         this.printIR(`}`)
@@ -443,7 +443,7 @@ declare i32 @printf(i8*, ...)
         const retType = typeToLLVM(expr.exprType)
         const var_name = `call_var${n}`
         console.log(9627, "callee", callee, retType)
-        this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
+        this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `${typeToLLVM(expr.exprType)} ${arg}`).join(', ')})`);
         return `%${var_name}`;
     }
 
@@ -468,7 +468,7 @@ declare i32 @printf(i8*, ...)
         } else if (expr.variable instanceof ParamVar) {
             //参数类型的变量 直接加载
             // this.printIR(`%${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
-            // return `%${var_name_n}`;
+            return `%${var_name}`;
         } else {
 
             if (this.globalVars.find(v => v === expr.variable)) {

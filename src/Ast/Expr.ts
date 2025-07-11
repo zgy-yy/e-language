@@ -214,7 +214,6 @@ export class CallExpr implements Expr {
         this.callee = callee;
         this.paren = paren;
         this.args = args;
-        console.log("this.exprType", this)
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitCallExpr(this);

@@ -184,7 +184,7 @@ export class Parser {
                 body.statements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, 0), null))
             }
         }
-        const fun_var = new FuncVar(fun_name.lexeme, dclRetType) //函数声明 视为变量
+        const fun_var = new FuncVar(fun_name.lexeme, dclRetType, params) //函数声明 视为变量
         this.symbolTable.leaveScope()
 
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表

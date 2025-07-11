@@ -9,22 +9,24 @@ type EncloseLoop = {
     end: string //循环结束标签
 }
 
+const initSequence = {
+    function: 0,
+    loop: 0,
+    for: 0,
+    doWhile: 0,
+    while: 0,
+    if: 0,
+    else: 0,
+    block: 0,
+    reg: 0
+}
+
 export class CodeGen implements ExprVisitor<string>, StmtVisitor<void> {
     private globalVars: Var[] = [];
     private globalVarListStmt: VarListStmt[] = []; //全局变量列表
     private globalFunctionStmt: FunctionStmt[] = []; //全局变量
     static codeText: string = "";
-    private sequence = {
-        function: 0,
-        loop: 0,
-        for: 0,
-        doWhile: 0,
-        while: 0,
-        if: 0,
-        else: 0,
-        block: 0,
-        reg: 0
-    };
+    private sequence = {...initSequence};
     private enclosing: EncloseLoop[] = []
     private paramVars: Map<string, number> = new Map();
     private functionDeclarations: string[] = []; //函数声明
@@ -66,6 +68,7 @@ declare i32 @printf(i8*, ...)
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
+        this.sequence = {...initSequence};
         const fnName = stmt.fn_name.name === "main" ? "main" : stmt.fn_name._id //函数名
         const retType = typeToLLVM(stmt.retType);
         this.printIR(`define ${retType} @${fnName}(${stmt.params.map(p => typeToLLVM(p.type) + ' %' + p._id).join(', ')}) {`)
@@ -466,17 +469,12 @@ declare i32 @printf(i8*, ...)
         //函数类型的变量
         if (expr.exprType === DataType.Fun) {
             const funVar = expr.variable as FuncVar
-            const retType = funVar.retType //函数变量 的返回值类型
-            if (retType === DataType.Fun) {
-                // this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `i32 ${arg}`).join(', ')})`);
-                // return `%${var_name}`;
-            } else {
-                return `@${var_name}`;
-            }
-
+            const retType = typeToLLVM(funVar.retType) //函数变量 的返回值类型
+            const params = funVar.params.map(p => typeToLLVM(p.type))
+            this.printIR(`%${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
+            return `%${var_name_n}`;
         } else if (expr.variable instanceof ParamVar) {
             //参数类型的变量 直接加载
-            // this.printIR(`%${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
             return `%${var_name}`;
         } else {
 

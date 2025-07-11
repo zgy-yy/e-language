@@ -21,8 +21,10 @@ export class ParamVar extends Var {
 
 export class FuncVar extends Var {
     retType: DataType //返回值类型
-    constructor(name: string, _retType: DataType) {
+    params: Var[] //参数列表
+    constructor(name: string, _retType: DataType, params: Var[]) {
         super(name, DataType.Fun) //函数类型为变量类型
         this.retType = _retType //返回值类型
+        this.params = params
     }
 }

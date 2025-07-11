@@ -481,11 +481,11 @@ declare i32 @printf(i8*, ...)
         } else {
 
             if (this.globalVars.find(v => v === expr.variable)) {
-                this.printIR(`%global_${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
-                return `%global_${var_name_n}`;
+                this.printIR(`%${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
+                return `%${var_name_n}`;
             } else {
-                this.printIR(`%local_${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
-                return `%local_${var_name_n}`;
+                this.printIR(`%${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
+                return `%${var_name_n}`;
             }
         }
     }

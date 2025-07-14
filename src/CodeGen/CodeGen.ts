@@ -451,11 +451,20 @@ declare i32 @printf(i8*, ...)
 
     visitCallExpr(expr: CallExpr): string {
         const n = this.sequence.reg++;
-        const args = expr.args.map(arg => arg.accept(this));
+        const args = expr.args.map(arg => {
+            return {
+                value: arg.accept(this),
+                type: typeToLLVM(arg.exprType)
+            }
+        });
         const callee = expr.callee.accept(this);
         const retType = typeToLLVM(expr.exprType)
         const var_name = `reg_call_${n}`
-        this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `${typeToLLVM(expr.exprType)} ${arg}`).join(', ')})`);
+        if (retType == 'void') {
+            this.printIR(`call ${retType} ${callee}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
+        } else {
+            this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
+        }
         return `%${var_name}`;
     }
 
@@ -470,7 +479,8 @@ declare i32 @printf(i8*, ...)
         if (expr.exprType instanceof FunType) {
             const funVar = expr.variable as FuncVar
             const retType = typeToLLVM(funVar.retType) //函数变量 的返回值类型
-            const params = funVar.params.map(p => typeToLLVM(p.type))
+            console.log('retType', funVar)
+            const params = funVar.paramTypes.map(p => typeToLLVM(p))
             this.printIR(`%${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
             return `%${var_name_n}`;
         } else if (expr.variable instanceof ParamVar) {
@@ -519,6 +529,6 @@ function typeToLLVM(type: DataType): string {
         }
     }
     if (type instanceof FunType) {
-        return "i32";
+        return "i32*";
     }
 }   

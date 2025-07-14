@@ -129,6 +129,9 @@ export class Parser {
 
     //变量声明语句
     varListDeclaration(varT: DataType): Stmt {
+        if (varT instanceof SimpleType && varT.simpleKind === SimpleDataKind.Void) {
+            El.error(this.previous(), "void type is not supported.")
+        }
         let varStmt: VarStmt[] = []
         const var_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.")//变量名
         if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
@@ -143,7 +146,12 @@ export class Parser {
             }
         }
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
-        const var_ = new Var(var_name.lexeme, varT)
+        let var_ = null
+        if (varT instanceof FunType) {
+            var_ = new FuncVar(var_name.lexeme, varT.retType, [])
+        } else {
+            var_ = new Var(var_name.lexeme, varT)
+        }
         this.symbolTable.addVariable(var_name.lexeme, var_)
 
         varStmt.push(new VarStmt(var_, initializer))
@@ -167,21 +175,6 @@ export class Parser {
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after variable declaration.")
         return new VarListStmt(varStmt)
     }
-
-    paramDeclaration(): Var {
-        const declType = this.declarationKind()
-        if (declType) {
-            let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-            if (this.symbolTable.inCurrentScope(identifier_name.lexeme)) {
-                this.error(identifier_name, "Paramter Variable with this name already declared in this scope.")
-            }
-            const declParamVar = new ParamVar(identifier_name.lexeme, declType)
-            this.symbolTable.addVariable(identifier_name.lexeme, declParamVar)
-            return declParamVar
-        }
-    }
-
-
 
 
     //函数声明
@@ -219,12 +212,25 @@ export class Parser {
                 body.statements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, line), null))
             }
         }
-        const fun_var = new FuncVar(fun_name.lexeme, dclRetType, params) //函数声明 视为变量
+        const fun_var = new FuncVar(fun_name.lexeme, dclRetType, params.map(item => item.type)) //函数声明 视为变量
         this.symbolTable.leaveScope()
 
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
         this.funcEnclosing.pop()
         return new FunctionStmt(dclRetType, fun_var, params, body)
+    }
+
+    paramDeclaration(): Var {
+        const declType = this.declarationKind()
+        if (declType) {
+            let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
+            if (this.symbolTable.inCurrentScope(identifier_name.lexeme)) {
+                this.error(identifier_name, "Paramter Variable with this name already declared in this scope.")
+            }
+            const declParamVar = new ParamVar(identifier_name.lexeme, declType)
+            this.symbolTable.addVariable(identifier_name.lexeme, declParamVar)
+            return declParamVar
+        }
     }
 
     printStatement(): Stmt {

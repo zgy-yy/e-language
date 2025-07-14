@@ -8,7 +8,7 @@ export class Var {
     constructor(name: string, type_: DataType) {
         this.name = name
         this.type = type_
-        this._id = name + '' + type_ + '_' + Var.incremental++
+        this._id = name + '_' + type_.toLLVM() + '_' + Var.incremental++
     }
 }
 
@@ -21,12 +21,11 @@ export class ParamVar extends Var {
 
 export class FuncVar extends Var {
     retType: DataType //返回值类型
-    params: Var[] //参数列表
-    constructor(name: string, _retType: DataType, params: Var[]) {
-        const paramsType = params.map(item => item.type)
-        const funType = new FunType(paramsType, _retType)
+    paramTypes: DataType[] //参数列表
+    constructor(name: string, _retType: DataType, paramTypes: DataType[]) {
+        const funType = new FunType(paramTypes, _retType)
         super(name, funType) //函数类型为变量类型
         this.retType = _retType //返回值类型
-        this.params = params
+        this.paramTypes = paramTypes
     }
 }

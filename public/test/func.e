@@ -8,7 +8,6 @@ void bar(){
 
 void main(){
     ()void func= bar;
-    void  b= foo(1,3)();
-    print b;
+    func();
 }
 

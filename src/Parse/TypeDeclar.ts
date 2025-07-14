@@ -23,6 +23,9 @@ export class DataType {
     toString(): string {
         return this.kind
     }
+    toLLVM(): string {
+        return this.kind
+    }
 }
 
 export class SimpleType extends DataType {
@@ -32,6 +35,9 @@ export class SimpleType extends DataType {
         this.simpleKind = kind
     }
     toString(): string {
+        return this.simpleKind
+    }
+    toLLVM(): string {
         return this.simpleKind
     }
 }
@@ -47,6 +53,9 @@ export class FunType extends DataType {
     toString(): string {
         return `(${this.paramsType.map(item => item.toString()).join('_')})->${this.retType.toString()}`
     }
+    toLLVM(): string {
+        return `${this.paramsType.map(item => item.toLLVM()).join('_')}_${this.retType.toLLVM()}`
+    }
 }
 
 export class ClassType extends DataType {
@@ -56,6 +65,9 @@ export class ClassType extends DataType {
     }
     toString(): string {
         return super.toString() + 'class'
+    }
+    toLLVM(): string {
+        return 'class'
     }
 }
 // 

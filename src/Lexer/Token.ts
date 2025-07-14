@@ -1,4 +1,4 @@
-export enum Tokenkind{
+export enum Tokenkind {
     SEMICOLON = ';',
     LEFT_PAREN = '(',
     RIGHT_PAREN = ')',
@@ -57,7 +57,7 @@ export enum Tokenkind{
     NULL = "Null",
 
     EOF = "EOF",
-    
+
 
     //关键字
     PRINT = "Print",
@@ -69,7 +69,7 @@ export enum Tokenkind{
     FOR = "For",
     LOOP = "Loop",//增加无条件循环
     BREAK = "Break",
-    CONTINUE= "Continue",
+    CONTINUE = "Continue",
     RETURN = "Return",
 
 
@@ -79,20 +79,7 @@ export enum Tokenkind{
     VOID = "Void",
     CHAR = "Char",
 }
-
-//变量类型
-export enum DataType  {
-    Int = "int",
-    Boolean = "bool",
-    Void = "void",
-    Char = "char",
-    Null = "null",
-    String = "string",
-    Fun = "fun",
-}
-
-
-export class Token{
+export class Token {
     type: Tokenkind
     lexeme: string; //词素：一组字符的集合 （关键字的组成字符）
     literal: any;//字面量：数值或字符串、null

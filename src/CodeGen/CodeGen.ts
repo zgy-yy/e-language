@@ -1,7 +1,7 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { FuncVar, ParamVar, Var } from "../Parse/Symbol";
-import { DataType } from "../Lexer/Token";
+import { DataType, FunType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
 
 
 type EncloseLoop = {
@@ -26,7 +26,7 @@ export class CodeGen implements ExprVisitor<string>, StmtVisitor<void> {
     private globalVarListStmt: VarListStmt[] = []; //全局变量列表
     private globalFunctionStmt: FunctionStmt[] = []; //全局变量
     static codeText: string = "";
-    private sequence = {...initSequence};
+    private sequence = { ...initSequence };
     private enclosing: EncloseLoop[] = []
     private paramVars: Map<string, number> = new Map();
     private functionDeclarations: string[] = []; //函数声明
@@ -68,7 +68,7 @@ declare i32 @printf(i8*, ...)
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
-        this.sequence = {...initSequence};
+        this.sequence = { ...initSequence };
         const fnName = stmt.fn_name.name === "main" ? "main" : stmt.fn_name._id //函数名
         const retType = typeToLLVM(stmt.retType);
         this.printIR(`define ${retType} @${fnName}(${stmt.params.map(p => typeToLLVM(p.type) + ' %' + p._id).join(', ')}) {`)
@@ -467,7 +467,7 @@ declare i32 @printf(i8*, ...)
         const var_name_n = `reg_${var_name}_${n}`
 
         //函数类型的变量
-        if (expr.exprType === DataType.Fun) {
+        if (expr.exprType instanceof FunType) {
             const funVar = expr.variable as FuncVar
             const retType = typeToLLVM(funVar.retType) //函数变量 的返回值类型
             const params = funVar.params.map(p => typeToLLVM(p.type))
@@ -504,12 +504,21 @@ declare i32 @printf(i8*, ...)
 
 
 function typeToLLVM(type: DataType): string {
-    switch (type) {
-        case DataType.Int:
-            return "i32";
-        case DataType.Boolean:
-            return "i1";
-        case DataType.Void:
-            return "void";
+    if (type instanceof SimpleType) {
+        switch (type.typekind) {
+            case SimpleDataKind.Int:
+                return "i32";
+            case SimpleDataKind.Boolean:
+                return "i1";
+            case SimpleDataKind.Void:
+                return "void";
+            case SimpleDataKind.Char:
+                return "i8";
+            case SimpleDataKind.Null:
+                return "i8*";
+        }
     }
-}
+    if (type instanceof FunType) {
+        return "i32";
+    }
+}   

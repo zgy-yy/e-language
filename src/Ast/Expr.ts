@@ -1,5 +1,6 @@
+import { DataType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
-import { Token, DataType, Tokenkind } from "../Lexer/Token"
+import { Token, Tokenkind } from "../Lexer/Token"
 import { FuncVar, Var } from "../Parse/Symbol";
 
 /*
@@ -32,8 +33,8 @@ export class LogicalBinaryExpr implements Expr {
     operator: Token;
     right: Expr;
     constructor(left: Expr, operator: Token, right: Expr) {
-        if (left.exprType === DataType.Boolean && right.exprType === DataType.Boolean) {
-            this.exprType = DataType.Boolean; //逻辑运算符的类型为布尔类型
+        if (left.exprType instanceof SimpleType && right.exprType instanceof SimpleType && left.exprType.typekind === SimpleDataKind.Boolean && right.exprType.typekind === SimpleDataKind.Boolean) {
+            this.exprType = new SimpleType(SimpleDataKind.Boolean); //逻辑运算符的类型为布尔类型
         } else {
             El.error(operator, "Logical operator must be used with boolean values.")
         }
@@ -54,11 +55,11 @@ export class BinaryExpr implements Expr {
     operator: Token;
     right: Expr;
     constructor(left: Expr, operator: Token, right: Expr) {
-        if (left.exprType === right.exprType) {
+        if (left.exprType instanceof SimpleType && right.exprType instanceof SimpleType && left.exprType.typekind === right.exprType.typekind) {
             if (operator.type === Tokenkind.PLUS || operator.type === Tokenkind.MINUS || operator.type === Tokenkind.STAR || operator.type === Tokenkind.SLASH) {
                 this.exprType = left.exprType;
             } else if (operator.type === Tokenkind.GREATER || operator.type === Tokenkind.GREATER_EQUAL || operator.type === Tokenkind.LESS || operator.type === Tokenkind.LESS_EQUAL || operator.type === Tokenkind.EQUAL_EQUAL || operator.type === Tokenkind.BANG_EQUAL) {
-                this.exprType = DataType.Boolean;
+                this.exprType = new SimpleType(SimpleDataKind.Boolean);
             } else {
                 El.error(operator, "Invalid operator in binary expression.")
             }
@@ -79,10 +80,10 @@ export class UnaryExpr implements Expr {
     operator: Token;
     right: Expr;
     constructor(operator: Token, right: Expr) {
-        if ((operator.type === Tokenkind.MINUS || operator.type === Tokenkind.BANG) && right.exprType === DataType.Int) {
-            this.exprType = DataType.Int; //一元表达式的类型为Int
-        } else if (operator.type === Tokenkind.BANG && right.exprType === DataType.Boolean) {
-            this.exprType = DataType.Boolean; //一元表达式的类型为boolean
+        if ((operator.type === Tokenkind.MINUS || operator.type === Tokenkind.BANG) && right.exprType instanceof SimpleType && right.exprType.typekind === SimpleDataKind.Int) {
+            this.exprType = new SimpleType(SimpleDataKind.Int); //一元表达式的类型为Int
+        } else if (operator.type === Tokenkind.BANG && right.exprType instanceof SimpleType && right.exprType.typekind === SimpleDataKind.Boolean) {
+            this.exprType = new SimpleType(SimpleDataKind.Boolean); //一元表达式的类型为boolean
         } else {
             El.error(operator, "Unary operator must be used with integer or boolean values.")
         }
@@ -100,8 +101,8 @@ export class PrefixSelfExpr implements Expr {
     right: Expr;
     operator: Token;
     constructor(operator: Token, right: Expr) {
-        if (right.exprType === DataType.Int) {
-            this.exprType = DataType.Int; //前缀自增自减表达式的类型为Int
+        if (right.exprType instanceof SimpleType && right.exprType.typekind === SimpleDataKind.Int) {
+            this.exprType = new SimpleType(SimpleDataKind.Int); //前缀自增自减表达式的类型为Int
         } else {
             El.error(operator, "Prefix self operator must be used with integer values.")
         }
@@ -119,8 +120,8 @@ export class SuffixSelfExpr implements Expr {
     left: Expr;
     operator: Token;
     constructor(left: Expr, operator: Token) {
-        if (left.exprType === DataType.Int) {
-            this.exprType = DataType.Int; //后缀自增自减表达式的类型为Int
+        if (left.exprType instanceof SimpleType && left.exprType.typekind === SimpleDataKind.Int) {
+            this.exprType = new SimpleType(SimpleDataKind.Int); //后缀自增自减表达式的类型为Int
         } else {
             El.error(operator, "Suffix self operator must be used with integer values.")
         }
@@ -140,14 +141,14 @@ export class LiteralExpr implements Expr {
     constructor(_val: any) {
         const _valType = typeof _val;
         if (_valType === 'string') {
-            this.exprType = DataType.String;
-            if (_val.length === 1) {
-                this.exprType = DataType.Char;
-            }
+            // this.exprType = new SimpleType(SimpleDataKind.String);
+            // if (_val.length === 1) {
+            //     this.exprType = new SimpleType(SimpleDataKind.Char);
+            // }
         } else if (_valType === 'number') {
-            this.exprType = DataType.Int;
+            this.exprType = new SimpleType(SimpleDataKind.Int);
         } else if (_valType === 'boolean') {
-            this.exprType = DataType.Boolean;
+            this.exprType = new SimpleType(SimpleDataKind.Boolean);
         } else {
             El.error(_val, "Invalid literal value.")
         }

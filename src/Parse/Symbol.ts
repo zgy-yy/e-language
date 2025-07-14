@@ -1,4 +1,4 @@
-import { DataType } from "../Lexer/Token"
+import { DataType, FunType } from "./TypeDeclar"
 
 export class Var {
     static incremental = 0
@@ -23,7 +23,9 @@ export class FuncVar extends Var {
     retType: DataType //返回值类型
     params: Var[] //参数列表
     constructor(name: string, _retType: DataType, params: Var[]) {
-        super(name, DataType.Fun) //函数类型为变量类型
+        const paramsType = params.map(item => item.type)
+        const funType = new FunType(paramsType, _retType)
+        super(name, funType) //函数类型为变量类型
         this.retType = _retType //返回值类型
         this.params = params
     }

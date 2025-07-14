@@ -38,24 +38,10 @@ tup[1]
 
 函数类型
 
-
 (int ,int)string cc=(a,b){
     return "232";
 }
 
-//函数类型
-string(Int,string)  funcPlay = (a,b){
-
-    return "hello"
-}
-
-void() say=(){
-    print("hello")
-}
-
-Int(Int,Int) count=(a,b){
-    retrun a+b;
-}
 
 //函数
 fpt()  {

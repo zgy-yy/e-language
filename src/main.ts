@@ -3,15 +3,15 @@ import { CodeGen } from "./CodeGen/CodeGen"
 import { Scanner } from "./Lexer/Lexer"
 import { Parser } from "./Parse/Parse"
 
-let code =""
+let code = ""
 
 async function main() {
-    const test_path ="./test/func.e"
+    const test_path = "./test/func.e"
     // 读取测试文件
     if (checkEnv() == 'node') {
         const fs = await import('fs')
         const path = await import('path')
-        let sourceCodePath = path.resolve(__dirname,'../public',test_path)
+        let sourceCodePath = path.resolve(__dirname, '../public', test_path)
         console.log('sourceCodePath', sourceCodePath)
         const sourceCode = fs.readFileSync(sourceCodePath, 'utf-8')
         code = sourceCode
@@ -19,11 +19,12 @@ async function main() {
         const file = await fetch(test_path)
         const text = await file.text()
         code = text
+        const rootDom = document.querySelector('body')
+        const htmlCode = code.split('\n').map((item, index) => {
+            return `<span class="line-number">${index + 1}</span> <span class="line-code">${item}</span> <br/>`
+        }).join('')
+        rootDom.innerHTML = `<pre>${htmlCode}</pre>`
     }
-
-    console.log('source code:\n', code)
-    
-
 
     const sanner = new Scanner(code)
     const tokens = sanner.scanTokens()

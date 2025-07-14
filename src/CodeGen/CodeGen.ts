@@ -30,7 +30,6 @@ export class CodeGen implements ExprVisitor<string>, StmtVisitor<void> {
     private enclosing: EncloseLoop[] = []
     private paramVars: Map<string, number> = new Map();
     private functionDeclarations: string[] = []; //函数声明
-    private functionDefinitions: string[] = []; //函数定义
 
     constructor() {
         // 初始化 LLVM IR 头部
@@ -266,14 +265,12 @@ declare i32 @printf(i8*, ...)
         if (this.globalVars.find(v => v === stmt.variable)) {
             // 全局变量
             const varType = typeToLLVM(stmt.variable.type);
-
-
             if (stmt.initializer) {
                 const value = stmt.initializer.accept(this);
                 this.printIR(`@${var_name} = global ${varType} ${value}`);
             } else {
                 this.printIR(`@${var_name} = global ${varType} 0`);
-            }
+            };
         } else {
             const varType = typeToLLVM(stmt.variable.type);
             // 局部变量
@@ -296,15 +293,15 @@ declare i32 @printf(i8*, ...)
         const left = expr.left.accept(this);
         const right = expr.right.accept(this);
         const n = this.sequence.reg++;
-        const logical_val = `reg_logical_${n}`
+        const logical_val = `%reg_logical_${n}`
 
         if (expr.operator.lexeme === '&&') {
-            this.printIR(`%${logical_val} = and i1 ${left}, ${right}`);
+            this.printIR(`${logical_val} = and i1 ${left}, ${right}`);
         } else {
-            this.printIR(`%${logical_val} = or i1 ${left}, ${right}`);
+            this.printIR(`${logical_val} = or i1 ${left}, ${right}`);
         }
 
-        return `%${logical_val}`;
+        return logical_val;
     }
     //赋值表达式生成
     visitAssignExpr(expr: AssignExpr): string {
@@ -333,45 +330,45 @@ declare i32 @printf(i8*, ...)
 
         const leftType = typeToLLVM(expr.left.exprType)
         const rightType = typeToLLVM(expr.right.exprType)
-        const bin_val = `reg_bin_${n}`
+        const bin_val = `%reg_bin_${n}`
 
         switch (expr.operator.lexeme) {
             case '+':
-                this.printIR(`%${bin_val} = add ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = add ${leftType} ${left}, ${right}`);
                 break;
             case '-':
-                this.printIR(`%${bin_val} = sub ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = sub ${leftType} ${left}, ${right}`);
                 break;
             case '*':
-                this.printIR(`%${bin_val} = mul ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = mul ${leftType} ${left}, ${right}`);
                 break;
             case '/':
-                this.printIR(`%${bin_val} = sdiv ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = sdiv ${leftType} ${left}, ${right}`);
                 break;
             case '%':
-                this.printIR(`%${bin_val} = srem ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = srem ${leftType} ${left}, ${right}`);
                 break;
             case '==':
-                this.printIR(`%${bin_val} = icmp eq ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = icmp eq ${leftType} ${left}, ${right}`);
                 break;
             case '!=':
-                this.printIR(`%${bin_val} = icmp ne ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = icmp ne ${leftType} ${left}, ${right}`);
                 break;
             case '<':
-                this.printIR(`%${bin_val} = icmp slt ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = icmp slt ${leftType} ${left}, ${right}`);
                 break;
             case '<=':
-                this.printIR(`%${bin_val} = icmp sle ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = icmp sle ${leftType} ${left}, ${right}`);
                 break;
             case '>':
-                this.printIR(`%${bin_val} = icmp sgt ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = icmp sgt ${leftType} ${left}, ${right}`);
                 break;
             case '>=':
-                this.printIR(`%${bin_val} = icmp sge ${leftType} ${left}, ${right}`);
+                this.printIR(`${bin_val} = icmp sge ${leftType} ${left}, ${right}`);
                 break;
         }
 
-        return `%${bin_val}`;
+        return bin_val;
     }
 
     //一元表达式生成
@@ -379,17 +376,17 @@ declare i32 @printf(i8*, ...)
         const rightType = typeToLLVM(expr.right.exprType)
         const right = expr.right.accept(this);
         const n = this.sequence.reg++;
-        const unary_val = `reg_unary_${n}`
+        const unary_val = `%reg_unary_${n}`
         switch (expr.operator.lexeme) {
             case '-':
-                this.printIR(`%${unary_val} = sub ${rightType} 0, ${right}`);
+                this.printIR(`${unary_val} = sub ${rightType} 0, ${right}`);
                 break;
             case '!':
-                this.printIR(`%${unary_val} = icmp eq ${rightType} ${right}, 0`);
+                this.printIR(`${unary_val} = icmp eq ${rightType} ${right}, 0`);
                 break;
         }
 
-        return `%${unary_val}`;
+        return unary_val;
     }
 
     //前缀自增自减表达式生成
@@ -399,26 +396,26 @@ declare i32 @printf(i8*, ...)
         let ir_var_name = '' //ir中变量
         const right_value = expr.right.accept(this);
         const rightType = typeToLLVM(expr.right.exprType)
-        let new_val = `reg_prefix_${n}`
+        let new_val = `%reg_prefix_${n}`
 
         if (this.globalVars.find(v => v === var_.variable)) {
             ir_var_name = `@${var_.variable._id}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`%${new_val} = add ${rightType} ${right_value}, 1`);
+                this.printIR(`${new_val} = add ${rightType} ${right_value}, 1`);
             } else {
-                this.printIR(`%${new_val} = sub ${rightType} ${right_value}, 1`);
+                this.printIR(`${new_val} = sub ${rightType} ${right_value}, 1`);
             }
         } else {
             ir_var_name = `%${var_.variable._id}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`%${new_val} = add ${rightType} ${right_value}, 1`);
+                this.printIR(`${new_val} = add ${rightType} ${right_value}, 1`);
             } else {
-                this.printIR(`%${new_val} = sub ${rightType} ${right_value}, 1`);
+                this.printIR(`${new_val} = sub ${rightType} ${right_value}, 1`);
             }
         }
         this.printIR(`store ${rightType} %${new_val}, ${rightType}* ${ir_var_name}`);
 
-        return `%${new_val}`;
+        return new_val;
     }
 
     //后缀自增自减表达式生成
@@ -428,25 +425,25 @@ declare i32 @printf(i8*, ...)
         let ir_var_name = ''
         const left_value = left.accept(this)
         const leftType = typeToLLVM(left.exprType)
-        let new_val = `reg_suffix_${n}`
+        let new_val = `%reg_suffix_${n}`
 
         if (this.globalVars.find(v => v === left.variable)) {
             ir_var_name = `@${left.variable._id}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`%${new_val} = add ${leftType} ${left_value}, 1`);
+                this.printIR(`${new_val} = add ${leftType} ${left_value}, 1`);
             } else {
-                this.printIR(`%${new_val} = sub ${leftType} ${left_value}, 1`);
+                this.printIR(`${new_val} = sub ${leftType} ${left_value}, 1`);
             }
         } else {
             ir_var_name = `%${left.variable._id}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`%${new_val} = add ${leftType} ${left_value}, 1`);
+                this.printIR(`${new_val} = add ${leftType} ${left_value}, 1`);
             } else {
-                this.printIR(`%${new_val} = sub ${leftType} ${left_value}, 1`);
+                this.printIR(`${new_val} = sub ${leftType} ${left_value}, 1`);
             }
         }
         this.printIR(`store ${leftType} %${new_val}, ${leftType}* ${ir_var_name}`);
-        return `${left_value}`;
+        return left_value;
     }
 
     visitCallExpr(expr: CallExpr): string {
@@ -458,14 +455,15 @@ declare i32 @printf(i8*, ...)
             }
         });
         const callee = expr.callee.accept(this);
+        console.log('callee', callee)
         const retType = typeToLLVM(expr.exprType)
-        const var_name = `reg_call_${n}`
+        const var_name = `%reg_call_${n}`
         if (retType == 'void') {
             this.printIR(`call ${retType} ${callee}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
         } else {
-            this.printIR(`%${var_name} = call ${retType} ${callee}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
+            this.printIR(`${var_name} = call ${retType} ${callee}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
         }
-        return `%${var_name}`;
+        return var_name;
     }
 
     //变量表达式生成
@@ -473,27 +471,32 @@ declare i32 @printf(i8*, ...)
         const var_name = expr.variable._id;
         const varType = typeToLLVM(expr.variable.type);
         const n = this.sequence.reg++;
-        const var_name_n = `reg_${var_name}_${n}`
+        const var_name_n = `%reg_${var_name}_${n}`
 
         //函数类型的变量
         if (expr.exprType instanceof FunType) {
             const funVar = expr.variable as FuncVar
             const retType = typeToLLVM(funVar.retType) //函数变量 的返回值类型
-            console.log('retType', funVar)
             const params = funVar.paramTypes.map(p => typeToLLVM(p))
-            this.printIR(`%${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
-            return `%${var_name_n}`;
+            if (this.globalFunctionStmt.find(v => v.fn_name === funVar)) {
+                this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
+            } else {
+                const load_Fun = `${var_name_n}_load`
+                this.printIR(`${load_Fun} = load ${varType}, ${varType}* %${var_name}`);
+                this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* ${load_Fun} to ${retType} (${params.join(', ')})*`);
+            }
+            return var_name_n;
         } else if (expr.variable instanceof ParamVar) {
             //参数类型的变量 直接加载
             return `%${var_name}`;
         } else {
 
             if (this.globalVars.find(v => v === expr.variable)) {
-                this.printIR(`%${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
-                return `%${var_name_n}`;
+                this.printIR(`${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
+                return var_name_n;
             } else {
-                this.printIR(`%${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
-                return `%${var_name_n}`;
+                this.printIR(`${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
+                return var_name_n;
             }
         }
     }

@@ -3,11 +3,13 @@ void bar(){
 }
 
 ()void  foo(int a,int b){
+    print 2;
     return bar;
 }
 
 void main(){
-    ()void func= bar;
-    func();
+
+    ()void ff = foo(1,2);
+    ff();
 }
 

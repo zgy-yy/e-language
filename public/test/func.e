@@ -7,7 +7,7 @@ void bar(){
 }
 
 void main(){
-    int  b= foo(1,3)();
+    void  b= foo(1,3)();
     print b;
 }
 

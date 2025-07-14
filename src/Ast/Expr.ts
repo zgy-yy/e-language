@@ -1,4 +1,4 @@
-import { DataType, isSameType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
+import { DataType, FunType, isSameType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token"
 import { FuncVar, Var } from "../Parse/Symbol";
@@ -101,7 +101,7 @@ export class PrefixSelfExpr implements Expr {
     right: Expr;
     operator: Token;
     constructor(operator: Token, right: Expr) {
-        if (isSameType(right.exprType, new SimpleType(SimpleDataKind.Int))) {
+        if (right.exprType instanceof SimpleType && right.exprType.simpleKind === SimpleDataKind.Int) {
             this.exprType = new SimpleType(SimpleDataKind.Int); //前缀自增自减表达式的类型为Int
         } else {
             El.error(operator, "Prefix self operator must be used with integer values.")
@@ -120,7 +120,7 @@ export class SuffixSelfExpr implements Expr {
     left: Expr;
     operator: Token;
     constructor(left: Expr, operator: Token) {
-        if (isSameType(left.exprType, new SimpleType(SimpleDataKind.Int))) {
+        if (left.exprType instanceof SimpleType && left.exprType.simpleKind === SimpleDataKind.Int) {
             this.exprType = new SimpleType(SimpleDataKind.Int); //后缀自增自减表达式的类型为Int
         } else {
             El.error(operator, "Suffix self operator must be used with integer values.")
@@ -207,11 +207,20 @@ export class CallExpr implements Expr {
     paren: Token;
     args: Array<Expr>;
     constructor(callee: Expr, paren: Token, args: Array<Expr>) {
+        // callee是函数变量或函数调用表达式
         if (callee instanceof VariableExpr && callee.variable instanceof FuncVar) {
-            this.exprType = callee.variable.retType;
+            this.exprType = callee.variable.retType
+        } else if (callee instanceof CallExpr) {
+            const _exprType = callee.exprType as FunType
+            this.exprType = _exprType.retType
         } else {
             El.error(paren, "Call expression must be used with function.")
         }
+        // if (callee instanceof VariableExpr && callee.variable instanceof FuncVar) {
+        //     this.exprType = callee.variable.retType;
+        // } else {
+        //     El.error(paren, "Call expression must be used with function.")
+        // }
         this.callee = callee;
         this.paren = paren;
         this.args = args;

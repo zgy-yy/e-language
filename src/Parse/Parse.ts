@@ -138,7 +138,9 @@ export class Parser {
         let initializer = null
         if (this.match(Tokenkind.EQUAL)) {
             initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
-            if (varT !== initializer.exprType) {
+            console.log('varT', varT)
+            console.log('initializer', initializer)
+            if (!isSameType(varT, initializer.exprType)) {
                 El.error(this.previous(), "Initializer type does not match variable type.")
             }
         }

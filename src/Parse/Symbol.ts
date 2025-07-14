@@ -8,7 +8,7 @@ export class Var {
     constructor(name: string, type_: DataType) {
         this.name = name
         this.type = type_
-        this._id = name + '_' + type_ + '_' + Var.incremental++
+        this._id = name + '' + type_ + '_' + Var.incremental++
     }
 }
 

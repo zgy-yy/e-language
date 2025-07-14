@@ -193,8 +193,8 @@ export class FunctionStmt implements Stmt {
 
 export class ReturnStmt implements Stmt {
     keyword: Token;
-    value?: Expr;
-    constructor(keyword: Token, value?: Expr) {
+    value: Expr;
+    constructor(keyword: Token, value: Expr) {
         this.keyword = keyword;
         this.value = value;
     }

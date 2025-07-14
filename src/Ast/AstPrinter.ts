@@ -10,7 +10,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitFunctionStmt(stmt: FunctionStmt): string {
-       return `${stmt.retType.kind} ${stmt.fn_name.name}(${stmt.params.map((p) => `${p.type.kind} ${p.name}`).join(", ")}) ${stmt.body.accept(this)}`;
+        return `${stmt.retType} ${stmt.fn_name.name}(${stmt.params.map((p) => `${p.type} ${p.name}`).join(", ")}) ${stmt.body.accept(this)}`;
     }
     visitContinueStmt(stmt: ContinueStmt): string {
         return "continue";
@@ -40,7 +40,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
 
     visitIfStmt(stmt: IfStmt): string {
-        let elseBranch = stmt.elseBranch ?"else " + stmt.elseBranch.accept(this) : "";
+        let elseBranch = stmt.elseBranch ? "else " + stmt.elseBranch.accept(this) : "";
         return `if ${stmt.condition.accept(this)} ${stmt.thenBranch.accept(this)} ${elseBranch}`;
     }
 
@@ -54,16 +54,19 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
 
     visitExpressionStmt(stmt: ExpressionStmt): string {
-       return stmt.expression.accept(this);
+        return stmt.expression.accept(this);
     }
     visitPrintStmt(stmt: PrintStmt): string {
-        return `print `+ stmt.expression.accept(this);
+        return `print ` + stmt.expression.accept(this);
     }
     visitVarListStmt(stmt: VarListStmt): string {
-       return `var ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
+        // 获取变量类型
+        const varType = stmt.varStmts[0].variable.type
+        return `${varType} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
+
     }
     visitVarStmt(stmt: VarStmt): string {
-       return stmt.initializer ? `${stmt.variable.name} = ${stmt.initializer.accept(this)}` : stmt.variable.name;
+        return stmt.initializer ? `${stmt.variable.name} = ${stmt.initializer.accept(this)}` : stmt.variable.name;
     }
 
     // Expr 
@@ -99,11 +102,11 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     visitLiteralExpr(expr: LiteralExpr): string {
         if (typeof expr.value === "string") {
             if (expr.value.length === 1) {
-                return `'${expr.value}'`; 
+                return `'${expr.value}'`;
             }
             return `"${expr.value}"`;
         }
-           
+
         return expr.value;
     }
     visitGroupingExpr(expr: GroupingExpr): string {

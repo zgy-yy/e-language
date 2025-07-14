@@ -63,3 +63,5 @@ function checkEnv(): 'node' | 'browser' {
     }
     return 'browser'
 }
+
+

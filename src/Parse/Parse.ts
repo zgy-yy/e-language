@@ -138,8 +138,6 @@ export class Parser {
         let initializer = null
         if (this.match(Tokenkind.EQUAL)) {
             initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
-            console.log('varT', varT)
-            console.log('initializer', initializer)
             if (!isSameType(varT, initializer.exprType)) {
                 El.error(this.previous(), "Initializer type does not match variable type.")
             }
@@ -217,7 +215,8 @@ export class Parser {
         } else {
             // 如果函数返回值类型为void，切没有明确返回值，则添加一个返回值为void的返回语句
             if (!funcEn.retExprType) {
-                body.statements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, 0), null))
+                const line = this.previous().line
+                body.statements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, line), null))
             }
         }
         const fun_var = new FuncVar(fun_name.lexeme, dclRetType, params) //函数声明 视为变量
@@ -254,7 +253,7 @@ export class Parser {
         const retType = value ? value.exprType : new SimpleType(SimpleDataKind.Void) //返回值类型
         // 如果返回值类型和函数返回值类型不一致，则抛出错误
         if (!isSameType(funcEn.dclRetType, retType)) {
-            console.log('funcEn.dclRetType',funcEn.dclRetType, retType)
+            console.log('funcEn.dclRetType', funcEn.dclRetType, retType)
             El.error(keyword, "Return type does not match function return type.")
         }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after return value.")

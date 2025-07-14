@@ -20,6 +20,9 @@ export class DataType {
     constructor(kind: DataKind) {
         this.kind = kind;
     }
+    toString(): string {
+        return this.kind
+    }
 }
 
 export class SimpleType extends DataType {
@@ -27,6 +30,9 @@ export class SimpleType extends DataType {
     constructor(kind: SimpleDataKind) {
         super(DataKind.simple)
         this.simpleKind = kind
+    }
+    toString(): string {
+        return this.simpleKind
     }
 }
 
@@ -38,12 +44,18 @@ export class FunType extends DataType {
         this.paramsType = _paramsType
         this.retType = _retType
     }
+    toString(): string {
+        return `(${this.paramsType.map(item => item.toString()).join('_')})->${this.retType.toString()}`
+    }
 }
 
 export class ClassType extends DataType {
     constructor() {
         super(DataKind.class)
         this.kind = DataKind.class; //声明类型为类
+    }
+    toString(): string {
+        return super.toString() + 'class'
     }
 }
 // 

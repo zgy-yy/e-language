@@ -10,7 +10,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitFunctionStmt(stmt: FunctionStmt): string {
-       return `${stmt.retType.typekind} ${stmt.fn_name.name}(${stmt.params.map((p) => `${p.type.kind} ${p.name}`).join(", ")}) ${stmt.body.accept(this)}`;
+       return `${stmt.retType.kind} ${stmt.fn_name.name}(${stmt.params.map((p) => `${p.type.kind} ${p.name}`).join(", ")}) ${stmt.body.accept(this)}`;
     }
     visitContinueStmt(stmt: ContinueStmt): string {
         return "continue";

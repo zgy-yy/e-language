@@ -2,7 +2,8 @@
 * 语句节点
 */
 
-import { Token, DataType } from "../Lexer/Token";
+import { DataType } from "../Parse/TypeDeclar";
+import { Token } from "../Lexer/Token";
 import { Var } from "../Parse/Symbol";
 import { Expr } from "./Expr";
 

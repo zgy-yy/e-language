@@ -505,7 +505,7 @@ declare i32 @printf(i8*, ...)
 
 function typeToLLVM(type: DataType): string {
     if (type instanceof SimpleType) {
-        switch (type.typekind) {
+        switch (type.simpleKind) {
             case SimpleDataKind.Int:
                 return "i32";
             case SimpleDataKind.Boolean:

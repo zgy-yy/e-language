@@ -1,9 +1,8 @@
-
 void bar(){
     print 1;
 }
 
-int  foo(int a,int b){
+()void  foo(int a,int b){
     return bar;
 }
 

@@ -2,7 +2,7 @@ import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GroupingExpr, Litera
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
-import { DataType, FunType, SimpleDataKind, SimpleType } from "./TypeDeclar";
+import { DataType, FunType, isSameType, SimpleDataKind, SimpleType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
 import { FuncVar, ParamVar, Var } from "./Symbol";
 
@@ -40,9 +40,8 @@ export class Parser {
     // 程序语句 declaration -> varDeclaration | functionDeclaration 
     declaration(): Stmt {
         try {
-            if (this.match(...this.typeKind)) {
-                let kind = this.previous()//声明的类型
-                let declType = new SimpleType(SimpleDataKind[kind.type])//声明 的类型
+            const declType = this.declarationKind()
+            if (declType) {
                 if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
                     return this.funcDeclaration(declType)
                 }
@@ -57,6 +56,36 @@ export class Parser {
                 throw error
             }
         }
+    }
+
+    // 声明类型
+    declarationKind(): DataType {
+        if (this.match(...this.typeKind)) {
+            let kind = this.previous()//声明的类型
+            let declType = new SimpleType(SimpleDataKind[kind.type])//声明 类型
+            return declType
+        } else if (this.match(Tokenkind.LEFT_PAREN)) {
+            const paramsType: DataType[] = []
+            if (!this.check(Tokenkind.RIGHT_PAREN)) {
+                do {
+                    if (paramsType.length >= 255) {
+                        this.error(this.peek(), "Can't have more than 255 parameters.")
+                    }
+                    const declType = this.declarationKind()
+                    if (declType) {
+                        paramsType.push(declType)
+                    }
+                } while (this.match(Tokenkind.COMMA))
+            }
+            this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
+            if (this.match(...this.typeKind)) {
+                let kind = this.previous()//声明的类型
+                let retType: DataType = new SimpleType(SimpleDataKind[kind.type])//声明 的类型
+                return new FunType(paramsType, retType)
+            }
+            this.error(this.peek(), "Expect type after parameters.")
+        }
+        return null
     }
 
     /* 语句 statement -> printStatement | block | ifStatement | whileStatement | doWhileStatement | forStatement 
@@ -95,35 +124,7 @@ export class Parser {
         return this.expressionStatement()
     }
 
-    declarationKind(): DataType {
-        if (this.match(...this.typeKind)) {
-            let kind = this.previous()//声明的类型
-            let declType = new SimpleType(SimpleDataKind[kind.type])//声明 的类型
-            return declType
-        } else if (this.match(Tokenkind.LEFT_PAREN)) {
-            const paramsType: DataType[] = []
-            if (!this.check(Tokenkind.RIGHT_PAREN)) {
-                do {
-                    if (paramsType.length >= 255) {
-                        this.error(this.peek(), "Can't have more than 255 parameters.")
-                    }
-                    if (this.match(...this.typeKind)) {
-                        let kind = this.previous()//声明的类型
-                        let declType: DataType = new SimpleType(SimpleDataKind[kind.type])//声明 的类型
-                        paramsType.push(declType)
-                    }
-                } while (this.match(Tokenkind.COMMA))
-            }
-            this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
-            if (this.match(...this.typeKind)) {
-                let kind = this.previous()//声明的类型
-                let retType: DataType = new SimpleType(SimpleDataKind[kind.type])//声明 的类型
-                return new FunType(paramsType, retType)
-            }
-            this.error(this.peek(), "Expect type after parameters.")
-        }
-        return null
-    }
+
 
 
     //变量声明语句
@@ -168,9 +169,8 @@ export class Parser {
     }
 
     paramDeclaration(): Var {
-        if (this.match(...this.typeKind)) {
-            let kind = this.previous()//声明的类型
-            let declType: DataType = new SimpleType(SimpleDataKind[kind.type])//声明 的类型
+        const declType = this.declarationKind()
+        if (declType) {
             let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
             if (this.symbolTable.inCurrentScope(identifier_name.lexeme)) {
                 this.error(identifier_name, "Paramter Variable with this name already declared in this scope.")
@@ -208,7 +208,7 @@ export class Parser {
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
         const body = this.blockStatement()
-        if (dclRetType instanceof SimpleType && dclRetType.typekind === SimpleDataKind.Void) {
+        if (!isSameType(funcEn.dclRetType, new SimpleType(SimpleDataKind.Void))) {
             if (!funcEn.retExprType) {
                 this.error(this.previous(), "Function must have a return value.")
             }
@@ -239,7 +239,7 @@ export class Parser {
 
     returnStatement(): Stmt {
         const funcEn = this.funcEnclosing.at(-1)
-        // 如果函数不存在，则抛出错误 如果函数不存在，则抛出错误
+        // 如果 reutrn 语句不在函数体内 则抛出错误
         if (!funcEn) {
             El.error(this.previous(), "Cannot return from top-level code.")
         }
@@ -251,7 +251,8 @@ export class Parser {
         }
         const retType = value ? value.exprType : new SimpleType(SimpleDataKind.Void) //返回值类型
         // 如果返回值类型和函数返回值类型不一致，则抛出错误
-        if (funcEn.dclRetType !== retType) {
+        if (!isSameType(funcEn.dclRetType, retType)) {
+            console.log('funcEn.dclRetType',funcEn.dclRetType, retType)
             El.error(keyword, "Return type does not match function return type.")
         }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after return value.")

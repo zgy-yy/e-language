@@ -8,8 +8,13 @@ void bar(int a){
     bar(a+1);
 }
 
+(int)void call(){
+    return bar;
+}
+
 
 void main(){
-    bar(1);
+    (int)void foo =  call();
+   foo(1);
 }
 

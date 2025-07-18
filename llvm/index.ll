@@ -24,9 +24,21 @@ if_end_0:
     }
 
 ; 函数定义
+define i32* @call__int_void_2() {  ; 函数调用
+entry:
+    %reg_bar_int_void_1_0 = bitcast void (i32)* @bar_int_void_1 to void (i32)*
+    ret i32* %reg_bar_int_void_1_0  ; 返回
+    }
+
+; 函数定义
 define void @main() {
 entry:
-    %reg_bar_int_void_1_1 = bitcast void (i32)* @bar_int_void_1 to void (i32)*
-    call void %reg_bar_int_void_1_1(i32 1)  ; 函数调用
+    %foo__void_4 = alloca i32*  ; 分配局部变量
+    %reg_call__int_void_2_1 = bitcast i32* ()* @call__int_void_2 to i32* ()*  ; 函数调用
+    %reg_call_0 = call i32* %reg_call__int_void_2_1()  ; 函数调用
+    store i32* %reg_call_0, i32** %foo__void_4  ; 存储值到变量
+    %reg_foo__void_4_3_load = load i32*, i32** %foo__void_4  ; 加载变量值
+    %reg_foo__void_4_3 = bitcast void ()* %reg_foo__void_4_3_load to void ()*  ; 加载变量值
+    call void %reg_foo__void_4_3(i32 1)  ; 函数调用
     ret void  ; 返回
     }

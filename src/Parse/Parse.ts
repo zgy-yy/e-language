@@ -216,9 +216,9 @@ export class Parser {
         if(!(bodyStatements.at(-1) instanceof ReturnStmt)){
             if(dclRetType instanceof SimpleType && dclRetType.simpleKind === SimpleDataKind.Void){
                 bodyStatements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, this.previous().line), null))
+            }else{
+                this.error(this.previous(), "Function must have a return value.")
             }
-        }else{
-            this.error(this.previous(), "Function must have a return value.")
         }
     
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after function block.")

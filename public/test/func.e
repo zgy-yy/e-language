@@ -1,15 +1,15 @@
-void bar(){
-    print 1;
+
+
+void bar(int a){
+    if(a==9){
+       return;
+    }
+    print a;
+    bar(a+1);
 }
 
-()void  foo(int a,int b){
-    print 2;
-    return bar;
-}
 
 void main(){
-
-    ()void ff = foo(1,2);
-    ff();
+    bar(1);
 }
 

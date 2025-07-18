@@ -10,7 +10,7 @@ type funcEnclosing = {
     funcName: string,
     params: Var[]
     dclRetType: DataType //声明的返回值类型
-    retExprType?: DataType //实际返回值类型
+    // retExprType?: DataType //实际返回值类型
 }
 export class Parser {
     tokens: Token[]
@@ -181,7 +181,6 @@ export class Parser {
     // functionDeclaration -> type IDENTIFIER "(" parameters? ")" block
     funcDeclaration(dclRetType: DataType): Stmt {
         const fun_name = this.consume(Tokenkind.IDENTIFIER, "Expect function name.")//函数名
-        this.symbolTable.enterScope()
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
         const params: Var[] = []
         if (!this.check(Tokenkind.RIGHT_PAREN)) {
@@ -192,6 +191,9 @@ export class Parser {
                 params.push(this.paramDeclaration())
             } while (this.match(Tokenkind.COMMA))
         }
+        const fun_var = new FuncVar(fun_name.lexeme, dclRetType, params.map(item => item.type)) //函数声明 视为变
+        this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
+
         const funcEn: funcEnclosing = {
             funcName: fun_name.lexeme,
             params: params,
@@ -200,22 +202,43 @@ export class Parser {
         this.funcEnclosing.push(funcEn)
         this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
-        const body = this.blockStatement()
-        if (!isSameType(funcEn.dclRetType, new SimpleType(SimpleDataKind.Void))) {
-            if (!funcEn.retExprType) {
-                this.error(this.previous(), "Function must have a return value.")
-            }
-        } else {
-            // 如果函数返回值类型为void，切没有明确返回值，则添加一个返回值为void的返回语句
-            if (!funcEn.retExprType) {
-                const line = this.previous().line
-                body.statements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, line), null))
-            }
+        // 进入函数作用域
+        this.symbolTable.enterScope()
+        params.forEach(item => {
+            this.symbolTable.addVariable(item.name, item)
+        })
+        // 解析函数体
+        const bodyStatements = []
+        while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
+            bodyStatements.push(this.statement())
         }
-        const fun_var = new FuncVar(fun_name.lexeme, dclRetType, params.map(item => item.type)) //函数声明 视为变量
-        this.symbolTable.leaveScope()
+        // 如果函数体最后没有 return 语句
+        if(!(bodyStatements.at(-1) instanceof ReturnStmt)){
+            if(dclRetType instanceof SimpleType && dclRetType.simpleKind === SimpleDataKind.Void){
+                bodyStatements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, this.previous().line), null))
+            }
+        }else{
+            this.error(this.previous(), "Function must have a return value.")
+        }
+    
+        this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after function block.")
+        // 如果函数返回值类型为void，切没有明确返回值，则添加一个返回值为void的返回语句
+        const body = new BlockStmt(bodyStatements)
 
-        this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
+
+        // if (!isSameType(funcEn.dclRetType, new SimpleType(SimpleDataKind.Void))) {
+        //     if (!funcEn.retExprType) {
+        //         this.error(this.previous(), "Function must have a return value.")
+        //     }
+        // } else {
+        //     // 如果函数返回值类型为void，切没有明确返回值，则添加一个返回值为void的返回语句
+        //     if (!funcEn.retExprType) {
+        //         const line = this.previous().line
+        //         body.statements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, line), null))
+        //     }
+        // }
+
+        this.symbolTable.leaveScope()
         this.funcEnclosing.pop()
         return new FunctionStmt(dclRetType, fun_var, params, body)
     }
@@ -224,11 +247,11 @@ export class Parser {
         const declType = this.declarationKind()
         if (declType) {
             let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-            if (this.symbolTable.inCurrentScope(identifier_name.lexeme)) {
-                this.error(identifier_name, "Paramter Variable with this name already declared in this scope.")
-            }
+            // if (this.symbolTable.inCurrentScope(identifier_name.lexeme)) {
+            //     this.error(identifier_name, "Paramter Variable with this name already declared in this scope.")
+            // }
             const declParamVar = new ParamVar(identifier_name.lexeme, declType)
-            this.symbolTable.addVariable(identifier_name.lexeme, declParamVar)
+            // this.symbolTable.addVariable(identifier_name.lexeme, declParamVar)
             return declParamVar
         }
     }
@@ -259,11 +282,10 @@ export class Parser {
         const retType = value ? value.exprType : new SimpleType(SimpleDataKind.Void) //返回值类型
         // 如果返回值类型和函数返回值类型不一致，则抛出错误
         if (!isSameType(funcEn.dclRetType, retType)) {
-            console.log('funcEn.dclRetType', funcEn.dclRetType, retType)
             El.error(keyword, "Return type does not match function return type.")
         }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after return value.")
-        funcEn.retExprType = retType
+        // funcEn.retExprType = retType
         return new ReturnStmt(keyword, value)
     }
 

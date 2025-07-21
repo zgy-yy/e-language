@@ -19,6 +19,7 @@ export class ParamVar extends Var {
     }
 }
 
+// 函数变量
 export class FuncVar extends Var {
     retType: DataType //返回值类型
     paramTypes: DataType[] //参数列表
@@ -27,5 +28,12 @@ export class FuncVar extends Var {
         super(name, funType) //函数类型为变量类型
         this.retType = _retType //返回值类型
         this.paramTypes = paramTypes
+    }
+}
+
+//声明的函数
+export class FunLable extends FuncVar {
+    constructor(name: string, _retType: DataType, paramTypes: DataType[]) {
+        super(name, _retType, paramTypes)
     }
 }

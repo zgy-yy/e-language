@@ -37,8 +37,7 @@ entry:
     %reg_call__int_void_2_1 = bitcast i32* ()* @call__int_void_2 to i32* ()*  ; 函数调用
     %reg_call_0 = call i32* %reg_call__int_void_2_1()  ; 函数调用
     store i32* %reg_call_0, i32** %foo__void_4  ; 存储值到变量
-    %reg_foo__void_4_3_load = load i32*, i32** %foo__void_4  ; 加载变量值
-    %reg_foo__void_4_3 = bitcast void ()* %reg_foo__void_4_3_load to void ()*  ; 加载变量值
+    %reg_foo__void_4_3 = load i32*, i32** %foo__void_4  ; 加载变量值
     call void %reg_foo__void_4_3(i32 1)  ; 函数调用
     ret void  ; 返回
     }

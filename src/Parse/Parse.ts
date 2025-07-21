@@ -4,7 +4,7 @@ import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
 import { DataType, FunType, isSameType, SimpleDataKind, SimpleType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
-import { FuncVar, ParamVar, Var } from "./Symbol";
+import { FuncVar, ParamVar, Var, FunLable } from "./Symbol";
 
 type funcEnclosing = {
     funcName: string,
@@ -191,7 +191,7 @@ export class Parser {
                 params.push(this.paramDeclaration())
             } while (this.match(Tokenkind.COMMA))
         }
-        const fun_var = new FuncVar(fun_name.lexeme, dclRetType, params.map(item => item.type)) //函数声明 视为变
+        const fun_var = new FunLable(fun_name.lexeme, dclRetType, params.map(item => item.type)) //函数声明 视为变
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
 
         const funcEn: funcEnclosing = {
@@ -213,30 +213,17 @@ export class Parser {
             bodyStatements.push(this.statement())
         }
         // 如果函数体最后没有 return 语句
-        if(!(bodyStatements.at(-1) instanceof ReturnStmt)){
-            if(dclRetType instanceof SimpleType && dclRetType.simpleKind === SimpleDataKind.Void){
+        if (!(bodyStatements.at(-1) instanceof ReturnStmt)) {
+            if (dclRetType instanceof SimpleType && dclRetType.simpleKind === SimpleDataKind.Void) {
                 bodyStatements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, this.previous().line), null))
-            }else{
+            } else {
                 this.error(this.previous(), "Function must have a return value.")
             }
         }
-    
+
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after function block.")
         // 如果函数返回值类型为void，切没有明确返回值，则添加一个返回值为void的返回语句
         const body = new BlockStmt(bodyStatements)
-
-
-        // if (!isSameType(funcEn.dclRetType, new SimpleType(SimpleDataKind.Void))) {
-        //     if (!funcEn.retExprType) {
-        //         this.error(this.previous(), "Function must have a return value.")
-        //     }
-        // } else {
-        //     // 如果函数返回值类型为void，切没有明确返回值，则添加一个返回值为void的返回语句
-        //     if (!funcEn.retExprType) {
-        //         const line = this.previous().line
-        //         body.statements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, line), null))
-        //     }
-        // }
 
         this.symbolTable.leaveScope()
         this.funcEnclosing.pop()

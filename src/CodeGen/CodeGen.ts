@@ -1,6 +1,6 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
-import { FuncVar, ParamVar, Var } from "../Parse/Symbol";
+import { FuncVar, FunLable, ParamVar, Var } from "../Parse/Symbol";
 import { DataType, FunType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
 
 
@@ -466,7 +466,7 @@ declare i32 @printf(i8*, ...)
         return var_name;
     }
 
-    //变量表达式生成
+    //变量表达式生成 变量表达式 => 变量名,函数名
     visitVariableExpr(expr: VariableExpr): string {
         const var_name = expr.variable._id;
         const varType = typeToLLVM(expr.variable.type);
@@ -474,30 +474,26 @@ declare i32 @printf(i8*, ...)
         const var_name_n = `%reg_${var_name}_${n}`
 
         //函数类型的变量
-        if (expr.exprType instanceof FunType) {
+        if (expr.variable instanceof FunLable) {
             const funVar = expr.variable as FuncVar
             const retType = typeToLLVM(funVar.retType) //函数变量 的返回值类型
             const params = funVar.paramTypes.map(p => typeToLLVM(p))
-            if (this.globalFunctionStmt.find(v => v.fn_name === funVar)) {
-                this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
-            } else {
-                const load_Fun = `${var_name_n}_load`
-                this.printIR(`${load_Fun} = load ${varType}, ${varType}* %${var_name}`);
-                this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* ${load_Fun} to ${retType} (${params.join(', ')})*`);
-            }
+            this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
             return var_name_n;
         } else if (expr.variable instanceof ParamVar) {
             //参数类型的变量 直接加载
             return `%${var_name}`;
         } else {
-
             if (this.globalVars.find(v => v === expr.variable)) {
                 this.printIR(`${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
-                return var_name_n;
             } else {
                 this.printIR(`${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
-                return var_name_n;
             }
+            if (expr.variable instanceof FunLable) {
+                const params = expr.variable.paramTypes.map(p => typeToLLVM(p))
+                this.printIR(`${var_name_n} = bitcast ${varType} (${params.join(', ')})* @${var_name_n} to ${varType} (${params.join(', ')})*`);
+            }
+            return var_name_n;
         }
     }
 

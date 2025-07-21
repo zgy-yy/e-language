@@ -9,6 +9,9 @@ void bar(int a){
 }
 
 (int)void call(){
+    bool a = true;
+    bool b=false;
+    a = false;
     return bar;
 }
 
@@ -16,5 +19,6 @@ void bar(int a){
 void main(){
     (int)void foo =  call();
    foo(1);
+   call()(1);
 }
 

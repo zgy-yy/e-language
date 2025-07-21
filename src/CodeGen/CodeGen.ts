@@ -455,7 +455,6 @@ declare i32 @printf(i8*, ...)
             }
         });
         const callee = expr.callee.accept(this);
-        console.log('callee', callee)
         const retType = typeToLLVM(expr.exprType)
         const var_name = `%reg_call_${n}`
         if (retType == 'void') {

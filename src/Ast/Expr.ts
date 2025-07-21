@@ -1,7 +1,7 @@
-import { DataType, FunType, isSameType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
+import { DataKind, DataType, FunType, isSameType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token"
-import { FuncVar, Var } from "../Parse/Symbol";
+import { FuncVar, FunLable, Var } from "../Parse/Symbol";
 
 /*
 * 表达式
@@ -188,8 +188,12 @@ export class GroupingExpr implements Expr {
 export class AssignExpr implements Expr {
     exprType: DataType;
     variable: Var;
+    operator: Token;
     value: Expr;
-    constructor(var_: Var, value: Expr) {
+    constructor(var_: Var, value: Expr, operator: Token) {
+        if (!isSameType(var_.type, value.exprType)) {
+            El.error(operator, "Type mismatch in assignment.")
+        }
         this.exprType = var_.type;
         this.variable = var_;
         this.value = value;
@@ -207,21 +211,39 @@ export class CallExpr implements Expr {
     paren: Token;
     args: Array<Expr>;
     constructor(callee: Expr, paren: Token, args: Array<Expr>) {
-        // callee是函数变量或函数调用表达式
-        // console.log('callee', callee.variable instanceof FuncVar)
+        // console.log('callee', callee)
+        // callee是函数声明
         if (callee instanceof VariableExpr && callee.variable instanceof FuncVar) {
+
+            const paramsType = callee.variable.paramTypes
+            if (paramsType.length !== args.length) {
+                El.error(paren, "Type mismatch in call expression.")
+            }
+            for (let i = 0; i < paramsType.length; i++) {
+                if (!isSameType(paramsType[i], args[i].exprType)) {
+                    El.error(paren, "Type mismatch in call expression.")
+                }
+            }
             this.exprType = callee.variable.retType
-        } else if (callee instanceof CallExpr) {
-            const _exprType = callee.exprType as FunType
-            this.exprType = _exprType.retType
+        } else if (callee instanceof CallExpr) { //callee是函数调用表达式
+            if (callee.exprType instanceof FunType) {
+                const paramsType = callee.exprType.paramsType
+                if (paramsType.length !== args.length) {
+                    El.error(paren, "Type mismatch in call expression.")
+                }
+                for (let i = 0; i < paramsType.length; i++) {
+                    if (!isSameType(paramsType[i], args[i].exprType)) {
+                        El.error(paren, "Type mismatch in call expression.")
+                    }
+                }
+                this.exprType = callee.exprType.retType
+            } else {
+                El.error(paren, "Call expression must be used with function.")
+            }
         } else {
             El.error(paren, "Call expression must be used with function.")
         }
-        // if (callee instanceof VariableExpr && callee.variable instanceof FuncVar) {
-        //     this.exprType = callee.variable.retType;
-        // } else {
-        //     El.error(paren, "Call expression must be used with function.")
-        // }
+
         this.callee = callee;
         this.paren = paren;
         this.args = args;

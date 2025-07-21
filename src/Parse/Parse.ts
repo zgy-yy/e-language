@@ -148,7 +148,7 @@ export class Parser {
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
         let var_ = null
         if (varT instanceof FunType) {
-            var_ = new FuncVar(var_name.lexeme, varT.retType, [])
+            var_ = new FuncVar(var_name.lexeme, varT.retType, varT.paramsType)
         } else {
             var_ = new Var(var_name.lexeme, varT)
         }
@@ -390,7 +390,7 @@ export class Parser {
             const equals = this.previous()
             const value = this.assignment()
             if (expr instanceof VariableExpr) {
-                return new AssignExpr(expr.variable, value)
+                return new AssignExpr(expr.variable, value, equals)
             }
             El.error(equals, "Invalid assignment target.")
         }

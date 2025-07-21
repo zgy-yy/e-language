@@ -1,14 +1,12 @@
-
-
-void bar(int a){
+void bar(int a,b){
     if(a==9){
        return;
     }
-    print a;
-    bar(a+1);
+    print a+b;
+    bar(a+1,b);
 }
 
-(int)void call(){
+(int,int)void call(){
     bool a = true;
     bool b=false;
     a = false;
@@ -17,8 +15,7 @@ void bar(int a){
 
 
 void main(){
-    (int)void foo =  call();
-   foo(1);
-   call()(1);
+    (int,int)void foo =  call();
+   foo(1,1);
 }
 

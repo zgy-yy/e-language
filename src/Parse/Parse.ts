@@ -188,7 +188,7 @@ export class Parser {
                 if (params.length >= 255) {
                     this.error(this.peek(), "Can't have more than 255 parameters.")
                 }
-                params.push(this.paramDeclaration())
+                params.push(...this.paramDeclaration())
             } while (this.match(Tokenkind.COMMA))
         }
         const fun_var = new FunLable(fun_name.lexeme, dclRetType, params.map(item => item.type)) //函数声明 视为变
@@ -230,17 +230,21 @@ export class Parser {
         return new FunctionStmt(dclRetType, fun_var, params, body)
     }
 
-    paramDeclaration(): Var {
+    paramDeclaration(): ParamVar[] {
         const declType = this.declarationKind()
+        const declParamVars: ParamVar[] = []
         if (declType) {
-            let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-            // if (this.symbolTable.inCurrentScope(identifier_name.lexeme)) {
-            //     this.error(identifier_name, "Paramter Variable with this name already declared in this scope.")
-            // }
-            const declParamVar = new ParamVar(identifier_name.lexeme, declType)
-            // this.symbolTable.addVariable(identifier_name.lexeme, declParamVar)
-            return declParamVar
+            do {
+                if (this.declarationKind()) {//遇到下一个参数类型，则退出
+                    break;
+                }
+                let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
+                const declParamVar = new ParamVar(identifier_name.lexeme, declType)
+                declParamVars.push(declParamVar)
+            } while (this.match(Tokenkind.COMMA))
+
         }
+        return declParamVars
     }
 
     printStatement(): Stmt {

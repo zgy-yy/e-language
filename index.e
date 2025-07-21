@@ -55,6 +55,8 @@ int func(int a,string b,int c=0,int d=4){
 }
 func(1,"ddda",d=4)
 
+int foo(int a=1, b=1, c=4,bool d)
+
 
 //结构体
 struct Base{

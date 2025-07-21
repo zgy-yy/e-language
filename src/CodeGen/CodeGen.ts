@@ -1,6 +1,6 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
-import { FuncVar, FunLable, ParamVar, Var } from "../Parse/Symbol";
+import { FuncVar, FunLable, Var } from "../Parse/Symbol";
 import { DataType, FunType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
 
 
@@ -530,4 +530,5 @@ function typeToLLVM(type: DataType): string {
     if (type instanceof FunType) {
         return "i32*";
     }
+    return "aaa";
 }   

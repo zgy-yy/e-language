@@ -12,13 +12,6 @@ export class Var {
     }
 }
 
-// 变量类型  函数参数
-export class ParamVar extends Var {
-    constructor(name: string, type_: DataType) {
-        super(name, type_)
-    }
-}
-
 // 函数变量
 export class FuncVar extends Var {
     retType: DataType //返回值类型

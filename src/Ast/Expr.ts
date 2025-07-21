@@ -211,7 +211,6 @@ export class CallExpr implements Expr {
     paren: Token;
     args: Array<Expr>;
     constructor(callee: Expr, paren: Token, args: Array<Expr>) {
-        // console.log('callee', callee)
         // callee是函数声明
         if (callee instanceof VariableExpr && callee.variable instanceof FuncVar) {
 

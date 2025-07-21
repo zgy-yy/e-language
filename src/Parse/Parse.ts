@@ -4,7 +4,7 @@ import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
 import { DataType, FunType, isSameType, SimpleDataKind, SimpleType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
-import { FuncVar, ParamVar, Var, FunLable } from "./Symbol";
+import { FuncVar, Var, FunLable } from "./Symbol";
 
 type funcEnclosing = {
     funcName: string,
@@ -184,12 +184,7 @@ export class Parser {
         this.consume(Tokenkind.LEFT_PAREN, "Expect '(' after function name.")
         const params: Var[] = []
         if (!this.check(Tokenkind.RIGHT_PAREN)) {
-            do {
-                if (params.length >= 255) {
-                    this.error(this.peek(), "Can't have more than 255 parameters.")
-                }
-                params.push(...this.paramDeclaration())
-            } while (this.match(Tokenkind.COMMA))
+            params.push(...this.paramDeclaration())
         }
         const fun_var = new FunLable(fun_name.lexeme, dclRetType, params.map(item => item.type)) //函数声明 视为变
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
@@ -230,17 +225,27 @@ export class Parser {
         return new FunctionStmt(dclRetType, fun_var, params, body)
     }
 
-    paramDeclaration(): ParamVar[] {
-        const declType = this.declarationKind()
-        const declParamVars: ParamVar[] = []
+    paramDeclaration(): Var[] {
+        let declType = this.declarationKind()
+        const declParamVars: Var[] = []
         if (declType) {
             do {
-                if (this.declarationKind()) {//遇到下一个参数类型，则退出
-                    break;
+                if (declParamVars.length >= 255) {
+                    this.error(this.peek(), "Can't have more than 255 parameters.")
+                }
+                const declType_ = this.declarationKind()
+                if (declType_) {//遇到下一个参数类型，
+                    declType = declType_
                 }
                 let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-                const declParamVar = new ParamVar(identifier_name.lexeme, declType)
-                declParamVars.push(declParamVar)
+                if (declType instanceof FunType) {
+                    const declParamVar = new FuncVar(identifier_name.lexeme, declType.retType, declType.paramsType)
+                    declParamVars.push(declParamVar)
+                } else {
+                    const declParamVar = new Var(identifier_name.lexeme, declType)
+                    declParamVars.push(declParamVar)
+                }
+                
             } while (this.match(Tokenkind.COMMA))
 
         }

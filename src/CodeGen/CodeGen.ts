@@ -70,8 +70,12 @@ declare i32 @printf(i8*, ...)
         this.sequence = { ...initSequence };
         const fnName = stmt.fn_name.name === "main" ? "main" : stmt.fn_name._id //函数名
         const retType = typeToLLVM(stmt.retType);
-        this.printIR(`define ${retType} @${fnName}(${stmt.params.map(p => typeToLLVM(p.type) + ' %' + p._id).join(', ')}) {`)
+        this.printIR(`define ${retType} @${fnName}(${stmt.params.map(p => typeToLLVM(p.type) + ' %' + p._id + '_P').join(', ')}) {`)
         this.printIR(`entry:`)
+        stmt.params.forEach(p => {
+            this.printIR(`%${p._id} = alloca ${typeToLLVM(p.type)}`);
+            this.printIR(`store ${typeToLLVM(p.type)} %${p._id}_P, ${typeToLLVM(p.type)}* %${p._id}`);
+        })
         stmt.body.accept(this);
         this.printIR(`}`)
     }
@@ -413,7 +417,7 @@ declare i32 @printf(i8*, ...)
                 this.printIR(`${new_val} = sub ${rightType} ${right_value}, 1`);
             }
         }
-        this.printIR(`store ${rightType} %${new_val}, ${rightType}* ${ir_var_name}`);
+        this.printIR(`store ${rightType} ${new_val}, ${rightType}* ${ir_var_name}`);
 
         return new_val;
     }
@@ -442,7 +446,7 @@ declare i32 @printf(i8*, ...)
                 this.printIR(`${new_val} = sub ${leftType} ${left_value}, 1`);
             }
         }
-        this.printIR(`store ${leftType} %${new_val}, ${leftType}* ${ir_var_name}`);
+        this.printIR(`store ${leftType} ${new_val}, ${leftType}* ${ir_var_name}`);
         return left_value;
     }
 
@@ -479,9 +483,6 @@ declare i32 @printf(i8*, ...)
             const params = funVar.paramTypes.map(p => typeToLLVM(p))
             this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
             return var_name_n;
-        } else if (expr.variable instanceof ParamVar) {
-            //参数类型的变量 直接加载
-            return `%${var_name}`;
         } else {
             if (this.globalVars.find(v => v === expr.variable)) {
                 this.printIR(`${var_name_n} = load ${varType}, ${varType}* @${var_name}`);

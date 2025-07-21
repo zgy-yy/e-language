@@ -3,7 +3,7 @@ void bar(int a,b){
        return;
     }
     print a+b;
-    bar(a+1,b);
+    bar(++a,b);
 }
 
 (int,int)void call(){
@@ -16,6 +16,6 @@ void bar(int a,b){
 
 void main(){
     (int,int)void foo =  call();
-   foo(1,1);
+   foo(1,2);
 }
 

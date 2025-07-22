@@ -5,8 +5,8 @@
     }
 
 int main(){
-   
-    A st = {
+    A st;
+    st = {
         a:1,
         b:2,
         c:true

@@ -67,7 +67,7 @@ export class Parser {
             let kind = this.previous()//声明的类型
             let declType = new SimpleType(SimpleDataKind[kind.type])//声明 类型
             return declType
-        } else if (this.match(Tokenkind.IDENTIFIER)) {
+        } else if (this.peekNext().type == Tokenkind.IDENTIFIER && this.match(Tokenkind.IDENTIFIER)) {
             const struct_name = this.previous()
             const struct = this.symbolTable.findStructure(struct_name.lexeme)
             if (struct) {
@@ -123,7 +123,6 @@ export class Parser {
             return this.continueStatement()
         if (this.match(Tokenkind.RETURN))
             return this.returnStatement()
-
         if (this.match(Tokenkind.STRUCT)) {
             return this.structStatement()
         }

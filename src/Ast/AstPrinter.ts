@@ -1,5 +1,5 @@
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
@@ -12,6 +12,11 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     visitFunctionStmt(stmt: FunctionStmt): string {
         return `${stmt.retType} ${stmt.fn_name.name}(${stmt.params.map((p) => `${p.type} ${p.name}`).join(", ")}) ${stmt.body.accept(this)}`;
     }
+
+    visitStructStmt(stmt: StructStmt): string {
+        return `struct ${stmt.structure.name} { ${stmt.structure.fields.map((f) => `${f.type} ${f.name}`).join(", ")} }`;
+    }
+
     visitContinueStmt(stmt: ContinueStmt): string {
         return "continue";
     }
@@ -76,6 +81,10 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
     visitAssignExpr(expr: AssignExpr): string {
         return `${expr.variable.name} = ${expr.value.accept(this)}`;
+    }
+
+    visitStructExpr(expr: StructExpr): string {
+        return `{ ${expr.fields.map((f) => `${f.name}: ${f.value.accept(this)}`).join(", ")} }`;
     }
 
     visitVariableExpr(expr: VariableExpr): string {

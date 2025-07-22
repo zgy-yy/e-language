@@ -1,10 +1,10 @@
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
-import { DataType, FunType, isSameType, SimpleDataKind, SimpleType } from "./TypeDeclar";
+import { DataType, FunType, isSameType, SimpleDataKind, SimpleType, StructType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
-import { FuncVar, Var, FunLable } from "./Symbol";
+import { FuncVar, Var, FunLable, Structure } from "./Symbol";
 
 type funcEnclosing = {
     funcName: string,
@@ -40,6 +40,9 @@ export class Parser {
     // 程序语句 declaration -> varDeclaration | functionDeclaration 
     declaration(): Stmt {
         try {
+            if (this.match(Tokenkind.STRUCT)) {
+                return this.structStatement()
+            }
             const declType = this.declarationKind()
             if (declType) {
                 if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
@@ -64,6 +67,13 @@ export class Parser {
             let kind = this.previous()//声明的类型
             let declType = new SimpleType(SimpleDataKind[kind.type])//声明 类型
             return declType
+        } else if (this.match(Tokenkind.IDENTIFIER)) {
+            const struct_name = this.previous()
+            const struct = this.symbolTable.findStructure(struct_name.lexeme)
+            if (struct) {
+                return new StructType(struct)
+            }
+            this.error(struct_name, "Struct with this name not declared.")
         } else if (this.match(Tokenkind.LEFT_PAREN)) {
             const paramsType: DataType[] = []
             if (!this.check(Tokenkind.RIGHT_PAREN)) {
@@ -114,6 +124,10 @@ export class Parser {
         if (this.match(Tokenkind.RETURN))
             return this.returnStatement()
 
+        if (this.match(Tokenkind.STRUCT)) {
+            return this.structStatement()
+        }
+
         let declType = this.declarationKind()
         if (declType) {
             if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
@@ -134,7 +148,7 @@ export class Parser {
         }
         let varStmt: VarStmt[] = []
         const var_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.")//变量名
-        if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
+        if (this.symbolTable.varInCurrentScope(var_name.lexeme)) {
             this.error(var_name, "Variable with this name already declared in this scope.")
         }
 
@@ -158,7 +172,7 @@ export class Parser {
 
         while (this.match(Tokenkind.COMMA)) {
             let var_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-            if (this.symbolTable.inCurrentScope(var_name.lexeme)) {
+            if (this.symbolTable.varInCurrentScope(var_name.lexeme)) {
                 this.error(var_name, "Variable with this name already declared in this scope.")
             }
             const var_ = new Var(var_name.lexeme, varT)
@@ -245,11 +259,35 @@ export class Parser {
                     const declParamVar = new Var(identifier_name.lexeme, declType)
                     declParamVars.push(declParamVar)
                 }
-                
+
             } while (this.match(Tokenkind.COMMA))
 
         }
         return declParamVars
+    }
+
+    structStatement(): Stmt {
+        const struct_name = this.consume(Tokenkind.IDENTIFIER, "Expect struct name.")//结构体名
+        if (this.symbolTable.structInCurrentScope(struct_name.lexeme)) {
+            this.error(struct_name, "Struct with this name already declared in this scope.")
+        }
+        this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before struct body.")
+        const struct_fields = []
+        while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
+            const field_type = this.declarationKind()//字段类型
+            const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
+            while (this.match(Tokenkind.COMMA)) {
+                const field_name_ = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
+                struct_fields.push({ name: field_name_.lexeme, type: field_type })
+            }
+            struct_fields.push({ name: field_name.lexeme, type: field_type })
+            this.consume(Tokenkind.SEMICOLON, "Expect ';' after field declaration.")
+        }
+        this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct body.")
+
+        const struct_ = new Structure(struct_name.lexeme, struct_fields)
+        this.symbolTable.addStructure(struct_name.lexeme, struct_)
+        return new StructStmt(struct_)
     }
 
     printStatement(): Stmt {
@@ -394,7 +432,7 @@ export class Parser {
     }
     //赋值表达式
     assignment(): Expr {
-        const expr = this.or()//表达式得出左值
+        const expr = this.or()
         if (this.match(Tokenkind.EQUAL)) {
             const equals = this.previous()
             const value = this.assignment()
@@ -527,9 +565,6 @@ export class Parser {
             return new GroupingExpr(expr)
         }
         if (this.match(Tokenkind.IDENTIFIER)) {
-            // if (this.peek().type == Tokenkind.LEFT_PAREN) {
-            //     return new VariableExpr(new Var(this.previous().lexeme, DataType.Fun))
-            // }
             const varExpr = this.previous()
             let varName = varExpr.lexeme
             if (this.symbolTable.findVariable(varName)) {
@@ -537,6 +572,21 @@ export class Parser {
             }
 
             throw this.error(varExpr, "Undefined variable '" + varName + "'.")
+        }
+
+        if (this.match(Tokenkind.LEFT_BRACE)) {
+            const fields = []
+            while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
+                const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
+                this.consume(Tokenkind.COLON, "Expect ':' after field name.")
+                const field_value = this.assignment()
+                fields.push({ name: field_name.lexeme, value: field_value })
+                if (this.peek().type !== Tokenkind.RIGHT_BRACE) {
+                    this.consume(Tokenkind.COMMA, "Expect ',' after field declaration.")
+                }
+            }
+            this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct expression.")
+            return new StructExpr(fields)
         }
         throw this.error(this.peek(), "Expect expression.");
     }

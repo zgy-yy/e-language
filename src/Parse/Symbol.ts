@@ -30,3 +30,18 @@ export class FunLable extends FuncVar {
         super(name, _retType, paramTypes)
     }
 }
+
+
+//  structure
+export class Structure {
+    name: string
+    fields: {
+        name: string
+        type: DataType
+    }[]
+    constructor(name: string, fields: { name: string, type: DataType }[]) {
+        this.name = name
+        this.fields = fields
+    }
+}
+

@@ -19,9 +19,9 @@ const Int b = 90;
 
 //Int a @ 0x808929;
 
-Int@ pC => cc;
-pC=23;
-pC => b;
+Int@ pi => cc;
+pi=23;
+pi => b;
 
 
 
@@ -34,6 +34,13 @@ arr[1];
 [int,string] tup =[1,"hello]; //元组
 tup[0]
 tup[1]
+
+
+Int a =23;
+//指针类型
+Int@ ptr => a;
+ptr = 23; 
+
 
 
 函数类型
@@ -88,7 +95,6 @@ type Stu =  class {
 
 type Tea = struct{
     string name;
-    void() say；
 }
 
 

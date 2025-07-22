@@ -4,7 +4,7 @@
 
 import { DataType } from "../Parse/TypeDeclar";
 import { Token } from "../Lexer/Token";
-import { Var } from "../Parse/Symbol";
+import { Structure, Var } from "../Parse/Symbol";
 import { Expr } from "./Expr";
 
 
@@ -25,6 +25,7 @@ export interface StmtVisitor<R> {
     visitContinueStmt(stmt: ContinueStmt): R;
     visitFunctionStmt(stmt: FunctionStmt): R;
     visitReturnStmt(stmt: ReturnStmt): R;
+    visitStructStmt(stmt: StructStmt): R;
 }
 
 export interface Stmt {
@@ -72,7 +73,7 @@ export class VarStmt implements Stmt {
 }
 
 //变量列表语句
-// 例如 int a,b,c = 1,2,3;
+// 例如 int a,b,c 
 export class VarListStmt implements Stmt {
     varStmts: VarStmt[];
     constructor(varStmts: VarStmt[]) {
@@ -200,5 +201,16 @@ export class ReturnStmt implements Stmt {
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitReturnStmt(this);
+    }
+}
+
+
+export class StructStmt implements Stmt {
+    structure: Structure
+    constructor(structure: Structure) {
+        this.structure = structure;
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitStructStmt(this);
     }
 }

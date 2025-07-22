@@ -1,7 +1,7 @@
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { FuncVar, FunLable, Var } from "../Parse/Symbol";
-import { DataType, FunType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
+import { DataType, FunType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 
 
 type EncloseLoop = {
@@ -25,6 +25,7 @@ export class CodeGen implements ExprVisitor<string>, StmtVisitor<void> {
     private globalVars: Var[] = [];
     private globalVarListStmt: VarListStmt[] = []; //全局变量列表
     private globalFunctionStmt: FunctionStmt[] = []; //全局变量
+    private globalStructStmt: StructStmt[] = []; //全局结构体
     static codeText: string = "";
     private sequence = { ...initSequence };
     private enclosing: EncloseLoop[] = []
@@ -42,6 +43,7 @@ declare i32 @printf(i8*, ...)
 `;
     }
 
+
     generateCode(programAst: {
         stmt: Stmt[];
     }): string {
@@ -54,16 +56,28 @@ declare i32 @printf(i8*, ...)
             if (stmt instanceof FunctionStmt) {
                 this.globalFunctionStmt.push(stmt);
             }
+            if (stmt instanceof StructStmt) {
+                this.globalStructStmt.push(stmt);
+            }
         });
+        this.globalStructStmt.forEach(stmt => {
+            this.visitStructStmt(stmt)
+        })
         this.globalVarListStmt.forEach(stmt => {
             this.visitVarListStmt(stmt)
         })
         this.globalFunctionStmt.forEach(stmt => {
             this.visitFunctionStmt(stmt)
         })
+  
 
         console.log('CodeGen.codeText', CodeGen.codeText);
         return CodeGen.codeText;
+    }
+
+
+    visitStructStmt(stmt: StructStmt): void {
+        this.printIR(`%${stmt.structure.name} = type { ${stmt.structure.fields.map(f => typeToLLVM(f.type)).join(', ')} }`);
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
@@ -290,6 +304,23 @@ declare i32 @printf(i8*, ...)
         for (const v of stmt.varStmts) {
             this.visitVarStmt(v);
         }
+    }
+
+
+    /*-----------------------------Expr-----------------------------*/
+    visitStructExpr(expr: StructExpr): string {
+        const n = this.sequence.reg++;
+        const struct_val = `%reg_struct_${n}`
+        this.printIR(`${struct_val} = alloca ${typeToLLVM(expr.exprType)}`);
+        expr.fields.forEach((f,index) => {
+            const field_val = f.value.accept(this);
+            const field_type = typeToLLVM(f.value.exprType)
+            const regName = `%regptr_${f.name}_${n}`
+            this.printIR(`${regName} = getelementptr inbounds ${typeToLLVM(expr.exprType)}, ${typeToLLVM(expr.exprType)}* ${struct_val}, i32 0, i32 ${index}`);
+            this.printIR(`store ${field_type} ${field_val}, ${field_type}* ${regName}`);
+        })
+        this.printIR(`${struct_val}_load = load ${typeToLLVM(expr.exprType)}, ${typeToLLVM(expr.exprType)}* ${struct_val}`);
+        return `${struct_val}_load`;
     }
 
     // 逻辑表达式生成
@@ -530,5 +561,8 @@ function typeToLLVM(type: DataType): string {
     if (type instanceof FunType) {
         return "i32*";
     }
-    return "aaa";
+    if (type instanceof StructType) {
+          return `%${type.structure.name}`
+    }
+    return "null";
 }   

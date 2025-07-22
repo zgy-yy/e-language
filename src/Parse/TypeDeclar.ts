@@ -1,3 +1,4 @@
+import { Structure } from "./Symbol";
 
 
 export enum SimpleDataKind {
@@ -11,6 +12,7 @@ export enum SimpleDataKind {
 export enum DataKind {
     simple = "simple",
     fun = "fun",
+    struct = "struct",
     class = "class",
 }
 
@@ -55,6 +57,20 @@ export class FunType extends DataType {
     }
     toLLVM(): string {
         return `${this.paramsType.map(item => item.toLLVM()).join('_')}_${this.retType.toLLVM()}`
+    }
+}
+
+export class StructType extends DataType {
+    structure: Structure
+    constructor(structure: Structure) {
+        super(DataKind.struct)
+        this.structure = structure
+    }
+    toString(): string {
+        return `struct ${this.structure.name}`
+    }
+    toLLVM(): string {
+        return `struct_${this.structure.name}`
     }
 }
 
@@ -110,6 +126,25 @@ export function isSameType(type1: DataType, type2: DataType): boolean {
                     return false
                 }
             }
+            break;
+        case DataKind.struct:
+            const structType1 = type1 as StructType
+            const structType2 = type2 as StructType
+            // 根据结构体字段匹配
+            if (structType1.structure.fields.length !== structType2.structure.fields.length) {
+                return false
+            }
+            for (let i = 0; i < structType1.structure.fields.length; i++) {
+                if (!isSameType(structType1.structure.fields[i].type, structType2.structure.fields[i].type)) {
+                    return false
+                }
+            }
+            if (structType1.structure.name === "") {
+                structType1.structure.name = structType2.structure.name
+            } else {
+                structType2.structure.name = structType1.structure.name
+            }
+
             break;
         case DataKind.class:
             return false

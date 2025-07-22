@@ -33,7 +33,8 @@ export enum Tokenkind {
     RIGHT_SHIFT_EQUAL = ">>=",
     //逗号
     COMMA = ",",
-
+    //冒号
+    COLON = ":",
     //逻辑
     BANG = "!",
     AND = "&&",
@@ -71,6 +72,8 @@ export enum Tokenkind {
     BREAK = "Break",
     CONTINUE = "Continue",
     RETURN = "Return",
+    STRUCT = "Struct",
+    CLASS = "Class",
 
 
     //数据类型

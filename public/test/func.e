@@ -14,6 +14,7 @@ void bar(int a,b, (int)void c){
 }
 
 void pri(int a){
+    int c;
     print  a;
 }
 

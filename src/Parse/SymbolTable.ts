@@ -1,11 +1,12 @@
-import { Var } from "./Symbol";
+import { Structure, Var } from "./Symbol";
 
 
 class Env{
     varEnv: Map<string, Var> = new Map<string, Var>();
+    structEnv: Map<string, Structure> = new Map<string, Structure>();
 }
 export class SymbolTable {
-    global: Var[] = [];
+    global: Env = new Env();
     private level: number = 0;
     private symTab: Env[] = [];
 
@@ -21,12 +22,12 @@ export class SymbolTable {
 
     addVariable(name: string, var_: Var) {
         if(this.level === 0){ // 全局变量
-            this.global.push(var_)
+            this.global.varEnv.set(name, var_)
         }
         if (this.symTab.length === 0) {
             this.symTab.push(new Env());
         }
-        this.symTab[this.symTab.length - 1].varEnv.set(name, var_);
+        this.symTab.at(-1).varEnv.set(name, var_);
         return var_;
     }
 
@@ -39,10 +40,37 @@ export class SymbolTable {
         return null;
     }
 
-    inCurrentScope(name: string): boolean {// 判断当前作用域是否有这个变量
+    varInCurrentScope(name: string): boolean {// 判断当前作用域是否有这个变量
         if (this.symTab.length === 0) {
             return false;
         }
         return this.symTab[this.symTab.length - 1].varEnv.has(name);
+    }
+
+    addStructure(name: string, structure: Structure) {
+        if (this.level === 0) {
+            this.global.structEnv.set(name, structure)
+        }
+        if (this.symTab.length === 0) {
+            this.symTab.push(new Env());
+        }
+        this.symTab.at(-1).structEnv.set(name, structure)
+        return structure;
+    }
+
+    findStructure(name: string): Structure {
+        for (let i = this.symTab.length - 1; i >= 0; i--) {
+            if (this.symTab[i].structEnv.has(name)) {
+                return this.symTab[i].structEnv.get(name);
+            }
+        }
+        return null;
+    }
+
+    structInCurrentScope(name: string): boolean {// 判断当前作用域是否有这个结构体
+        if (this.symTab.length === 0) {
+            return false;
+        }
+        return this.symTab.at(-1).structEnv.has(name);
     }
 }

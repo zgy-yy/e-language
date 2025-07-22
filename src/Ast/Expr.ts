@@ -1,12 +1,13 @@
-import { DataKind, DataType, FunType, isSameType, SimpleDataKind, SimpleType } from "../Parse/TypeDeclar";
+import { DataKind, DataType, FunType, isSameType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token"
-import { FuncVar, FunLable, Var } from "../Parse/Symbol";
+import { FuncVar, FunLable, Structure, Var } from "../Parse/Symbol";
 
 /*
 * 表达式
 */
 export interface ExprVisitor<R> {
+    visitStructExpr(expr: StructExpr): R;
     visitBinaryExpr(expr: BinaryExpr): R;
     visitUnaryExpr(expr: UnaryExpr): R;
     visitSuffixSelfExpr(expr: SuffixSelfExpr): R;
@@ -251,6 +252,21 @@ export class CallExpr implements Expr {
         return visitor.visitCallExpr(this);
     }
 
+}
+
+export class StructExpr implements Expr {
+    exprType: DataType;
+    fields: {
+        name: string
+        value: Expr
+    }[];
+    constructor(fields: { name: string, value: Expr }[]) {
+        this.exprType = new StructType(new Structure("", fields.map((f) => ({ name: f.name, type: f.value.exprType }))))
+        this.fields = fields;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitStructExpr(this);
+    }
 }
 
 export class CommaExpr implements Expr {

@@ -26,7 +26,8 @@ export class Scanner {//扫描器，或称为词法分析
         ["break", Tokenkind.BREAK],
         ["continue", Tokenkind.CONTINUE],
         ["return", Tokenkind.RETURN],
-
+        ["struct", Tokenkind.STRUCT],
+        ["class", Tokenkind.CLASS],
 
         //字面量
         [SimpleDataKind.Null, Tokenkind.NULL],
@@ -72,6 +73,9 @@ export class Scanner {//扫描器，或称为词法分析
                 break;
             case ",":
                 this.addToken(Tokenkind.COMMA);
+                break;
+            case ":":
+                this.addToken(Tokenkind.COLON);
                 break;
             case '+':
                 this.addToken(this.match("+") ? Tokenkind.PLUS_PLUS : Tokenkind.PLUS);

@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { FuncVar, FunLable, Var } from "../Parse/Symbol";
 import { DataType, FunType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
@@ -44,6 +44,7 @@ declare i32 @printf(i8*, ...)
     }
 
 
+
     generateCode(programAst: {
         stmt: Stmt[];
     }): string {
@@ -69,7 +70,7 @@ declare i32 @printf(i8*, ...)
         this.globalFunctionStmt.forEach(stmt => {
             this.visitFunctionStmt(stmt)
         })
-  
+
 
         console.log('CodeGen.codeText', CodeGen.codeText);
         return CodeGen.codeText;
@@ -500,6 +501,31 @@ declare i32 @printf(i8*, ...)
         return var_name;
     }
 
+    visitGetFieldExpr(expr: GetFieldExpr): string {
+        const n = this.sequence.reg++;
+        const structVal = expr.structVal as VariableExpr
+        const structName = structVal.variable._id
+        const field_type = typeToLLVM(expr.exprType)
+        const structType = expr.structVal.exprType as StructType
+        const field_index = structType.structure.fields.findIndex(f => f.name === expr.field)
+        const regName = `%regptr_${expr.field}_${n}`
+        this.printIR(`${regName} = getelementptr inbounds ${typeToLLVM(expr.structVal.exprType)}, ${typeToLLVM(expr.structVal.exprType)}* %${structName}, i32 0, i32 ${field_index}`);
+        this.printIR(`${regName}_load = load ${field_type}, ${field_type}* ${regName}`);
+        return `${regName}_load`;
+    }
+    visitSetFieldExpr(expr: SetFieldExpr): string {
+        const n = this.sequence.reg++;
+        const value = expr.value.accept(this);
+        const structVal = expr.structVal as VariableExpr
+        const structName = structVal.variable._id
+        const field_type = typeToLLVM(expr.exprType)
+        const structType = expr.structVal.exprType as StructType
+        const field_index = structType.structure.fields.findIndex(f => f.name === expr.field)
+        const regName = `%regptr_${expr.field}_${n}`
+        this.printIR(`${regName} = getelementptr inbounds ${typeToLLVM(expr.structVal.exprType)}, ${typeToLLVM(expr.structVal.exprType)}* %${structName}, i32 0, i32 ${field_index}`);
+        this.printIR(`store ${field_type} ${value}, ${field_type}* ${regName}`);
+        return value;
+    }
     //变量表达式生成 变量表达式 => 变量名,函数名
     visitVariableExpr(expr: VariableExpr): string {
         const var_name = expr.variable._id;
@@ -562,7 +588,7 @@ function typeToLLVM(type: DataType): string {
         return "i32*";
     }
     if (type instanceof StructType) {
-          return `%${type.structure.name}`
+        return `%${type.structure.name}`
     }
     return "null";
 }   

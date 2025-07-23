@@ -134,16 +134,18 @@ export function isSameType(type1: DataType, type2: DataType): boolean {
             if (structType1.structure.fields.length !== structType2.structure.fields.length) {
                 return false
             }
+            //结构体名
+            const structName = structType1.structure.name ? structType1.structure.name : structType2.structure.name
+
+          
             for (let i = 0; i < structType1.structure.fields.length; i++) {
-                if (!isSameType(structType1.structure.fields[i].type, structType2.structure.fields[i].type)) {
+                if (!isSameType(structType1.structure.fields[i].type, 
+                    structType2.structure.fields.find(f => f.name === structType1.structure.fields[i].name)?.type)) {
                     return false
                 }
             }
-            if (structType1.structure.name === "") {
-                structType1.structure.name = structType2.structure.name
-            } else {
-                structType2.structure.name = structType1.structure.name
-            }
+            structType1.structure.name = structName
+            structType2.structure.name = structName
 
             break;
         case DataKind.class:

@@ -35,13 +35,9 @@ export class FunLable extends FuncVar {
 //  structure
 export class Structure {
     name: string
-    fields: {
-        name: string
-        type: DataType
-    }[]
+    fields: { name: string, type: DataType }[]
     constructor(name: string, fields: { name: string, type: DataType }[]) {
         this.name = name
         this.fields = fields
     }
 }
-

@@ -1,4 +1,4 @@
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
@@ -154,8 +154,23 @@ export class Parser {
         let initializer = null
         if (this.match(Tokenkind.EQUAL)) {
             initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
+
             if (!isSameType(varT, initializer.exprType)) {
                 El.error(this.previous(), "Initializer type does not match variable type.")
+            } else {
+                initializer.exprType = varT
+                if (varT instanceof StructType) {
+                    initializer.fields.sort((a, b) => {
+                        const indexA = varT.structure.fields.findIndex(f => f.name === a.name);
+                        const indexB = varT.structure.fields.findIndex(f => f.name === b.name);
+
+                        // 如果元素不在 referenceArray 中，放在后面
+                        if (indexA === -1) return 1;
+                        if (indexB === -1) return -1;
+
+                        return indexA - indexB;
+                    });
+                }
             }
         }
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
@@ -275,11 +290,11 @@ export class Parser {
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
             const field_type = this.declarationKind()//字段类型
             const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
+            struct_fields.push({ name: field_name.lexeme, type: field_type })
             while (this.match(Tokenkind.COMMA)) {
                 const field_name_ = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
                 struct_fields.push({ name: field_name_.lexeme, type: field_type })
             }
-            struct_fields.push({ name: field_name.lexeme, type: field_type })
             this.consume(Tokenkind.SEMICOLON, "Expect ';' after field declaration.")
         }
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct body.")
@@ -438,6 +453,9 @@ export class Parser {
             if (expr instanceof VariableExpr) {
                 return new AssignExpr(expr.variable, value, equals)
             }
+            if (expr instanceof GetFieldExpr) {
+                return new SetFieldExpr(expr.structVal, expr.field, value)
+            }
             El.error(equals, "Invalid assignment target.")
         }
         return expr
@@ -524,6 +542,10 @@ export class Parser {
             if (this.match(Tokenkind.LEFT_PAREN)) {
                 expr = this.functionCall(expr)
             }
+            else if (this.match(Tokenkind.DOT)) {
+                const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
+                expr = new GetFieldExpr(expr as StructExpr, field_name.lexeme)
+            }
             // else if (this.match(Tokenkind)) {
             //     const index = this.expression()
             //     this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after index.")
@@ -579,6 +601,9 @@ export class Parser {
                 const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
                 this.consume(Tokenkind.COLON, "Expect ':' after field name.")
                 const field_value = this.assignment()
+                if (fields.find(f => f.name === field_name.lexeme)) {
+                    this.error(field_name, "Field with this name already declared in this struct.")
+                }
                 fields.push({ name: field_name.lexeme, value: field_value })
                 if (this.peek().type !== Tokenkind.RIGHT_BRACE) {
                     this.consume(Tokenkind.COMMA, "Expect ',' after field declaration.")

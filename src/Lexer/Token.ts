@@ -35,6 +35,7 @@ export enum Tokenkind {
     COMMA = ",",
     //冒号
     COLON = ":",
+    DOT = ".",
     //逻辑
     BANG = "!",
     AND = "&&",

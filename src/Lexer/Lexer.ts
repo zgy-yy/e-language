@@ -77,6 +77,9 @@ export class Scanner {//扫描器，或称为词法分析
             case ":":
                 this.addToken(Tokenkind.COLON);
                 break;
+            case ".":
+                this.addToken(Tokenkind.DOT);
+                break;
             case '+':
                 this.addToken(this.match("+") ? Tokenkind.PLUS_PLUS : Tokenkind.PLUS);
                 break;

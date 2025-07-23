@@ -6,10 +6,13 @@
 
 int main(){
     A st;
-    st = {
+    st={
+         c:true,
         a:1,
-        b:2,
-        c:true
+            b:2,
+       
     };
+    print st.a;
+
     return 0;
 }

@@ -447,8 +447,6 @@ export class Parser {
                 return new AssignExpr(expr.variable, value, equals)
             }
             if (expr instanceof GetFieldExpr) {
-                console.log("1expr", expr)
-                console.log("2value", value)
                 return new SetFieldExpr(expr.structVal, expr.field, value,equals)
             }
             El.error(equals, "Invalid assignment target.")
@@ -552,7 +550,6 @@ export class Parser {
             } else {
                 break
             }
-            console.log('expr', expr)
         }
         return expr
     }

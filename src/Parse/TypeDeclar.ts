@@ -135,9 +135,7 @@ export function isSameType(type1: DataType, type2: DataType): boolean {
                     return false
                 }
             }
-            const structName = structType1.structure.name ?? structType2.structure.name
-            structType1.structure.name = structName
-            structType2.structure.name = structName
+            structType2.structure = structType1.structure
             break;
         case DataKind.class:
             return false

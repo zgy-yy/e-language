@@ -313,7 +313,9 @@ declare i32 @printf(i8*, ...)
         const n = this.sequence.reg++;
         const struct_val = `%reg_struct_${n}`
         this.printIR(`${struct_val} = alloca ${typeToLLVM(expr.exprType)}`);
-        Array.from(expr.fields.entries()).forEach(([name, value], index) => {
+        Array.from(expr.fields.entries()).forEach(([name, value]) => {
+            const structType = expr.exprType as StructType
+            const index = Array.from(structType.structure.fields.entries()).findIndex(([na, type]) => na === name)
             const field_val = value.accept(this);
             const field_type = typeToLLVM(value.exprType)
             const regName = `%regptr_${name}_${n}`
@@ -507,7 +509,6 @@ declare i32 @printf(i8*, ...)
         const structName = structVal
         const field_type = typeToLLVM(expr.exprType)
         const structType = expr.structVal.exprType as StructType
-        console.log("structType", structType)
         const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
         const regName = `%regptr_${expr.field}_${n}`
         this.printIR(`${regName} = getelementptr inbounds ${typeToLLVM(expr.structVal.exprType)}, ${typeToLLVM(expr.structVal.exprType)}* %${structName}, i32 0, i32 ${field_index}`);

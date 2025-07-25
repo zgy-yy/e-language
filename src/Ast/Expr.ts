@@ -298,8 +298,6 @@ export class SetFieldExpr implements Expr {
         this.structVal = struct
         this.field = field;
         this.value = value;
-
-        console.log("this", this)
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitSetFieldExpr(this);

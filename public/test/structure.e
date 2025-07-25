@@ -4,15 +4,20 @@
         bool c;
     }
 
+
+struct B{
+    int i;
+    A a;
+}
+
 int main(){
-    A st;
-    st={
-         c:true,
-        a:1,
-            b:2,
-       
+    B ha={
+        i:43,
+        a:{
+        a:1,c:true,b:6,
+         }
     };
-    print st.a;
+    print ha.a.b;
 
     return 0;
 }

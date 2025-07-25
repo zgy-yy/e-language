@@ -130,23 +130,14 @@ export function isSameType(type1: DataType, type2: DataType): boolean {
         case DataKind.struct:
             const structType1 = type1 as StructType
             const structType2 = type2 as StructType
-            // 根据结构体字段匹配
-            if (structType1.structure.fields.length !== structType2.structure.fields.length) {
-                return false
-            }
-            //结构体名
-            const structName = structType1.structure.name ? structType1.structure.name : structType2.structure.name
-
-          
-            for (let i = 0; i < structType1.structure.fields.length; i++) {
-                if (!isSameType(structType1.structure.fields[i].type, 
-                    structType2.structure.fields.find(f => f.name === structType1.structure.fields[i].name)?.type)) {
+            for (const [name, type] of structType1.structure.fields) {
+                if (!isSameType(type, structType2.structure.fields.get(name))) {
                     return false
                 }
             }
+            const structName = structType1.structure.name ?? structType2.structure.name
             structType1.structure.name = structName
             structType2.structure.name = structName
-
             break;
         case DataKind.class:
             return false

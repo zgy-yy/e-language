@@ -14,7 +14,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitStructStmt(stmt: StructStmt): string {
-        return `struct ${stmt.structure.name} { ${stmt.structure.fields.map((f) => `${f.type} ${f.name}`).join(", ")} }`;
+        return `struct ${stmt.structure.name} { ${Array.from(stmt.structure.fields.entries()).map(([name, type]) => `${type} ${name}`).join(", ")} }`;
     }
 
     visitContinueStmt(stmt: ContinueStmt): string {
@@ -84,7 +84,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitStructExpr(expr: StructExpr): string {
-        return `{ ${expr.fields.map((f) => `${f.name}: ${f.value.accept(this)}`).join(", ")} }`;
+        return `{ ${Array.from(expr.fields.entries()).map(([name, value]) => `${name}: ${value.accept(this)}`).join(", ")} }`;
     }
 
     visitGetFieldExpr(expr: GetFieldExpr): string {

@@ -196,22 +196,6 @@ export class AssignExpr implements Expr {
     constructor(var_: Var, value: Expr, operator: Token) {
         if (!isSameType(var_.type, value.exprType)) {
             El.error(operator, "Type mismatch in assignment.")
-        } else {
-            value.exprType = var_.type
-            if (var_.type instanceof StructType) {
-                const structType = value.exprType as StructType
-                const _v = value as StructExpr
-                _v.fields.sort((a, b) => {
-                    const indexA = structType.structure.fields.findIndex(f => f.name === a.name);
-                    const indexB = structType.structure.fields.findIndex(f => f.name === b.name);
-
-                    // 如果元素不在 referenceArray 中，放在后面
-                    if (indexA === -1) return 1;
-                    if (indexB === -1) return -1;
-
-                    return indexA - indexB;
-                });
-            }
         }
 
         this.exprType = var_.type;
@@ -275,13 +259,10 @@ export class CallExpr implements Expr {
 
 export class StructExpr implements Expr {
     exprType: DataType;
-    fields: {
-        name: string
-        value: Expr
-    }[];
+    fields: Map<string, Expr>;
     constructor(fields: { name: string, value: Expr }[]) {
-        this.exprType = new StructType(new Structure("", fields.map((f) => ({ name: f.name, type: f.value.exprType }))))
-        this.fields = fields;
+        this.exprType = new StructType(new Structure("", new Map(fields.map(f => [f.name, f.value.exprType]))))
+        this.fields = new Map(fields.map(f => [f.name, f.value]))
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitStructExpr(this);
@@ -292,12 +273,12 @@ export class GetFieldExpr implements Expr {
     exprType: DataType;
     structVal: Expr;
     field: string;
-    constructor(struct: StructExpr, field: string) {
+    constructor(struct: Expr, field: string) {
         const structType = struct.exprType as StructType
-        this.exprType = structType.structure.fields.find(f => f.name === field)?.type;
+        this.exprType = structType.structure.fields.get(field);
         this.structVal = struct;
         this.field = field;
-    }
+    } 
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitGetFieldExpr(this);
     }
@@ -308,12 +289,17 @@ export class SetFieldExpr implements Expr {
     structVal: Expr;
     field: string;
     value: Expr;
-    constructor(struct: Expr, field: string, value: Expr) {
+    constructor(struct: Expr, field: string, value: Expr,equals:Token) {
         const structType = struct.exprType as StructType
-        this.exprType = structType.structure.fields.find(f => f.name === field)?.type;
+        this.exprType = structType.structure.fields.get(field);
+        if (!isSameType(this.exprType, value.exprType)) {
+            El.error(equals, "Type mismatch in assignment.")
+        }
         this.structVal = struct
         this.field = field;
         this.value = value;
+
+        console.log("this", this)
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitSetFieldExpr(this);

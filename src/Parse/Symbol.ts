@@ -1,4 +1,4 @@
-import { DataType, FunType } from "./TypeDeclar"
+import { DataType, FunType, StructType } from "./TypeDeclar"
 
 export class Var {
     static incremental = 0
@@ -31,12 +31,20 @@ export class FunLable extends FuncVar {
     }
 }
 
+export class StructVar extends Var {
+    fields:Map<string, DataType>
+    constructor(name: string, structName: string, fields: Map<string, DataType>) {
+        const structType = new StructType(new Structure(structName, fields))
+        super(name, structType)
+        this.fields = fields
+    }
+}
 
 //  structure
 export class Structure {
     name: string
-    fields: { name: string, type: DataType }[]
-    constructor(name: string, fields: { name: string, type: DataType }[]) {
+    fields: Map<string, DataType>
+    constructor(name: string, fields: Map<string, DataType>) {
         this.name = name
         this.fields = fields
     }

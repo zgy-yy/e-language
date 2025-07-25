@@ -4,7 +4,7 @@ import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
 import { DataType, FunType, isSameType, SimpleDataKind, SimpleType, StructType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
-import { FuncVar, Var, FunLable, Structure } from "./Symbol";
+import { FuncVar, Var, FunLable, Structure, StructVar } from "./Symbol";
 
 type funcEnclosing = {
     funcName: string,
@@ -159,24 +159,14 @@ export class Parser {
                 El.error(this.previous(), "Initializer type does not match variable type.")
             } else {
                 initializer.exprType = varT
-                if (varT instanceof StructType) {
-                    initializer.fields.sort((a, b) => {
-                        const indexA = varT.structure.fields.findIndex(f => f.name === a.name);
-                        const indexB = varT.structure.fields.findIndex(f => f.name === b.name);
-
-                        // 如果元素不在 referenceArray 中，放在后面
-                        if (indexA === -1) return 1;
-                        if (indexB === -1) return -1;
-
-                        return indexA - indexB;
-                    });
-                }
             }
         }
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
         let var_ = null
         if (varT instanceof FunType) {
             var_ = new FuncVar(var_name.lexeme, varT.retType, varT.paramsType)
+        } else if (varT instanceof StructType) {
+            var_ = new StructVar(var_name.lexeme, varT.structure.name, varT.structure.fields)
         } else {
             var_ = new Var(var_name.lexeme, varT)
         }
@@ -269,6 +259,9 @@ export class Parser {
                 if (declType instanceof FunType) {
                     const declParamVar = new FuncVar(identifier_name.lexeme, declType.retType, declType.paramsType)
                     declParamVars.push(declParamVar)
+                } else if (declType instanceof StructType) {
+                    const declParamVar = new StructVar(identifier_name.lexeme, declType.structure.name, declType.structure.fields)
+                    declParamVars.push(declParamVar)
                 } else {
                     const declParamVar = new Var(identifier_name.lexeme, declType)
                     declParamVars.push(declParamVar)
@@ -299,7 +292,7 @@ export class Parser {
         }
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct body.")
 
-        const struct_ = new Structure(struct_name.lexeme, struct_fields)
+        const struct_ = new Structure(struct_name.lexeme, new Map(struct_fields.map(f => [f.name, f.type])))
         this.symbolTable.addStructure(struct_name.lexeme, struct_)
         return new StructStmt(struct_)
     }
@@ -454,7 +447,9 @@ export class Parser {
                 return new AssignExpr(expr.variable, value, equals)
             }
             if (expr instanceof GetFieldExpr) {
-                return new SetFieldExpr(expr.structVal, expr.field, value)
+                console.log("1expr", expr)
+                console.log("2value", value)
+                return new SetFieldExpr(expr.structVal, expr.field, value,equals)
             }
             El.error(equals, "Invalid assignment target.")
         }
@@ -544,7 +539,7 @@ export class Parser {
             }
             else if (this.match(Tokenkind.DOT)) {
                 const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
-                expr = new GetFieldExpr(expr as StructExpr, field_name.lexeme)
+                expr = new GetFieldExpr(expr, field_name.lexeme)
             }
             // else if (this.match(Tokenkind)) {
             //     const index = this.expression()
@@ -557,6 +552,7 @@ export class Parser {
             } else {
                 break
             }
+            console.log('expr', expr)
         }
         return expr
     }

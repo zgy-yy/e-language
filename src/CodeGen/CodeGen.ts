@@ -1,6 +1,6 @@
 import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
-import { FuncVar, FunLable, Var } from "../Parse/Symbol";
+import { FuncVar, FunLable, StructVar, Var } from "../Parse/Symbol";
 import { DataType, FunType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 
 
@@ -78,7 +78,7 @@ declare i32 @printf(i8*, ...)
 
 
     visitStructStmt(stmt: StructStmt): void {
-        this.printIR(`%${stmt.structure.name} = type { ${stmt.structure.fields.map(f => typeToLLVM(f.type)).join(', ')} }`);
+        this.printIR(`%${stmt.structure.name} = type { ${Array.from(stmt.structure.fields.entries()).map(([name, type]) => typeToLLVM(type)).join(', ')} }`);
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
@@ -288,7 +288,7 @@ declare i32 @printf(i8*, ...)
                 const value = stmt.initializer.accept(this);
                 this.printIR(`@${var_name} = global ${varType} ${value}`);
             } else {
-                this.printIR(`@${var_name} = global ${varType} 0`);
+                this.printIR(`@${var_name} = global ${varType}`);
             };
         } else {
             const varType = typeToLLVM(stmt.variable.type);
@@ -313,10 +313,10 @@ declare i32 @printf(i8*, ...)
         const n = this.sequence.reg++;
         const struct_val = `%reg_struct_${n}`
         this.printIR(`${struct_val} = alloca ${typeToLLVM(expr.exprType)}`);
-        expr.fields.forEach((f,index) => {
-            const field_val = f.value.accept(this);
-            const field_type = typeToLLVM(f.value.exprType)
-            const regName = `%regptr_${f.name}_${n}`
+        Array.from(expr.fields.entries()).forEach(([name, value], index) => {
+            const field_val = value.accept(this);
+            const field_type = typeToLLVM(value.exprType)
+            const regName = `%regptr_${name}_${n}`
             this.printIR(`${regName} = getelementptr inbounds ${typeToLLVM(expr.exprType)}, ${typeToLLVM(expr.exprType)}* ${struct_val}, i32 0, i32 ${index}`);
             this.printIR(`store ${field_type} ${field_val}, ${field_type}* ${regName}`);
         })
@@ -503,24 +503,28 @@ declare i32 @printf(i8*, ...)
 
     visitGetFieldExpr(expr: GetFieldExpr): string {
         const n = this.sequence.reg++;
-        const structVal = expr.structVal as VariableExpr
-        const structName = structVal.variable._id
+        const structVal = expr.structVal.accept(this)
+        const structName = structVal
         const field_type = typeToLLVM(expr.exprType)
         const structType = expr.structVal.exprType as StructType
-        const field_index = structType.structure.fields.findIndex(f => f.name === expr.field)
+        console.log("structType", structType)
+        const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
         const regName = `%regptr_${expr.field}_${n}`
         this.printIR(`${regName} = getelementptr inbounds ${typeToLLVM(expr.structVal.exprType)}, ${typeToLLVM(expr.structVal.exprType)}* %${structName}, i32 0, i32 ${field_index}`);
+        if (expr.exprType instanceof StructType) {
+            return `regptr_${expr.field}_${n}`
+        }
         this.printIR(`${regName}_load = load ${field_type}, ${field_type}* ${regName}`);
         return `${regName}_load`;
     }
     visitSetFieldExpr(expr: SetFieldExpr): string {
         const n = this.sequence.reg++;
         const value = expr.value.accept(this);
-        const structVal = expr.structVal as VariableExpr
-        const structName = structVal.variable._id
+        const structVal = expr.structVal.accept(this)
+        const structName = structVal
         const field_type = typeToLLVM(expr.exprType)
         const structType = expr.structVal.exprType as StructType
-        const field_index = structType.structure.fields.findIndex(f => f.name === expr.field)
+        const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
         const regName = `%regptr_${expr.field}_${n}`
         this.printIR(`${regName} = getelementptr inbounds ${typeToLLVM(expr.structVal.exprType)}, ${typeToLLVM(expr.structVal.exprType)}* %${structName}, i32 0, i32 ${field_index}`);
         this.printIR(`store ${field_type} ${value}, ${field_type}* ${regName}`);
@@ -540,15 +544,14 @@ declare i32 @printf(i8*, ...)
             const params = funVar.paramTypes.map(p => typeToLLVM(p))
             this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
             return var_name_n;
+        } else if (expr.variable instanceof StructVar) {
+            const structVar = expr.variable
+            return structVar._id;
         } else {
             if (this.globalVars.find(v => v === expr.variable)) {
                 this.printIR(`${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
             } else {
                 this.printIR(`${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
-            }
-            if (expr.variable instanceof FunLable) {
-                const params = expr.variable.paramTypes.map(p => typeToLLVM(p))
-                this.printIR(`${var_name_n} = bitcast ${varType} (${params.join(', ')})* @${var_name_n} to ${varType} (${params.join(', ')})*`);
             }
             return var_name_n;
         }

@@ -515,7 +515,6 @@ declare i32 @printf(i8*, ...)
     visitSetFieldExpr(expr: SetFieldExpr): string {
         const n = this.sequence.reg++;
         const value = expr.value.accept(this);
-        console.log('setFieldExpr', expr, value)
 
         const setField = (expr: Expr, value: string) => {
             if (expr instanceof SetFieldExpr) {
@@ -523,19 +522,17 @@ declare i32 @printf(i8*, ...)
                 const field_type = typeToLLVM(expr.exprType)
                 const structType = expr.target.exprType as StructType
                 const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
-                const regName = `%regfield_${expr.field}_${n}`
+                const regName = `%temp${expr.field}_${n}`
                 this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.target.exprType)} ${target}, ${field_type} ${value}, ${field_index}`);
-                console.log('aa', expr.target,expr.field, regName)
 
                 setField(expr.target, regName)
             }
             if (expr instanceof GetFieldExpr) {
                 const target = expr.target.accept(this)
                 const field_type = typeToLLVM(expr.exprType)
-                console.log("tar",expr,expr.exprType,value,field_type)
                 const structType = expr.target.exprType as StructType
                 const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
-                const regName = `%regfield_${expr.field}_${n}`
+                const regName = `%temp_${expr.field}_${n}`
                 this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.target.exprType)} ${target}, ${field_type} ${value}, ${field_index}`);
                 setField(expr.target, regName)
             }

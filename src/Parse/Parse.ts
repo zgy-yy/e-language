@@ -447,7 +447,7 @@ export class Parser {
                 return new AssignExpr(expr.variable, value, equals)
             }
             if (expr instanceof GetFieldExpr) {
-                return new SetFieldExpr(expr.structVal, expr.field, value,equals)
+                return new SetFieldExpr(expr.target, expr.field, value,equals)
             }
             El.error(equals, "Invalid assignment target.")
         }

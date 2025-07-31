@@ -88,11 +88,11 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitGetFieldExpr(expr: GetFieldExpr): string {
-        return `${expr.structVal.accept(this)}.${expr.field}`;
+        return `${expr.target.accept(this)}.${expr.field}`;
     }
 
     visitSetFieldExpr(expr: SetFieldExpr): string {
-        return `${expr.structVal.accept(this)}.${expr.field} = ${expr.value.accept(this)}`;
+        return `${expr.target.accept(this)}.${expr.field} = ${expr.value.accept(this)}`;
     }
 
     visitVariableExpr(expr: VariableExpr): string {

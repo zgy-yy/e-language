@@ -271,12 +271,12 @@ export class StructExpr implements Expr {
 
 export class GetFieldExpr implements Expr {
     exprType: DataType;
-    structVal: Expr;
+    target: Expr;
     field: string;
     constructor(struct: Expr, field: string) {
         const structType = struct.exprType as StructType
         this.exprType = structType.structure.fields.get(field);
-        this.structVal = struct;
+        this.target = struct;
         this.field = field;
     } 
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -286,7 +286,7 @@ export class GetFieldExpr implements Expr {
 
 export class SetFieldExpr implements Expr {
     exprType: DataType;
-    structVal: Expr;
+    target: Expr;
     field: string;
     value: Expr;
     constructor(struct: Expr, field: string, value: Expr,equals:Token) {
@@ -295,7 +295,7 @@ export class SetFieldExpr implements Expr {
         if (!isSameType(this.exprType, value.exprType)) {
             El.error(equals, "Type mismatch in assignment.")
         }
-        this.structVal = struct
+        this.target = struct
         this.field = field;
         this.value = value;
     }

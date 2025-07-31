@@ -10,14 +10,18 @@ struct B{
     A a;
 }
 
-int main(){
-    B ha={
-        i:43,
-        a:{
-        a:1,c:true,b:6,
-         }
-    };
-    print ha.a.b;
 
+int main(){
+    A sh={
+        a:12,
+        b:4,
+        c:false
+    };
+    B bb = {
+        i:1,
+        a:sh
+    };
+   bb.a.b=312;
+   print bb.a.b;
     return 0;
 }

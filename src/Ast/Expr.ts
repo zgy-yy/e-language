@@ -1,4 +1,4 @@
-import { DataKind, DataType, FunType, isSameType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
+import { ArrayType, DataKind, DataType, FunType, isSameType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token"
 import { FuncVar, FunLable, Structure, Var } from "../Parse/Symbol";
@@ -7,6 +7,7 @@ import { FuncVar, FunLable, Structure, Var } from "../Parse/Symbol";
 * 表达式
 */
 export interface ExprVisitor<R> {
+    visitArrayExpr(expr: ArrayExpr): R;
     visitStructExpr(expr: StructExpr): R;
     visitBinaryExpr(expr: BinaryExpr): R;
     visitUnaryExpr(expr: UnaryExpr): R;
@@ -266,6 +267,29 @@ export class StructExpr implements Expr {
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitStructExpr(this);
+    }
+}
+
+export class ArrayExpr implements Expr {
+    exprType: DataType;
+    elements: Expr[];
+    constructor(elements: Expr[]) {
+        if (elements.length === 0) {
+            this.exprType = new ArrayType(new SimpleType(SimpleDataKind.Void), new LiteralExpr(0))
+        } else {
+            const elementType = elements[0].exprType
+            for (const element of elements) {
+                if (!isSameType(elementType, element.exprType)) {
+                    El.error(null, "Type mismatch in array expression.")
+                }
+            }
+
+            this.exprType = new ArrayType(elementType, new LiteralExpr(elements.length))
+        }
+        this.elements = elements
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitArrayExpr(this);
     }
 }
 

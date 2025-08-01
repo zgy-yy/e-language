@@ -1,8 +1,8 @@
 import { c } from "vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P";
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
-import { FuncVar, FunLable, StructVar, Var } from "../Parse/Symbol";
-import { DataType, FunType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
+import { ArrayVar, FuncVar, FunLable, Var } from "../Parse/Symbol";
+import { ArrayType, DataType, FunType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 
 
 type EncloseLoop = {
@@ -292,13 +292,27 @@ declare i32 @printf(i8*, ...)
                 this.printIR(`@${var_name} = global ${varType}`);
             };
         } else {
-            const varType = typeToLLVM(stmt.variable.type);
-            // 局部变量
-            this.printIR(`%${var_name} = alloca ${varType}`);
-            if (stmt.initializer) {
-                const value = stmt.initializer.accept(this);
-                this.printIR(`store ${varType} ${value}, ${varType}* %${var_name}`);
+            // 数组变量
+            if (stmt.variable instanceof ArrayVar) {
+                const arrayType = stmt.variable.type as ArrayType
+                const len = arrayType.lengthExpr.accept(this)
+                const varType = `[${len} x ${typeToLLVM(arrayType)}]`
+                this.printIR(`%${var_name} = alloca ${varType}`);
+                if (stmt.initializer) {
+                    const value = stmt.initializer.accept(this);
+                    this.printIR(`store ${varType} ${value}, ${varType}* %${var_name}`);
+                }
+            } else {
+                const varType = typeToLLVM(stmt.variable.type);
+                // 局部变量
+                this.printIR(`%${var_name} = alloca ${varType}`);
+                if (stmt.initializer) {
+                    const value = stmt.initializer.accept(this);
+                    this.printIR(`store ${varType} ${value}, ${varType}* %${var_name}`);
+                }
             }
+
+
         }
     }
 
@@ -310,6 +324,26 @@ declare i32 @printf(i8*, ...)
 
 
     /*-----------------------------Expr-----------------------------*/
+
+    //数组表达式生成
+    visitArrayExpr(expr: ArrayExpr): string {
+        const n = this.sequence.reg++;
+        const len = expr.elements.length
+
+        const array_type = `[${len} x ${typeToLLVM(expr.exprType)}]`
+        let undef_array = `undef`
+        for (let i = 0; i < expr.elements.length; i++) {
+            const element = expr.elements[i].accept(this);
+            const element_type = typeToLLVM(expr.elements[i].exprType)
+            const regName = `%temp_${i}_${n}`
+            this.printIR(`${regName} = insertvalue ${array_type} ${undef_array}, ${element_type} ${element}, ${i}`);
+            undef_array = regName
+        }
+
+        return undef_array;
+    }
+
+    //结构体表达式生成
     visitStructExpr(expr: StructExpr): string {
         const n = this.sequence.reg++;
         let undef_struct = `undef`
@@ -604,6 +638,9 @@ function typeToLLVM(type: DataType): string {
     }
     if (type instanceof StructType) {
         return `%${type.structure.name}`
+    }
+    if (type instanceof ArrayType) {
+        return typeToLLVM(type.elementType)
     }
     return "null";
 }   

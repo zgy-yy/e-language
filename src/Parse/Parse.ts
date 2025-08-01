@@ -1,10 +1,10 @@
-import { AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
-import { DataType, FunType, isSameType, SimpleDataKind, SimpleType, StructType } from "./TypeDeclar";
+import { ArrayType, DataType, FunType, isSameType, SimpleDataKind, SimpleType, StructType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
-import { FuncVar, Var, FunLable, Structure, StructVar } from "./Symbol";
+import { FuncVar, Var, FunLable, Structure, StructVar, ArrayVar } from "./Symbol";
 
 type funcEnclosing = {
     funcName: string,
@@ -94,6 +94,11 @@ export class Parser {
                 return new FunType(paramsType, retType)
             }
             this.error(this.peek(), "Expect type after parameters.")
+        } else if (this.match(Tokenkind.LEFT_BRACKET)) {
+            const lenExpr = this.expression()
+            this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
+            const array_type = this.declarationKind()
+            return new ArrayType(array_type, lenExpr)
         }
         return null
     }
@@ -167,6 +172,8 @@ export class Parser {
             var_ = new FuncVar(var_name.lexeme, varT.retType, varT.paramsType)
         } else if (varT instanceof StructType) {
             var_ = new StructVar(var_name.lexeme, varT.structure.name, varT.structure.fields)
+        } else if (varT instanceof ArrayType) {
+            var_ = new ArrayVar(var_name.lexeme, varT.elementType, varT.lengthExpr)
         } else {
             var_ = new Var(var_name.lexeme, varT)
         }
@@ -605,6 +612,20 @@ export class Parser {
             this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct expression.")
             return new StructExpr(fields)
         }
+
+        // 数组表达式
+        if (this.match(Tokenkind.LEFT_BRACKET)) {
+            const elements = []
+            while (!this.check(Tokenkind.RIGHT_BRACKET) && !this.isAtEnd()) {
+                elements.push(this.assignment())
+                if (this.peek().type !== Tokenkind.RIGHT_BRACKET) {
+                    this.consume(Tokenkind.COMMA, "Expect ',' after array element.")
+                }
+            }
+            this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
+            return new ArrayExpr(elements)
+        }
+
         throw this.error(this.peek(), "Expect expression.");
     }
 

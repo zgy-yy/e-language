@@ -1,4 +1,5 @@
-import { DataType, FunType, StructType } from "./TypeDeclar"
+import { Expr } from "Ast/Expr"
+import { ArrayType, DataType, FunType, StructType } from "./TypeDeclar"
 
 export class Var {
     static incremental = 0
@@ -37,6 +38,15 @@ export class StructVar extends Var {
         const structType = new StructType(new Structure(structName, fields))
         super(name, structType)
         this.fields = fields
+    }
+}
+
+export class ArrayVar extends Var {
+    elementType: DataType
+    constructor(name: string, elementType: DataType, lenExpr: Expr) {
+        const arrayType = new ArrayType(elementType, lenExpr)
+        super(name, arrayType)
+        this.elementType = elementType
     }
 }
 

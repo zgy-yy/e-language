@@ -1,3 +1,4 @@
+import { Expr } from "Ast/Expr";
 import { Structure } from "./Symbol";
 
 
@@ -14,6 +15,7 @@ export enum DataKind {
     fun = "fun",
     struct = "struct",
     class = "class",
+    array = "array",
 }
 
 
@@ -60,6 +62,21 @@ export class FunType extends DataType {
     }
 }
 
+export class ArrayType extends DataType {
+    elementType: DataType
+    lengthExpr: Expr
+    constructor(elementType: DataType, length: Expr) {
+        super(DataKind.array)
+        this.elementType = elementType
+        this.lengthExpr = length
+    }
+    toString(): string {
+        return "arr_" + this.elementType.toString()
+    }
+    toLLVM(): string {
+        return `arr_${this.elementType.toLLVM()}`
+    }
+}
 export class StructType extends DataType {
     structure: Structure
     constructor(structure: Structure) {
@@ -89,53 +106,62 @@ export class ClassType extends DataType {
 // 
 
 
-export function isSameType(type1: DataType, type2: DataType): boolean {
+export function isSameType(left: DataType, right: DataType): boolean {
     // 如果类型为空，直接返回 false
-    if (!type1 || !type2) {
+    if (!left || !right) {
         return false
     }
-    const type1Kind = type1.kind
-    const type2Kind = type2.kind
+    const leftKind = left.kind
+    const rightKind = right.kind
     // 类型不一致，直接返回 false
-    if (type1Kind !== type2Kind) {
+    if (leftKind !== rightKind) {
         return false
     }
     // 类型一致，继续判断具体类型
-    switch (type1Kind) {
+    switch (leftKind) {
         case DataKind.simple:
-            const simpleType1 = type1 as SimpleType
-            const simpleType2 = type2 as SimpleType
-            if (simpleType1.simpleKind !== simpleType2.simpleKind) {
+            const simpleLeft = left as SimpleType
+            const simpleRight = right as SimpleType
+            if (simpleLeft.simpleKind !== simpleRight.simpleKind) {
                 return false
             }
             break;
         case DataKind.fun:
-            const funType1 = type1 as FunType
-            const funType2 = type2 as FunType
+            const funLeft = left as FunType
+            const funRight = right as FunType
             // 返回值类型不一致，直接返回 false
-            if (!isSameType(funType1.retType, funType2.retType)) {
+            if (!isSameType(funLeft.retType, funRight.retType)) {
                 return false
             }
             // 参数类型数量不一致，直接返回 false
-            if (funType1.paramsType.length !== funType2.paramsType.length) {
+            if (funLeft.paramsType.length !== funRight.paramsType.length) {
                 return false
             }
             // 参数类型不一致，直接返回 false
-            for (let i = 0; i < funType1.paramsType.length; i++) {
-                if (!isSameType(funType1.paramsType[i], funType2.paramsType[i])) {
+            for (let i = 0; i < funLeft.paramsType.length; i++) {
+                if (!isSameType(funLeft.paramsType[i], funRight.paramsType[i])) {
                     return false
                 }
             }
             break;
         case DataKind.struct:
-            const structType1 = type1 as StructType
-            const structType2 = type2 as StructType
-            for (const [name, type] of structType1.structure.fields) {
-                if (!isSameType(type, structType2.structure.fields.get(name))) {
+            const structLeft = left as StructType
+            const structRight = right as StructType
+            for (const [name, type] of structLeft.structure.fields) {
+                if (!isSameType(type, structRight.structure.fields.get(name))) {
                     return false
                 }
             }
-            structType2.structure = structType1.structure
+            structRight.structure = structLeft.structure
+            break;
+        case DataKind.array:
+            const arrayLeft = left as ArrayType
+            const arrayRight = right as ArrayType
+            //右侧元素类型为void时 代表空数组
+            const arrayRightElementTypeIsVoid = arrayRight.elementType instanceof SimpleType && arrayRight.elementType.simpleKind === SimpleDataKind.Void
+            if (!isSameType(arrayLeft.elementType, arrayRight.elementType) && !arrayRightElementTypeIsVoid) {
+                return false
+            }
             break;
         case DataKind.class:
             return false

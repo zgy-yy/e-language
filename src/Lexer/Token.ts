@@ -4,6 +4,8 @@ export enum Tokenkind {
     RIGHT_PAREN = ')',
     LEFT_BRACE = '{',
     RIGHT_BRACE = '}',
+    LEFT_BRACKET = '[',
+    RIGHT_BRACKET = ']',
     //自增 、自减
     PLUS_PLUS = "++",
     MINUS_MINUS = "--",

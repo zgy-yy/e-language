@@ -162,8 +162,6 @@ export class Parser {
 
             if (!isSameType(varT, initializer.exprType)) {
                 El.error(this.previous(), "Initializer type does not match variable type.")
-            } else {
-                initializer.exprType = varT
             }
         }
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中

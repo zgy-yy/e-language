@@ -4,6 +4,10 @@ import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStm
 import { ArrayVar, FuncVar, FunLable, Var } from "../Parse/Symbol";
 import { ArrayType, DataType, FunType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 
+type ExprResult = {
+    type: string,
+    valReg: string
+}
 
 type EncloseLoop = {
     start: string, //循环开始标签
@@ -22,7 +26,7 @@ const initSequence = {
     reg: 0
 }
 
-export class CodeGen implements ExprVisitor<string>, StmtVisitor<void> {
+export class CodeGen implements ExprVisitor<ExprResult>, StmtVisitor<void> {
     private globalVars: Var[] = [];
     private globalVarListStmt: VarListStmt[] = []; //全局变量列表
     private globalFunctionStmt: FunctionStmt[] = []; //全局变量
@@ -275,9 +279,8 @@ declare i32 @printf(i8*, ...)
     }
 
     visitPrintStmt(stmt: PrintStmt): void {
-        const _type = typeToLLVM(stmt.expression.exprType);
         const value = stmt.expression.accept(this);
-        this.printIR(`call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), ${_type} ${value})`);
+        this.printIR(`call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), ${value.type} ${value.valReg})`);
     }
 
     visitVarStmt(stmt: VarStmt): void {
@@ -296,11 +299,11 @@ declare i32 @printf(i8*, ...)
             if (stmt.variable instanceof ArrayVar) {
                 const arrayType = stmt.variable.type as ArrayType
                 const len = arrayType.lengthExpr.accept(this)
-                const varType = `[${len} x ${typeToLLVM(arrayType)}]`
-                this.printIR(`%${var_name} = alloca ${varType}`);
+                const varType = typeToLLVM(arrayType)
+                this.printIR(`%${var_name} = alloca ${varType},i32 ${len.valReg}`);
                 if (stmt.initializer) {
                     const value = stmt.initializer.accept(this);
-                    this.printIR(`store ${varType} ${value}, ${varType}* %${var_name}`);
+                    this.printIR(`store ${value.type} ${value.valReg}, ${varType} %${var_name}`);
                 }
             } else {
                 const varType = typeToLLVM(stmt.variable.type);
@@ -326,11 +329,9 @@ declare i32 @printf(i8*, ...)
     /*-----------------------------Expr-----------------------------*/
 
     //数组表达式生成
-    visitArrayExpr(expr: ArrayExpr): string {
+    visitArrayExpr(expr: ArrayExpr): ExprResult {
         const n = this.sequence.reg++;
-        const len = expr.elements.length
-
-        const array_type = `[${len} x ${typeToLLVM(expr.exprType)}]`
+        const array_type = typeToLLVM(expr.exprType)
         let undef_array = `undef`
         for (let i = 0; i < expr.elements.length; i++) {
             const element = expr.elements[i].accept(this);
@@ -340,11 +341,11 @@ declare i32 @printf(i8*, ...)
             undef_array = regName
         }
 
-        return undef_array;
+        return { type: array_type, valReg: undef_array };
     }
 
     //结构体表达式生成
-    visitStructExpr(expr: StructExpr): string {
+    visitStructExpr(expr: StructExpr): ExprResult {
         const n = this.sequence.reg++;
         let undef_struct = `undef`
         Array.from(expr.fields.entries()).forEach(([name, value]) => {
@@ -357,11 +358,11 @@ declare i32 @printf(i8*, ...)
             undef_struct = regName;
         })
 
-        return undef_struct;
+        return { type: typeToLLVM(expr.exprType), valReg: undef_struct };
     }
 
     // 逻辑表达式生成
-    visitLogicalBinaryExpr(expr: LogicalBinaryExpr): string {
+    visitLogicalBinaryExpr(expr: LogicalBinaryExpr): ExprResult {
         const left = expr.left.accept(this);
         const right = expr.right.accept(this);
         const n = this.sequence.reg++;
@@ -373,29 +374,29 @@ declare i32 @printf(i8*, ...)
             this.printIR(`${logical_val} = or i1 ${left}, ${right}`);
         }
 
-        return logical_val;
+        return { type: 'i1', valReg: logical_val };
     }
     //赋值表达式生成
-    visitAssignExpr(expr: AssignExpr): string {
+    visitAssignExpr(expr: AssignExpr): ExprResult {
         const value = expr.value.accept(this);
         const varType = typeToLLVM(expr.variable.type)
         const var_name = expr.variable._id
         if (this.globalVars.find(v => v === expr.variable)) {
-            this.printIR(`store ${varType} ${value}, ${varType}* @${var_name}`);
+            this.printIR(`store ${value.type} ${value.valReg}, ${varType}* @${var_name}`);
         } else {
-            this.printIR(`store ${varType} ${value}, ${varType}* %${var_name}`);
+            this.printIR(`store ${value.type} ${value.valReg}, ${varType}* %${var_name}`);
         }
-        return value;
+        return value
     }
 
     //逗号表达式生成
-    visitCommaExpr(expr: CommaExpr): string {
+    visitCommaExpr(expr: CommaExpr): ExprResult {
         expr.left.accept(this);
         return expr.right.accept(this);
     }
 
     //二元表达式生成
-    visitBinaryExpr(expr: BinaryExpr): string {
+    visitBinaryExpr(expr: BinaryExpr): ExprResult {
         const n = this.sequence.reg++;
         const left = expr.left.accept(this);
         const right = expr.right.accept(this);
@@ -440,11 +441,11 @@ declare i32 @printf(i8*, ...)
                 break;
         }
 
-        return bin_val;
+        return { type: leftType, valReg: bin_val };
     }
 
     //一元表达式生成
-    visitUnaryExpr(expr: UnaryExpr): string {
+    visitUnaryExpr(expr: UnaryExpr): ExprResult {
         const rightType = typeToLLVM(expr.right.exprType)
         const right = expr.right.accept(this);
         const n = this.sequence.reg++;
@@ -458,11 +459,11 @@ declare i32 @printf(i8*, ...)
                 break;
         }
 
-        return unary_val;
+        return { type: rightType, valReg: unary_val };
     }
 
     //前缀自增自减表达式生成
-    visitPrefixSelfExpr(expr: PrefixSelfExpr): string {
+    visitPrefixSelfExpr(expr: PrefixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
         const var_ = expr.right as VariableExpr;//变量自身
         let ir_var_name = '' //ir中变量
@@ -487,11 +488,11 @@ declare i32 @printf(i8*, ...)
         }
         this.printIR(`store ${rightType} ${new_val}, ${rightType}* ${ir_var_name}`);
 
-        return new_val;
+        return { type: rightType, valReg: new_val };
     }
 
     //后缀自增自减表达式生成
-    visitSuffixSelfExpr(expr: SuffixSelfExpr): string {
+    visitSuffixSelfExpr(expr: SuffixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
         const left = expr.left as VariableExpr;
         let ir_var_name = ''
@@ -518,7 +519,7 @@ declare i32 @printf(i8*, ...)
         return left_value;
     }
 
-    visitCallExpr(expr: CallExpr): string {
+    visitCallExpr(expr: CallExpr): ExprResult {
         const n = this.sequence.reg++;
         const args = expr.args.map(arg => {
             return {
@@ -534,19 +535,19 @@ declare i32 @printf(i8*, ...)
         } else {
             this.printIR(`${var_name} = call ${retType} ${callee}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
         }
-        return var_name;
+        return { type: retType, valReg: var_name };
     }
 
-    visitGetFieldExpr(expr: GetFieldExpr): string {
+    visitGetFieldExpr(expr: GetFieldExpr): ExprResult {
         const n = this.sequence.reg++;
         const target = expr.target.accept(this)
         const structType = expr.target.exprType as StructType
         const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
         const regName = `%regfield_${expr.field}_${n}`
         this.printIR(`${regName} = extractvalue ${typeToLLVM(expr.target.exprType)} ${target}, ${field_index}`);
-        return regName;
+        return { type: typeToLLVM(expr.exprType), valReg: regName };
     }
-    visitSetFieldExpr(expr: SetFieldExpr): string {
+    visitSetFieldExpr(expr: SetFieldExpr): ExprResult {
         const n = this.sequence.reg++;
         const value = expr.value.accept(this);
 
@@ -575,12 +576,12 @@ declare i32 @printf(i8*, ...)
                 this.printIR(`store ${field_type} ${value}, ${field_type}* %${expr.variable._id}`);
             }
         }
-        setField(expr, value)
+        setField(expr, value.valReg)
 
         return value;
     }
     //变量表达式生成 变量表达式 => 变量名,函数名
-    visitVariableExpr(expr: VariableExpr): string {
+    visitVariableExpr(expr: VariableExpr): ExprResult {
         const var_name = expr.variable._id;
         const varType = typeToLLVM(expr.variable.type);
         const n = this.sequence.reg++;
@@ -592,22 +593,22 @@ declare i32 @printf(i8*, ...)
             const retType = typeToLLVM(funVar.retType) //函数变量 的返回值类型
             const params = funVar.paramTypes.map(p => typeToLLVM(p))
             this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
-            return var_name_n;
+            return { type: retType, valReg: var_name_n };
         } else {
             if (this.globalVars.find(v => v === expr.variable)) {
                 this.printIR(`${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
             } else {
                 this.printIR(`${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
             }
-            return var_name_n;
+            return { type: varType, valReg: var_name_n };
         }
     }
 
-    visitLiteralExpr(expr: LiteralExpr): string {
+    visitLiteralExpr(expr: LiteralExpr): ExprResult {
         return expr.value.toString();
     }
 
-    visitGroupingExpr(expr: GroupingExpr): string {
+    visitGroupingExpr(expr: GroupingExpr): ExprResult {
         return expr.expression.accept(this);
     }
 
@@ -640,7 +641,11 @@ function typeToLLVM(type: DataType): string {
         return `%${type.structure.name}`
     }
     if (type instanceof ArrayType) {
-        return typeToLLVM(type.elementType)
+        if (type.len) {
+            return `[${type.len} x ${typeToLLVM(type.elementType)}]`
+        } else {
+            return `${typeToLLVM(type.elementType)}*`
+        }
     }
     return "null";
 }   

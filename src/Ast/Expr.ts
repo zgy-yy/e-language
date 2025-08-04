@@ -275,7 +275,7 @@ export class ArrayExpr implements Expr {
     elements: Expr[];
     constructor(elements: Expr[]) {
         if (elements.length === 0) {
-            this.exprType = new ArrayType(new SimpleType(SimpleDataKind.Void), new LiteralExpr(0))
+            this.exprType = new ArrayType(new SimpleType(SimpleDataKind.Void), new LiteralExpr(0),0)
         } else {
             const elementType = elements[0].exprType
             for (const element of elements) {
@@ -284,7 +284,7 @@ export class ArrayExpr implements Expr {
                 }
             }
 
-            this.exprType = new ArrayType(elementType, new LiteralExpr(elements.length))
+            this.exprType = new ArrayType(elementType, new LiteralExpr(elements.length),elements.length)
         }
         this.elements = elements
     }

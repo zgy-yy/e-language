@@ -101,10 +101,9 @@ declare i32 @printf(i8*, ...)
     }
     // 语句生成
     visitReturnStmt(stmt: ReturnStmt): void {
-        const _retType = typeToLLVM(stmt.value?.exprType);
         if (stmt.value) {
-            const value = stmt.value.accept(this);
-            this.printIR(`ret ${_retType} ${value}`);
+            const retExpR = stmt.value.accept(this);
+            this.printIR(`ret ${retExpR.type} ${retExpR.valReg}`);
         } else {
             this.printIR(`ret void`);
         }
@@ -157,9 +156,9 @@ declare i32 @printf(i8*, ...)
         this.printIR(`${cond_label}:`);
 
         if (stmt.condition) {
-            const cond = stmt.condition.accept(this);
+            const condExpR = stmt.condition.accept(this);
             const cond_val = `reg_forCond_${n}`
-            this.printIR(`%${cond_val} = icmp ne i1 ${cond}, 0`);
+            this.printIR(`%${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
             this.printIR(`br i1 %${cond_val}, label %${body_label}, label %${end_label}`);
         } else {
             this.printIR(`br label %${body_label}`);
@@ -200,9 +199,9 @@ declare i32 @printf(i8*, ...)
         this.printIR(`br label %${cond_label}`);
         this.printIR(`${cond_label}:`);
 
-        const cond = stmt.condition.accept(this);
+        const condExpR = stmt.condition.accept(this);
         const cond_val = `reg_doCond_${n}`
-        this.printIR(`%${cond_val} = icmp ne i1 ${cond}, 0`);
+        this.printIR(`%${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
         this.printIR(`br i1 %${cond_val}, label %${body_label}, label %${end_label}`);
 
         this.printIR(`${end_label}:`);
@@ -224,9 +223,9 @@ declare i32 @printf(i8*, ...)
         this.printIR(`br label %${cond_label}`);
         this.printIR(`${cond_label}:`);
 
-        const cond = stmt.condition.accept(this);
+        const condExpR = stmt.condition.accept(this);
         const cond_val = `reg_whileCond_${n}`
-        this.printIR(`%${cond_val} = icmp ne i1 ${cond}, 0`);
+        this.printIR(`%${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
         this.printIR(`br i1 %${cond_val}, label %${body_label}, label %${end_label}`);
 
         this.printIR(`${body_label}:`);
@@ -241,12 +240,12 @@ declare i32 @printf(i8*, ...)
     //if 语句生成
     visitIfStmt(stmt: IfStmt): void {
         const n = this.sequence.if++;
-        const cond = stmt.condition.accept(this);
+        const condExpR = stmt.condition.accept(this);
         const cond_val = `reg_ifCond_${n}`
         const then_label = `if_then_${n}`
         const else_label = `if_else_${n}`
         const end_label = `if_end_${n}`
-        this.printIR(`%${cond_val} = icmp ne i1 ${cond}, 0`);
+        this.printIR(`%${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
 
         if (stmt.elseBranch) {
             this.printIR(`br i1 %${cond_val}, label %${then_label}, label %${else_label}`);
@@ -279,8 +278,8 @@ declare i32 @printf(i8*, ...)
     }
 
     visitPrintStmt(stmt: PrintStmt): void {
-        const value = stmt.expression.accept(this);
-        this.printIR(`call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), ${value.type} ${value.valReg})`);
+        const exprExpR = stmt.expression.accept(this);
+        this.printIR(`call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), ${exprExpR.type} ${exprExpR.valReg})`);
     }
 
     visitVarStmt(stmt: VarStmt): void {
@@ -289,8 +288,8 @@ declare i32 @printf(i8*, ...)
             // 全局变量
             const varType = typeToLLVM(stmt.variable.type);
             if (stmt.initializer) {
-                const value = stmt.initializer.accept(this);
-                this.printIR(`@${var_name} = global ${varType} ${value}`);
+                const initExpR = stmt.initializer.accept(this);
+                this.printIR(`@${var_name} = global ${varType} ${initExpR.valReg}`);
             } else {
                 this.printIR(`@${var_name} = global ${varType}`);
             };
@@ -298,20 +297,20 @@ declare i32 @printf(i8*, ...)
             // 数组变量
             if (stmt.variable instanceof ArrayVar) {
                 const arrayType = stmt.variable.type as ArrayType
-                const len = arrayType.lengthExpr.accept(this)
+                const lenExpR = arrayType.lengthExpr.accept(this)
                 const varType = typeToLLVM(arrayType)
-                this.printIR(`%${var_name} = alloca ${varType},i32 ${len.valReg}`);
+                this.printIR(`%${var_name} = alloca ${varType},i32 ${lenExpR.valReg}`);
                 if (stmt.initializer) {
-                    const value = stmt.initializer.accept(this);
-                    this.printIR(`store ${value.type} ${value.valReg}, ${varType} %${var_name}`);
+                    const initExpR = stmt.initializer.accept(this);
+                    this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType} %${var_name}`);
                 }
             } else {
                 const varType = typeToLLVM(stmt.variable.type);
                 // 局部变量
                 this.printIR(`%${var_name} = alloca ${varType}`);
                 if (stmt.initializer) {
-                    const value = stmt.initializer.accept(this);
-                    this.printIR(`store ${varType} ${value}, ${varType}* %${var_name}`);
+                    const initExpR = stmt.initializer.accept(this);
+                    this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* %${var_name}`);
                 }
             }
 
@@ -334,10 +333,10 @@ declare i32 @printf(i8*, ...)
         const array_type = typeToLLVM(expr.exprType)
         let undef_array = `undef`
         for (let i = 0; i < expr.elements.length; i++) {
-            const element = expr.elements[i].accept(this);
+            const elExprR = expr.elements[i].accept(this);
             const element_type = typeToLLVM(expr.elements[i].exprType)
             const regName = `%temp_${i}_${n}`
-            this.printIR(`${regName} = insertvalue ${array_type} ${undef_array}, ${element_type} ${element}, ${i}`);
+            this.printIR(`${regName} = insertvalue ${array_type} ${undef_array}, ${element_type} ${elExprR.valReg}, ${i}`);
             undef_array = regName
         }
 
@@ -351,8 +350,9 @@ declare i32 @printf(i8*, ...)
         Array.from(expr.fields.entries()).forEach(([name, value]) => {
             const structType = expr.exprType as StructType
             const index = Array.from(structType.structure.fields.entries()).findIndex(([na, type]) => na === name)
-            const field_val = value.accept(this);
-            const field_type = typeToLLVM(value.exprType)
+            const field_exprR = value.accept(this);
+            const field_type = field_exprR.type
+            const field_val = field_exprR.valReg
             const regName = `%temp_${n}_${name}`
             this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.exprType)} ${undef_struct}, ${field_type} ${field_val}, ${index}`);
             undef_struct = regName;
@@ -363,30 +363,30 @@ declare i32 @printf(i8*, ...)
 
     // 逻辑表达式生成
     visitLogicalBinaryExpr(expr: LogicalBinaryExpr): ExprResult {
-        const left = expr.left.accept(this);
-        const right = expr.right.accept(this);
+        const leftExpR = expr.left.accept(this);
+        const rightExpR = expr.right.accept(this);
         const n = this.sequence.reg++;
         const logical_val = `%reg_logical_${n}`
 
         if (expr.operator.lexeme === '&&') {
-            this.printIR(`${logical_val} = and i1 ${left}, ${right}`);
+            this.printIR(`${logical_val} = and i1 ${leftExpR.valReg}, ${rightExpR.valReg}`);
         } else {
-            this.printIR(`${logical_val} = or i1 ${left}, ${right}`);
+            this.printIR(`${logical_val} = or i1 ${leftExpR.valReg}, ${rightExpR.valReg}`);
         }
 
         return { type: 'i1', valReg: logical_val };
     }
     //赋值表达式生成
     visitAssignExpr(expr: AssignExpr): ExprResult {
-        const value = expr.value.accept(this);
+        const valueExpR = expr.value.accept(this);
         const varType = typeToLLVM(expr.variable.type)
         const var_name = expr.variable._id
         if (this.globalVars.find(v => v === expr.variable)) {
-            this.printIR(`store ${value.type} ${value.valReg}, ${varType}* @${var_name}`);
+            this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType}* @${var_name}`);
         } else {
-            this.printIR(`store ${value.type} ${value.valReg}, ${varType}* %${var_name}`);
+            this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType}* %${var_name}`);
         }
-        return value
+        return valueExpR
     }
 
     //逗号表达式生成
@@ -398,11 +398,12 @@ declare i32 @printf(i8*, ...)
     //二元表达式生成
     visitBinaryExpr(expr: BinaryExpr): ExprResult {
         const n = this.sequence.reg++;
-        const left = expr.left.accept(this);
-        const right = expr.right.accept(this);
+        const leftExpR = expr.left.accept(this);
+        const rightExpR = expr.right.accept(this);
+        const leftType = leftExpR.type
+        const left = leftExpR.valReg
+        const right = rightExpR.valReg
 
-        const leftType = typeToLLVM(expr.left.exprType)
-        const rightType = typeToLLVM(expr.right.exprType)
         const bin_val = `%reg_bin_${n}`
 
         switch (expr.operator.lexeme) {
@@ -441,21 +442,21 @@ declare i32 @printf(i8*, ...)
                 break;
         }
 
-        return { type: leftType, valReg: bin_val };
+        return { type: 'i1', valReg: bin_val };
     }
 
     //一元表达式生成
     visitUnaryExpr(expr: UnaryExpr): ExprResult {
-        const rightType = typeToLLVM(expr.right.exprType)
-        const right = expr.right.accept(this);
+        const rightExpR = expr.right.accept(this);
+        const rightType = rightExpR.type
         const n = this.sequence.reg++;
         const unary_val = `%reg_unary_${n}`
         switch (expr.operator.lexeme) {
             case '-':
-                this.printIR(`${unary_val} = sub ${rightType} 0, ${right}`);
+                this.printIR(`${unary_val} = sub ${rightType} 0, ${rightExpR.valReg}`);
                 break;
             case '!':
-                this.printIR(`${unary_val} = icmp eq ${rightType} ${right}, 0`);
+                this.printIR(`${unary_val} = icmp eq ${rightType} ${rightExpR.valReg}, 0`);
                 break;
         }
 
@@ -467,23 +468,23 @@ declare i32 @printf(i8*, ...)
         const n = this.sequence.reg++;
         const var_ = expr.right as VariableExpr;//变量自身
         let ir_var_name = '' //ir中变量
-        const right_value = expr.right.accept(this);
+        const rightExpR = expr.right.accept(this);
         const rightType = typeToLLVM(expr.right.exprType)
         let new_val = `%reg_prefix_${n}`
 
         if (this.globalVars.find(v => v === var_.variable)) {
             ir_var_name = `@${var_.variable._id}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`${new_val} = add ${rightType} ${right_value}, 1`);
+                this.printIR(`${new_val} = add ${rightType} ${rightExpR.valReg}, 1`);
             } else {
-                this.printIR(`${new_val} = sub ${rightType} ${right_value}, 1`);
+                this.printIR(`${new_val} = sub ${rightType} ${rightExpR.valReg}, 1`);
             }
         } else {
             ir_var_name = `%${var_.variable._id}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`${new_val} = add ${rightType} ${right_value}, 1`);
+                this.printIR(`${new_val} = add ${rightType} ${rightExpR.valReg}, 1`);
             } else {
-                this.printIR(`${new_val} = sub ${rightType} ${right_value}, 1`);
+                this.printIR(`${new_val} = sub ${rightType} ${rightExpR.valReg}, 1`);
             }
         }
         this.printIR(`store ${rightType} ${new_val}, ${rightType}* ${ir_var_name}`);
@@ -491,84 +492,87 @@ declare i32 @printf(i8*, ...)
         return { type: rightType, valReg: new_val };
     }
 
-    //后缀自增自减表达式生成
+    //后缀表达式生成
     visitSuffixSelfExpr(expr: SuffixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
         const left = expr.left as VariableExpr;
         let ir_var_name = ''
-        const left_value = left.accept(this)
-        const leftType = typeToLLVM(left.exprType)
+        const leftExpR = left.accept(this)
+        const leftType = leftExpR.type
+        const leftReg = leftExpR.valReg
         let new_val = `%reg_suffix_${n}`
 
         if (this.globalVars.find(v => v === left.variable)) {
             ir_var_name = `@${left.variable._id}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`${new_val} = add ${leftType} ${left_value}, 1`);
+                this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
             } else {
-                this.printIR(`${new_val} = sub ${leftType} ${left_value}, 1`);
+                this.printIR(`${new_val} = sub ${leftType} ${leftReg}, 1`);
             }
         } else {
             ir_var_name = `%${left.variable._id}`
             if (expr.operator.lexeme === '++') {
-                this.printIR(`${new_val} = add ${leftType} ${left_value}, 1`);
+                this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
             } else {
-                this.printIR(`${new_val} = sub ${leftType} ${left_value}, 1`);
+                this.printIR(`${new_val} = sub ${leftType} ${leftReg}, 1`);
             }
         }
         this.printIR(`store ${leftType} ${new_val}, ${leftType}* ${ir_var_name}`);
-        return left_value;
+        return leftExpR;
     }
 
     visitCallExpr(expr: CallExpr): ExprResult {
         const n = this.sequence.reg++;
         const args = expr.args.map(arg => {
+            const argExpR = arg.accept(this)
             return {
-                value: arg.accept(this),
-                type: typeToLLVM(arg.exprType)
+                value: argExpR.valReg,
+                type: argExpR.type
             }
         });
-        const callee = expr.callee.accept(this);
+        const calleeExpR = expr.callee.accept(this);
         const retType = typeToLLVM(expr.exprType)
         const var_name = `%reg_call_${n}`
         if (retType == 'void') {
-            this.printIR(`call ${retType} ${callee}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
+            this.printIR(`call ${retType} ${calleeExpR.valReg}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
         } else {
-            this.printIR(`${var_name} = call ${retType} ${callee}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
+            this.printIR(`${var_name} = call ${retType} ${calleeExpR.valReg}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
         }
         return { type: retType, valReg: var_name };
     }
 
     visitGetFieldExpr(expr: GetFieldExpr): ExprResult {
         const n = this.sequence.reg++;
-        const target = expr.target.accept(this)
+        const targetExpR = expr.target.accept(this)
         const structType = expr.target.exprType as StructType
         const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
         const regName = `%regfield_${expr.field}_${n}`
-        this.printIR(`${regName} = extractvalue ${typeToLLVM(expr.target.exprType)} ${target}, ${field_index}`);
+        this.printIR(`${regName} = extractvalue ${typeToLLVM(expr.target.exprType)} ${targetExpR.valReg}, ${field_index}`);
         return { type: typeToLLVM(expr.exprType), valReg: regName };
     }
     visitSetFieldExpr(expr: SetFieldExpr): ExprResult {
         const n = this.sequence.reg++;
-        const value = expr.value.accept(this);
+        const valueExpR = expr.value.accept(this);
 
         const setField = (expr: Expr, value: string) => {
             if (expr instanceof SetFieldExpr) {
-                const target = expr.target.accept(this)
+                const targetExpR = expr.target.accept(this)
+                const targetReg = targetExpR.valReg
                 const field_type = typeToLLVM(expr.exprType)
                 const structType = expr.target.exprType as StructType
                 const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
                 const regName = `%temp${expr.field}_${n}`
-                this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.target.exprType)} ${target}, ${field_type} ${value}, ${field_index}`);
+                this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.target.exprType)} ${targetReg}, ${field_type} ${value}, ${field_index}`);
 
                 setField(expr.target, regName)
             }
             if (expr instanceof GetFieldExpr) {
-                const target = expr.target.accept(this)
+                const targetExpR = expr.target.accept(this)
                 const field_type = typeToLLVM(expr.exprType)
                 const structType = expr.target.exprType as StructType
                 const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
                 const regName = `%temp_${expr.field}_${n}`
-                this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.target.exprType)} ${target}, ${field_type} ${value}, ${field_index}`);
+                this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.target.exprType)} ${targetExpR.valReg}, ${field_type} ${value}, ${field_index}`);
                 setField(expr.target, regName)
             }
             if (expr instanceof VariableExpr) {
@@ -576,9 +580,9 @@ declare i32 @printf(i8*, ...)
                 this.printIR(`store ${field_type} ${value}, ${field_type}* %${expr.variable._id}`);
             }
         }
-        setField(expr, value.valReg)
+        setField(expr, valueExpR.valReg)
 
-        return value;
+        return valueExpR;
     }
     //变量表达式生成 变量表达式 => 变量名,函数名
     visitVariableExpr(expr: VariableExpr): ExprResult {
@@ -605,7 +609,7 @@ declare i32 @printf(i8*, ...)
     }
 
     visitLiteralExpr(expr: LiteralExpr): ExprResult {
-        return expr.value.toString();
+        return { type: typeToLLVM(expr.exprType), valReg: expr.value.toString() };
     }
 
     visitGroupingExpr(expr: GroupingExpr): ExprResult {

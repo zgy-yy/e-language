@@ -6,10 +6,7 @@
     }
 
 int main(){
-    int a =5;
-    [a]int arr = [1,2,3,4,5];
-    arr = [2,3,4,5,6];
-    print arr;
+    [3]int arr =[1,3,4];
 
     return 0;
 }

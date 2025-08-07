@@ -1,5 +1,4 @@
-import { c } from "vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P";
-import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { ArrayVar, FuncVar, FunLable, Var } from "../Parse/Symbol";
 import { ArrayType, DataType, FunType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
@@ -297,12 +296,11 @@ declare i32 @printf(i8*, ...)
             // 数组变量
             if (stmt.variable instanceof ArrayVar) {
                 const arrayType = stmt.variable.type as ArrayType
-                const lenExpR = arrayType.lengthExpr.accept(this)
                 const varType = typeToLLVM(arrayType)
-                this.printIR(`%${var_name} = alloca ${varType},i32 ${lenExpR.valReg}`);
+                this.printIR(`%${var_name} = alloca ${varType}`);
                 if (stmt.initializer) {
                     const initExpR = stmt.initializer.accept(this);
-                    this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType} %${var_name}`);
+                    this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* %${var_name}`);
                 }
             } else {
                 const varType = typeToLLVM(stmt.variable.type);
@@ -331,6 +329,7 @@ declare i32 @printf(i8*, ...)
     visitArrayExpr(expr: ArrayExpr): ExprResult {
         const n = this.sequence.reg++;
         const array_type = typeToLLVM(expr.exprType)
+        console.log("array_type", expr.exprType)
         let undef_array = `undef`
         for (let i = 0; i < expr.elements.length; i++) {
             const elExprR = expr.elements[i].accept(this);
@@ -343,6 +342,22 @@ declare i32 @printf(i8*, ...)
         return { type: array_type, valReg: undef_array };
     }
 
+    visitIndexExpr(expr: IndexExpr): ExprResult {
+        const n = this.sequence.reg++;
+        const targetExpR = expr.target.accept(this)
+        const taExprType = expr.target.exprType as ArrayType
+        const lvType = targetExpR.type
+        const elementType = typeToLLVM(taExprType.elementType)
+        const indexExpR = expr.index.accept(this)
+
+        const index_val = `%reg_index_${n}`
+        const tempArr = `%temp_arr_alloca${n}`
+        this.printIR(`${tempArr} = alloca ${lvType}`);
+        this.printIR(`store ${lvType} ${targetExpR.valReg}, ${lvType}* ${tempArr}`);
+        this.printIR(`${index_val}_1 = getelementptr ${lvType}, ${lvType}* ${tempArr},${indexExpR.type} 0, ${indexExpR.type} ${indexExpR.valReg}`);
+        this.printIR(`${index_val} = load ${elementType}, ${elementType}* ${index_val}_1`);
+        return { type: elementType, valReg: index_val };
+    }
     //结构体表达式生成
     visitStructExpr(expr: StructExpr): ExprResult {
         const n = this.sequence.reg++;
@@ -645,11 +660,7 @@ function typeToLLVM(type: DataType): string {
         return `%${type.structure.name}`
     }
     if (type instanceof ArrayType) {
-        if (type.len) {
-            return `[${type.len} x ${typeToLLVM(type.elementType)}]`
-        } else {
-            return `${typeToLLVM(type.elementType)}*`
-        }
+        return `[${type.len} x ${typeToLLVM(type.elementType)}]`
     }
     return "null";
 }   

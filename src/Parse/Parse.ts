@@ -1,4 +1,4 @@
-import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
@@ -96,9 +96,15 @@ export class Parser {
             this.error(this.peek(), "Expect type after parameters.")
         } else if (this.match(Tokenkind.LEFT_BRACKET)) {
             const lenExpr = this.expression()
-            this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
-            const array_type = this.declarationKind()
-            return new ArrayType(array_type, lenExpr)
+            if (lenExpr instanceof LiteralExpr && typeof lenExpr.value === 'number') {
+                const len = lenExpr.value as number
+                this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
+                const array_type = this.declarationKind()
+                return new ArrayType(array_type, len)
+            } else {
+                this.error(this.peek(), "Array length must be a number literal.")
+            }
+
         }
         return null
     }
@@ -171,7 +177,7 @@ export class Parser {
         } else if (varT instanceof StructType) {
             var_ = new StructVar(var_name.lexeme, varT.structure.name, varT.structure.fields)
         } else if (varT instanceof ArrayType) {
-            var_ = new ArrayVar(var_name.lexeme, varT.elementType, varT.lengthExpr)
+            var_ = new ArrayVar(var_name.lexeme, varT.elementType, varT.len)
         } else {
             var_ = new Var(var_name.lexeme, varT)
         }
@@ -452,7 +458,7 @@ export class Parser {
                 return new AssignExpr(expr.variable, value, equals)
             }
             if (expr instanceof GetFieldExpr) {
-                return new SetFieldExpr(expr.target, expr.field, value,equals)
+                return new SetFieldExpr(expr.target, expr.field, value, equals)
             }
             El.error(equals, "Invalid assignment target.")
         }
@@ -544,11 +550,11 @@ export class Parser {
                 const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
                 expr = new GetFieldExpr(expr, field_name.lexeme)
             }
-            // else if (this.match(Tokenkind)) {
-            //     const index = this.expression()
-            //     this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after index.")
-            //     expr = new IndexExpr(expr, index)
-            // } 
+            else if (this.match(Tokenkind.LEFT_BRACKET)) {
+                const index = this.assignment()
+                this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after index.")
+                expr = new IndexExpr(expr, index)
+            }
             else if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
                 const operator = this.previous()
                 expr = new SuffixSelfExpr(expr, operator)

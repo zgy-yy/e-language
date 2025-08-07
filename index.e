@@ -213,3 +213,17 @@ class S :: C,P{
         age
     }
 }
+
+
+int process(){
+
+    sleep(12);
+    retrun 1;
+}
+int mian(){
+    Thread t= run process();
+    print(1);
+   int c= await t;
+   print c;
+
+}

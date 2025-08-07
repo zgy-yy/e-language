@@ -64,15 +64,11 @@ export class FunType extends DataType {
 
 export class ArrayType extends DataType {
     elementType: DataType
-    lengthExpr: Expr
     len: number
-    constructor(elementType: DataType, length: Expr,len?:number) {
+    constructor(elementType: DataType, length: number) {
         super(DataKind.array)
         this.elementType = elementType
-        this.lengthExpr = length
-        if (len) {
-            this.len = len
-        }
+        this.len = length
     }
     toString(): string {
         return "arr_" + this.elementType.toString()

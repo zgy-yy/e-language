@@ -22,6 +22,7 @@ export interface ExprVisitor<R> {
     visitCommaExpr(expr: CommaExpr): R;
     visitGetFieldExpr(expr: GetFieldExpr): R;
     visitSetFieldExpr(expr: SetFieldExpr): R;
+    visitIndexExpr(expr: IndexExpr): R;
 }
 
 export interface Expr { //表达式 基类
@@ -275,7 +276,7 @@ export class ArrayExpr implements Expr {
     elements: Expr[];
     constructor(elements: Expr[]) {
         if (elements.length === 0) {
-            this.exprType = new ArrayType(new SimpleType(SimpleDataKind.Void), new LiteralExpr(0),0)
+            this.exprType = new ArrayType(new SimpleType(SimpleDataKind.Void), 0)
         } else {
             const elementType = elements[0].exprType
             for (const element of elements) {
@@ -284,12 +285,26 @@ export class ArrayExpr implements Expr {
                 }
             }
 
-            this.exprType = new ArrayType(elementType, new LiteralExpr(elements.length),elements.length)
+            this.exprType = new ArrayType(elementType, elements.length)
         }
         this.elements = elements
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitArrayExpr(this);
+    }
+}
+
+export class IndexExpr implements Expr {
+    exprType: DataType;
+    target: Expr;
+    index: Expr;
+    constructor(target: Expr, index: Expr) {
+        this.exprType = (target.exprType as ArrayType).elementType;
+        this.target = target;
+        this.index = index;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitIndexExpr(this);
     }
 }
 

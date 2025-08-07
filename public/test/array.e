@@ -5,8 +5,15 @@
         bool c;
     }
 
+[2]int foo(){
+
+    [2]int arr=[1,2];
+    return arr;
+}
+
 int main(){
-    [3]int arr =[1,3,4];
+    [2]int c  = foo();
+    print c[1];
 
     return 0;
 }

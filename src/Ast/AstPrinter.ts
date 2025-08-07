@@ -1,5 +1,5 @@
 import { ArrayType } from "../Parse/TypeDeclar";
-import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
@@ -69,7 +69,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         // 获取变量类型
         const varType = stmt.varStmts[0].variable.type
         if (varType instanceof ArrayType) {
-            return `[${varType.lengthExpr.accept(this)}]${varType.elementType.toString()} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
+            return `[${varType.len}]${varType.elementType.toString()} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
         }
         return `${varType} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
 
@@ -89,6 +89,9 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
     visitArrayExpr(expr: ArrayExpr): string {
         return `[${expr.elements.map((e) => e.accept(this)).join(", ")}]`;
+    }
+    visitIndexExpr(expr: IndexExpr): string {
+        return `${expr.target.accept(this)}[${expr.index.accept(this)}]`;
     }
 
     visitStructExpr(expr: StructExpr): string {

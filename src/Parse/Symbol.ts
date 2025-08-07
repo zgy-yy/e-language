@@ -43,8 +43,8 @@ export class StructVar extends Var {
 
 export class ArrayVar extends Var {
     elementType: DataType
-    constructor(name: string, elementType: DataType, lenExpr: Expr) {
-        const arrayType = new ArrayType(elementType, lenExpr)
+    constructor(name: string, elementType: DataType, length: number) {
+        const arrayType = new ArrayType(elementType, length)
         super(name, arrayType)
         this.elementType = elementType
     }

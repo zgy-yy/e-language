@@ -5,14 +5,12 @@
         bool c;
     }
 
-[2]int foo(){
-
-    [2]int arr=[1,2];
-    return arr;
-}
-
 int main(){
-    [2]int c  = foo();
+    int a=0;
+    a=12;
+
+    [2]int c  = [1,2];
+    c[0]=12;
     print c[1];
 
     return 0;

@@ -1,4 +1,4 @@
-import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
@@ -459,6 +459,9 @@ export class Parser {
             }
             if (expr instanceof GetFieldExpr) {
                 return new SetFieldExpr(expr.target, expr.field, value, equals)
+            }
+            if (expr instanceof IndexExpr) {
+                return new SetIndexExpr(expr.target, expr.index, value, equals)
             }
             El.error(equals, "Invalid assignment target.")
         }

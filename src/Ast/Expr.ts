@@ -23,6 +23,7 @@ export interface ExprVisitor<R> {
     visitGetFieldExpr(expr: GetFieldExpr): R;
     visitSetFieldExpr(expr: SetFieldExpr): R;
     visitIndexExpr(expr: IndexExpr): R;
+    visitSetIndexExpr(expr: SetIndexExpr): R;
 }
 
 export interface Expr { //表达式 基类
@@ -305,6 +306,25 @@ export class IndexExpr implements Expr {
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitIndexExpr(this);
+    }
+}
+
+export class SetIndexExpr implements Expr {
+    exprType: DataType;
+    array: Expr;
+    index: Expr;
+    value: Expr;
+    constructor(array: Expr, index: Expr, value: Expr,equals:Token) {
+        this.exprType = (array.exprType as ArrayType).elementType;
+        if (!isSameType(this.exprType, value.exprType)) {
+            El.error(equals, "Type mismatch in assignment.")
+        }
+        this.array = array;
+        this.index = index;
+        this.value = value;
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitSetIndexExpr(this);
     }
 }
 

@@ -1,5 +1,5 @@
 import { ArrayType } from "../Parse/TypeDeclar";
-import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
@@ -92,6 +92,9 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
     visitIndexExpr(expr: IndexExpr): string {
         return `${expr.target.accept(this)}[${expr.index.accept(this)}]`;
+    }
+    visitSetIndexExpr(expr: SetIndexExpr): string {
+        return `${expr.array.accept(this)}[${expr.index.accept(this)}] = ${expr.value.accept(this)}`;
     }
 
     visitStructExpr(expr: StructExpr): string {

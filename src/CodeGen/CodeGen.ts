@@ -1,4 +1,4 @@
-import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { ArrayVar, FuncVar, FunLable, Var } from "../Parse/Symbol";
 import { ArrayType, DataType, FunType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
@@ -358,6 +358,21 @@ declare i32 @printf(i8*, ...)
         this.printIR(`${index_val} = load ${elementType}, ${elementType}* ${index_val}_1`);
         return { type: elementType, valReg: index_val };
     }
+
+    visitSetIndexExpr(expr: SetIndexExpr): ExprResult {
+        const n = this.sequence.reg++;
+        const arrayExpR = expr.array.accept(this)
+        const indexExpR = expr.index.accept(this)
+        const valueExpR = expr.value.accept(this)
+        const arrayType = arrayExpR.type
+        const elementType = valueExpR.type
+        const index_val = `%reg_index_${n}`
+        const  elemPtr = `%reg_elemPtr_${n}`
+        this.printIR(`${elemPtr} = getelementptr ${arrayType}, ${arrayType}* ${arrayExpR.valReg},${indexExpR.type} 0, ${indexExpR.type} ${indexExpR.valReg}`);
+        this.printIR(`store ${elementType} ${valueExpR.valReg}, ${elementType}* ${elemPtr}`);
+        return { type: elementType, valReg: valueExpR.valReg };
+    }
+
     //结构体表达式生成
     visitStructExpr(expr: StructExpr): ExprResult {
         const n = this.sequence.reg++;

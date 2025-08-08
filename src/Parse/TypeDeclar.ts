@@ -1,8 +1,7 @@
-import { Expr } from "Ast/Expr";
 import { Structure } from "./Symbol";
 
 
-export enum SimpleDataKind {
+export enum SimpleKind {
     Int = "int",
     Boolean = "bool",
     Void = "void",
@@ -14,8 +13,8 @@ export enum DataKind {
     simple = "simple",
     fun = "fun",
     struct = "struct",
-    class = "class",
     array = "array",
+    class = "class",
 }
 
 
@@ -27,14 +26,11 @@ export class DataType {
     toString(): string {
         return this.kind
     }
-    toLLVM(): string {
-        return this.kind
-    }
 }
 
 export class SimpleType extends DataType {
-    simpleKind: SimpleDataKind
-    constructor(kind: SimpleDataKind) {
+    simpleKind: SimpleKind
+    constructor(kind: SimpleKind) {
         super(DataKind.simple)
         this.simpleKind = kind
     }
@@ -57,9 +53,6 @@ export class FunType extends DataType {
     toString(): string {
         return `(${this.paramsType.map(item => item.toString()).join('_')})->${this.retType.toString()}`
     }
-    toLLVM(): string {
-        return `${this.paramsType.map(item => item.toLLVM()).join('_')}_${this.retType.toLLVM()}`
-    }
 }
 
 export class ArrayType extends DataType {
@@ -73,9 +66,6 @@ export class ArrayType extends DataType {
     toString(): string {
         return "arr_" + this.elementType.toString()
     }
-    toLLVM(): string {
-        return `arr_${this.elementType.toLLVM()}`
-    }
 }
 export class StructType extends DataType {
     structure: Structure
@@ -86,9 +76,6 @@ export class StructType extends DataType {
     toString(): string {
         return `struct ${this.structure.name}`
     }
-    toLLVM(): string {
-        return `struct_${this.structure.name}`
-    }
 }
 
 export class ClassType extends DataType {
@@ -98,9 +85,6 @@ export class ClassType extends DataType {
     }
     toString(): string {
         return super.toString() + 'class'
-    }
-    toLLVM(): string {
-        return 'class'
     }
 }
 // 
@@ -158,7 +142,7 @@ export function isSameType(left: DataType, right: DataType): boolean {
             const arrayLeft = left as ArrayType
             const arrayRight = right as ArrayType
             //右侧元素类型为void时 代表空数组
-            const arrayRightElementTypeIsVoid = arrayRight.elementType instanceof SimpleType && arrayRight.elementType.simpleKind === SimpleDataKind.Void
+            const arrayRightElementTypeIsVoid = arrayRight.elementType instanceof SimpleType && arrayRight.elementType.simpleKind === SimpleKind.Void
             if (!isSameType(arrayLeft.elementType, arrayRight.elementType) && !arrayRightElementTypeIsVoid) {
                 return false
             }

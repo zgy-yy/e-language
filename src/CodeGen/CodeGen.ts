@@ -1,7 +1,8 @@
 import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { ArrayVar, FuncVar, FunLable, Var } from "../Parse/Symbol";
-import { ArrayType, DataType, FunType, SimpleDataKind, SimpleType, StructType } from "../Parse/TypeDeclar";
+import { ArrayType, DataType, FunType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
+import { Scope } from "./Scope";
 
 type ExprResult = {
     type: string,
@@ -13,17 +14,7 @@ type EncloseLoop = {
     end: string //循环结束标签
 }
 
-const initSequence = {
-    function: 0,
-    loop: 0,
-    for: 0,
-    doWhile: 0,
-    while: 0,
-    if: 0,
-    else: 0,
-    block: 0,
-    reg: 0
-}
+
 
 export class CodeGen implements ExprVisitor<ExprResult>, StmtVisitor<void> {
     private globalVars: Var[] = [];
@@ -31,9 +22,16 @@ export class CodeGen implements ExprVisitor<ExprResult>, StmtVisitor<void> {
     private globalFunctionStmt: FunctionStmt[] = []; //全局变量
     private globalStructStmt: StructStmt[] = []; //全局结构体
     static codeText: string = "";
-    private sequence = { ...initSequence };
+    private scope: Scope = new Scope(); // 作用域 index 0为全局作用域
     private enclosing: EncloseLoop[] = []
-    private paramVars: Map<string, number> = new Map();
+    private sequence: {
+        loop: number,
+        for: number,
+        doWhile: number,
+        while: number,
+        if: number,
+        reg: number,
+    } = { loop: 0, for: 0, doWhile: 0, while: 0, if: 0, reg: 0 }
     private functionDeclarations: string[] = []; //函数声明
 
     constructor() {
@@ -86,17 +84,29 @@ declare i32 @printf(i8*, ...)
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
-        this.sequence = { ...initSequence };
-        const fnName = stmt.fn_name.name === "main" ? "main" : stmt.fn_name._id //函数名
+        const lv_funName = stmt.fn_name.name === "main" ? "@main" : `@fn_${stmt.fn_name}` //函数名
+        // 添加函数变量到全局作用域
+        this.scope.addVariable(stmt.fn_name, lv_funName)
+        // 进入函数作用域
+        this.scope.enterScope()
+        // 添加参数到函数作用域
+        stmt.params.forEach(p => {
+            this.scope.addVariable(p, `${p.name}_P`)
+        })
+        // 生成函数定义
         const retType = typeToLLVM(stmt.retType);
-        this.printIR(`define ${retType} @${fnName}(${stmt.params.map(p => typeToLLVM(p.type) + ' %' + p._id + '_P').join(', ')}) {`)
+        this.printIR(`define ${retType} ${lv_funName}(${stmt.params.map(p => typeToLLVM(p.type) + ' ' + this.scope.findVariable(p)).join(', ')}) {`)
         this.printIR(`entry:`)
         stmt.params.forEach(p => {
-            this.printIR(`%${p._id} = alloca ${typeToLLVM(p.type)}`);
-            this.printIR(`store ${typeToLLVM(p.type)} %${p._id}_P, ${typeToLLVM(p.type)}* %${p._id}`);
+            const lv_name = this.scope.findVariable(p)
+            this.printIR(`${lv_name} = alloca ${typeToLLVM(p.type)}`);
+            this.printIR(`store ${typeToLLVM(p.type)} ${lv_name}, ${typeToLLVM(p.type)}* ${lv_name}`);
         })
-        stmt.body.accept(this);
+        stmt.body.forEach(s => {
+            s.accept(this);
+        })
         this.printIR(`}`)
+        this.scope.leaveScope()
     }
     // 语句生成
     visitReturnStmt(stmt: ReturnStmt): void {
@@ -110,165 +120,197 @@ declare i32 @printf(i8*, ...)
 
     visitContinueStmt(stmt: ContinueStmt): void {
         const startLabel = this.enclosing.at(-1)?.start
-        this.printIR(`br label %${startLabel}`);
+        this.printIR(`br label ${startLabel}`);
     }
 
     visitBreakStmt(stmt: BreakStmt): void {
         const endLabel = this.enclosing.at(-1)?.end
-        this.printIR(`br label %${endLabel}`);
+        this.printIR(`br label ${endLabel}`);
     }
 
     visitLoopStmt(stmt: LoopStmt): void {
+        this.scope.enterScope()
         const n = this.sequence.loop++;
-        const body_label = `loop_body_${n}`
-        const end_label = `loop_end_${n}`
+        const dec_body = `loop_body_${n}`
+        const dec_end = `loop_end_${n}`
+        const body_label = `%${dec_body}`
+        const end_label = `%${dec_end}`
         this.enclosing.push({
             start: body_label,
             end: end_label
         })
-        this.printIR(`br label %${body_label}`);
-        this.printIR(`${body_label}:`);
+        this.printIR(`br label ${body_label}`);
+        this.printIR(`${dec_body}:`);
         stmt.body.accept(this);
-        this.printIR(`br label %${body_label}`);
-        this.printIR(`${end_label}:`);
+        this.printIR(`br label ${body_label}`);
+        this.printIR(`${dec_end}:`);
         this.enclosing.pop()
+        this.scope.leaveScope()
     }
     visitForStmt(stmt: ForStmt): void {
+        this.scope.enterScope()
         const n = this.sequence.for++;
-        const initLabel = `for_init_${n}`
-        const cond_label = `for_cond_${n}`
-        const inc_label = `for_inc_${n}`
-        const body_label = `for_body_${n}`
-        const end_label = `for_end_${n}`
+
+        const dec_init = `for_init_${n}`
+        const dec_cond = `for_cond_${n}`
+        const dec_inc = `for_inc_${n}`
+        const dec_body = `for_body_${n}`
+        const dec_end = `for_end_${n}`
+
+        const init_label = `%${dec_init}`
+        const cond_label = `%${dec_cond}`
+        const inc_label = `%${dec_inc}`
+        const body_label = `%${dec_body}`
+        const end_label = `%${dec_end}`
         this.enclosing.push({
             start: inc_label,
             end: end_label
         })
-        this.printIR(`br label %${initLabel}`);
-        this.printIR(`${initLabel}:`);
+        this.printIR(`br label ${init_label}`);
+        this.printIR(`${dec_init}:`);
 
         if (stmt.initializer) {
             stmt.initializer.accept(this);
         }
-
-        this.printIR(`br label %${cond_label}`);
-        this.printIR(`${cond_label}:`);
+        this.printIR(`br label ${cond_label}`);
+        this.printIR(`${dec_cond}:`);
 
         if (stmt.condition) {
             const condExpR = stmt.condition.accept(this);
-            const cond_val = `reg_forCond_${n}`
-            this.printIR(`%${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
-            this.printIR(`br i1 %${cond_val}, label %${body_label}, label %${end_label}`);
+            const cond_val = `%reg_forCond_${n}`
+            this.printIR(`${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
+            this.printIR(`br i1 ${cond_val}, label ${body_label}, label ${end_label}`);
         } else {
-            this.printIR(`br label %${body_label}`);
+            this.printIR(`br label ${body_label}`);
         }
 
-        this.printIR(`${body_label}:`);
+        this.printIR(`${dec_body}:`);
         stmt.body.accept(this);
 
-        this.printIR(`br label %${inc_label}`);
-        this.printIR(`${inc_label}:`);
+        this.printIR(`br label ${inc_label}`);
+        this.printIR(`${dec_inc}:`);
 
         if (stmt.increment) {
             stmt.increment.accept(this);
         }
 
-        this.printIR(`br label %${cond_label}`);
-        this.printIR(`${end_label}:`);
+        this.printIR(`br label ${cond_label}`);
+        this.printIR(`${dec_end}:`);
 
         this.enclosing.pop()
+        this.scope.leaveScope()
     }
 
     visitDoWhileStmt(stmt: DoWhileStmt): void {
+        this.scope.enterScope()
         const n = this.sequence.doWhile++;
-        const body_label = `do_body_${n}`
-        const cond_label = `do_cond_${n}`
-        const end_label = `do_end_${n}`
+        const dec_body = `do_body_${n}`
+        const dec_cond = `do_cond_${n}`
+        const dec_end = `do_end_${n}`
+
+        const body_label = `%${dec_body}`
+        const cond_label = `%${dec_cond}`
+        const end_label = `%${dec_end}`
 
         this.enclosing.push({
             start: cond_label,
             end: end_label
         })
 
-        this.printIR(`br label %${body_label}`);
-        this.printIR(`${body_label}:`);
+        this.printIR(`br label ${body_label}`);
+        this.printIR(`${dec_body}:`);
 
         stmt.body.accept(this);
 
-        this.printIR(`br label %${cond_label}`);
-        this.printIR(`${cond_label}:`);
+        this.printIR(`br label ${cond_label}`);
+        this.printIR(`${dec_cond}:`);
 
         const condExpR = stmt.condition.accept(this);
-        const cond_val = `reg_doCond_${n}`
-        this.printIR(`%${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
-        this.printIR(`br i1 %${cond_val}, label %${body_label}, label %${end_label}`);
+        const cond_val = `%reg_doCond_${n}`
+        this.printIR(`${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
+        this.printIR(`br i1 ${cond_val}, label ${body_label}, label ${end_label}`);
 
-        this.printIR(`${end_label}:`);
+        this.printIR(`${dec_end}:`);
         this.enclosing.pop()
+        this.scope.leaveScope()
     }
 
     visitWhileStmt(stmt: WhileStmt): void {
+        this.scope.enterScope()
         const n = this.sequence.while++;
         //标签名
-        const cond_label = `while_cond_${n}`
-        const body_label = `while_body_${n}`
-        const end_label = `while_end_${n}`
+        const dec_cond = `while_cond_${n}`
+        const dec_body = `while_body_${n}`
+        const dec_end = `while_end_${n}`
+        const cond_label = `%${dec_cond}`
+        const body_label = `%${dec_body}`
+        const end_label = `%${dec_end}`
 
         this.enclosing.push({
             start: cond_label,
             end: end_label
         })
 
-        this.printIR(`br label %${cond_label}`);
-        this.printIR(`${cond_label}:`);
+        this.printIR(`br label ${cond_label}`);
+        this.printIR(`${dec_cond}:`);
 
         const condExpR = stmt.condition.accept(this);
-        const cond_val = `reg_whileCond_${n}`
-        this.printIR(`%${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
-        this.printIR(`br i1 %${cond_val}, label %${body_label}, label %${end_label}`);
+        const cond_val = `%reg_whileCond_${n}`
+        this.printIR(`${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
+        this.printIR(`br i1 ${cond_val}, label ${body_label}, label ${end_label}`);
 
-        this.printIR(`${body_label}:`);
+        this.printIR(`${dec_body}:`);
         stmt.body.accept(this);
 
-        this.printIR(`br label %${cond_label}`);
-        this.printIR(`${end_label}:`);
+        this.printIR(`br label ${cond_label}`);
+        this.printIR(`${dec_end}:`);
 
         this.enclosing.pop()
+        this.scope.leaveScope()
     }
 
     //if 语句生成
     visitIfStmt(stmt: IfStmt): void {
+        this.scope.enterScope()
         const n = this.sequence.if++;
         const condExpR = stmt.condition.accept(this);
-        const cond_val = `reg_ifCond_${n}`
-        const then_label = `if_then_${n}`
-        const else_label = `if_else_${n}`
-        const end_label = `if_end_${n}`
-        this.printIR(`%${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
+        const dec_then = `if_then_${n}`
+        const dec_else = `if_else_${n}`
+        const dec_end = `if_end_${n}`
+
+        const then_label = `%${dec_then}`
+        const else_label = `%${dec_else}`
+        const end_label = `%${dec_end}`
+
+        const cond_val = `%reg_ifCond_${n}`
+        this.printIR(`${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
 
         if (stmt.elseBranch) {
-            this.printIR(`br i1 %${cond_val}, label %${then_label}, label %${else_label}`);
-            this.printIR(`${then_label}:`);
+            this.printIR(`br i1 ${cond_val}, label ${then_label}, label ${else_label}`);
+            this.printIR(`${dec_then}:`);
             stmt.thenBranch.accept(this);
-            this.printIR(`br label %${end_label}`);
-            this.printIR(`${else_label}:`);
+            this.printIR(`br label ${end_label}`);
+            this.printIR(`${dec_else}:`);
             stmt.elseBranch.accept(this);
-            this.printIR(`br label %${end_label}`);
-            this.printIR(`${end_label}:`);
+            this.printIR(`br label ${end_label}`);
+            this.printIR(`${dec_end}:`);
         } else {
-            this.printIR(`br i1 %${cond_val}, label %${then_label}, label %${end_label}`);
-            this.printIR(`${then_label}:`);
+            this.printIR(`br i1 ${cond_val}, label ${then_label}, label ${end_label}`);
+            this.printIR(`${dec_then}:`);
             stmt.thenBranch.accept(this);
-            this.printIR(`br label %${end_label}`);
-            this.printIR(`${end_label}:`);
+            this.printIR(`br label ${end_label}`);
+            this.printIR(`${dec_end}:`);
         }
+        this.scope.leaveScope()
     }
 
     //块语句生成
     visitBlockStmt(stmt: BlockStmt): void {
+        this.scope.enterScope()
         for (const s of stmt.statements) {
             s.accept(this);
         }
+        this.scope.leaveScope()
     }
 
     //表达式语句生成
@@ -282,37 +324,35 @@ declare i32 @printf(i8*, ...)
     }
 
     visitVarStmt(stmt: VarStmt): void {
-        const var_name = stmt.variable._id
+        const var_name = this.scope.addVariable(stmt.variable, stmt.variable.name)
         if (this.globalVars.find(v => v === stmt.variable)) {
             // 全局变量
             const varType = typeToLLVM(stmt.variable.type);
             if (stmt.initializer) {
                 const initExpR = stmt.initializer.accept(this);
-                this.printIR(`@${var_name} = global ${varType} ${initExpR.valReg}`);
+                this.printIR(`${var_name} = global ${varType} ${initExpR.valReg}`);
             } else {
-                this.printIR(`@${var_name} = global ${varType}`);
+                this.printIR(`${var_name} = global ${varType}`);
             };
         } else {
             // 数组变量
             if (stmt.variable instanceof ArrayVar) {
                 const arrayType = stmt.variable.type as ArrayType
                 const varType = typeToLLVM(arrayType)
-                this.printIR(`%${var_name} = alloca ${varType}`);
+                this.printIR(`${var_name} = alloca ${varType}`);
                 if (stmt.initializer) {
                     const initExpR = stmt.initializer.accept(this);
-                    this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* %${var_name}`);
+                    this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* ${var_name}`);
                 }
             } else {
                 const varType = typeToLLVM(stmt.variable.type);
                 // 局部变量
-                this.printIR(`%${var_name} = alloca ${varType}`);
+                this.printIR(`${var_name} = alloca ${varType}`);
                 if (stmt.initializer) {
                     const initExpR = stmt.initializer.accept(this);
-                    this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* %${var_name}`);
+                    this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* ${var_name}`);
                 }
             }
-
-
         }
     }
 
@@ -329,12 +369,11 @@ declare i32 @printf(i8*, ...)
     visitArrayExpr(expr: ArrayExpr): ExprResult {
         const n = this.sequence.reg++;
         const array_type = typeToLLVM(expr.exprType)
-        console.log("array_type", expr.exprType)
         let undef_array = `undef`
         for (let i = 0; i < expr.elements.length; i++) {
             const elExprR = expr.elements[i].accept(this);
             const element_type = typeToLLVM(expr.elements[i].exprType)
-            const regName = `%temp_${i}_${n}`
+            const regName = `%temp_${n}_${i}`
             this.printIR(`${regName} = insertvalue ${array_type} ${undef_array}, ${element_type} ${elExprR.valReg}, ${i}`);
             undef_array = regName
         }
@@ -351,7 +390,7 @@ declare i32 @printf(i8*, ...)
         const indexExpR = expr.index.accept(this)
 
         const index_val = `%reg_index_${n}`
-        const tempArr = `%temp_arr_alloca${n}`
+        const tempArr = `%temp_arr_alloca_${n}`
         this.printIR(`${tempArr} = alloca ${lvType}`);
         this.printIR(`store ${lvType} ${targetExpR.valReg}, ${lvType}* ${tempArr}`);
         this.printIR(`${index_val}_1 = getelementptr ${lvType}, ${lvType}* ${tempArr},${indexExpR.type} 0, ${indexExpR.type} ${indexExpR.valReg}`);
@@ -367,7 +406,7 @@ declare i32 @printf(i8*, ...)
         const arrayType = arrayExpR.type
         const elementType = valueExpR.type
         const index_val = `%reg_index_${n}`
-        const  elemPtr = `%reg_elemPtr_${n}`
+        const elemPtr = `%reg_elemPtr_${n}`
         this.printIR(`${elemPtr} = getelementptr ${arrayType}, ${arrayType}* ${arrayExpR.valReg},${indexExpR.type} 0, ${indexExpR.type} ${indexExpR.valReg}`);
         this.printIR(`store ${elementType} ${valueExpR.valReg}, ${elementType}* ${elemPtr}`);
         return { type: elementType, valReg: valueExpR.valReg };
@@ -410,12 +449,8 @@ declare i32 @printf(i8*, ...)
     visitAssignExpr(expr: AssignExpr): ExprResult {
         const valueExpR = expr.value.accept(this);
         const varType = typeToLLVM(expr.variable.type)
-        const var_name = expr.variable._id
-        if (this.globalVars.find(v => v === expr.variable)) {
-            this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType}* @${var_name}`);
-        } else {
-            this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType}* %${var_name}`);
-        }
+        const var_name = this.scope.findVariable(expr.variable)
+        this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType}* ${var_name}`);
         return valueExpR
     }
 
@@ -434,7 +469,10 @@ declare i32 @printf(i8*, ...)
         const left = leftExpR.valReg
         const right = rightExpR.valReg
 
+        const retType = typeToLLVM(expr.exprType)
+
         const bin_val = `%reg_bin_${n}`
+    
 
         switch (expr.operator.lexeme) {
             case '+':
@@ -472,7 +510,7 @@ declare i32 @printf(i8*, ...)
                 break;
         }
 
-        return { type: 'i1', valReg: bin_val };
+        return { type: retType, valReg: bin_val };
     }
 
     //一元表达式生成
@@ -497,20 +535,19 @@ declare i32 @printf(i8*, ...)
     visitPrefixSelfExpr(expr: PrefixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
         const var_ = expr.right as VariableExpr;//变量自身
-        let ir_var_name = '' //ir中变量
+        let ir_var_name = this.scope.findVariable(var_.variable) //ir中变量
         const rightExpR = expr.right.accept(this);
         const rightType = typeToLLVM(expr.right.exprType)
         let new_val = `%reg_prefix_${n}`
 
+
         if (this.globalVars.find(v => v === var_.variable)) {
-            ir_var_name = `@${var_.variable._id}`
             if (expr.operator.lexeme === '++') {
                 this.printIR(`${new_val} = add ${rightType} ${rightExpR.valReg}, 1`);
             } else {
                 this.printIR(`${new_val} = sub ${rightType} ${rightExpR.valReg}, 1`);
             }
         } else {
-            ir_var_name = `%${var_.variable._id}`
             if (expr.operator.lexeme === '++') {
                 this.printIR(`${new_val} = add ${rightType} ${rightExpR.valReg}, 1`);
             } else {
@@ -526,21 +563,19 @@ declare i32 @printf(i8*, ...)
     visitSuffixSelfExpr(expr: SuffixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
         const left = expr.left as VariableExpr;
-        let ir_var_name = ''
+        let ir_var_name = this.scope.findVariable(left.variable)
         const leftExpR = left.accept(this)
         const leftType = leftExpR.type
         const leftReg = leftExpR.valReg
         let new_val = `%reg_suffix_${n}`
 
         if (this.globalVars.find(v => v === left.variable)) {
-            ir_var_name = `@${left.variable._id}`
             if (expr.operator.lexeme === '++') {
                 this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
             } else {
                 this.printIR(`${new_val} = sub ${leftType} ${leftReg}, 1`);
             }
         } else {
-            ir_var_name = `%${left.variable._id}`
             if (expr.operator.lexeme === '++') {
                 this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
             } else {
@@ -591,7 +626,7 @@ declare i32 @printf(i8*, ...)
                 const field_type = typeToLLVM(expr.exprType)
                 const structType = expr.target.exprType as StructType
                 const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
-                const regName = `%temp${expr.field}_${n}`
+                const regName = `%temp_${expr.field}_${n}`
                 this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.target.exprType)} ${targetReg}, ${field_type} ${value}, ${field_index}`);
 
                 setField(expr.target, regName)
@@ -607,7 +642,7 @@ declare i32 @printf(i8*, ...)
             }
             if (expr instanceof VariableExpr) {
                 const field_type = typeToLLVM(expr.exprType)
-                this.printIR(`store ${field_type} ${value}, ${field_type}* %${expr.variable._id}`);
+                this.printIR(`store ${field_type} ${value}, ${field_type}* ${this.scope.findVariable(expr.variable)}`);
             }
         }
         setField(expr, valueExpR.valReg)
@@ -616,23 +651,23 @@ declare i32 @printf(i8*, ...)
     }
     //变量表达式生成 变量表达式 => 变量名,函数名
     visitVariableExpr(expr: VariableExpr): ExprResult {
-        const var_name = expr.variable._id;
+        const var_name = this.scope.findVariable(expr.variable);
         const varType = typeToLLVM(expr.variable.type);
         const n = this.sequence.reg++;
-        const var_name_n = `%reg_${var_name}_${n}`
+        const var_name_n = `${var_name}_reg_${n}`
 
         //函数类型的变量
         if (expr.variable instanceof FunLable) {
             const funVar = expr.variable as FuncVar
             const retType = typeToLLVM(funVar.retType) //函数变量 的返回值类型
             const params = funVar.paramTypes.map(p => typeToLLVM(p))
-            this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* @${var_name} to ${retType} (${params.join(', ')})*`);
+            this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* ${var_name} to ${retType} (${params.join(', ')})*`);
             return { type: retType, valReg: var_name_n };
         } else {
             if (this.globalVars.find(v => v === expr.variable)) {
-                this.printIR(`${var_name_n} = load ${varType}, ${varType}* @${var_name}`);
+                this.printIR(`${var_name_n} = load ${varType}, ${varType}* ${var_name}`);
             } else {
-                this.printIR(`${var_name_n} = load ${varType}, ${varType}* %${var_name}`);
+                this.printIR(`${var_name_n} = load ${varType}, ${varType}* ${var_name}`);
             }
             return { type: varType, valReg: var_name_n };
         }
@@ -656,15 +691,15 @@ declare i32 @printf(i8*, ...)
 function typeToLLVM(type: DataType): string {
     if (type instanceof SimpleType) {
         switch (type.simpleKind) {
-            case SimpleDataKind.Int:
+            case SimpleKind.Int:
                 return "i32";
-            case SimpleDataKind.Boolean:
+            case SimpleKind.Boolean:
                 return "i1";
-            case SimpleDataKind.Void:
+            case SimpleKind.Void:
                 return "void";
-            case SimpleDataKind.Char:
+            case SimpleKind.Char:
                 return "i8";
-            case SimpleDataKind.Null:
+            case SimpleKind.Null:
                 return "i8*";
         }
     }

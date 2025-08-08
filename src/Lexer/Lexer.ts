@@ -2,7 +2,7 @@
     将源码中的 字符(char) 识别为 词法单元(Token)
 */
 
-import { SimpleDataKind } from "../Parse/TypeDeclar";
+import { SimpleKind } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "./Token";
 
@@ -30,15 +30,15 @@ export class Scanner {//扫描器，或称为词法分析
         ["class", Tokenkind.CLASS],
 
         //字面量
-        [SimpleDataKind.Null, Tokenkind.NULL],
+        [SimpleKind.Null, Tokenkind.NULL],
         ['true', Tokenkind.TRUE],
         ['false', Tokenkind.FALSE],
 
         //数据类型
-        [SimpleDataKind.Int, Tokenkind.INT],
-        [SimpleDataKind.Char, Tokenkind.CHAR],
-        [SimpleDataKind.Boolean, Tokenkind.BOOLEAN],
-        [SimpleDataKind.Void, Tokenkind.VOID],
+        [SimpleKind.Int, Tokenkind.INT],
+        [SimpleKind.Char, Tokenkind.CHAR],
+        [SimpleKind.Boolean, Tokenkind.BOOLEAN],
+        [SimpleKind.Void, Tokenkind.VOID],
 
     ])
 

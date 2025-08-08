@@ -11,7 +11,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitFunctionStmt(stmt: FunctionStmt): string {
-        return `${stmt.retType} ${stmt.fn_name.name}(${stmt.params.map((p) => `${p.type} ${p.name}`).join(", ")}) ${stmt.body.accept(this)}`;
+        return `${stmt.retType} ${stmt.fn_name.name}(${stmt.params.map((p) => `${p.type} ${p.name}`).join(", ")}) {\n${stmt.body.map((s) => s.accept(this)).join("\n")}\n}`;
     }
 
     visitStructStmt(stmt: StructStmt): string {

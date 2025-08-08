@@ -5,11 +5,12 @@ export class Var {
     static incremental = 0
     type: DataType //变量类型
     name: string
-    _id: string
     constructor(name: string, type_: DataType) {
         this.name = name
         this.type = type_
-        this._id = name + '_' + type_.toLLVM() + '_' + Var.incremental++
+    }
+    toString(): string {
+        return this.name
     }
 }
 

@@ -2,7 +2,7 @@ import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldE
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
-import { ArrayType, DataType, FunType, isSameType, SimpleDataKind, SimpleType, StructType } from "./TypeDeclar";
+import { ArrayType, DataType, FunType, isSameType, SimpleKind, SimpleType, StructType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
 import { FuncVar, Var, FunLable, Structure, StructVar, ArrayVar } from "./Symbol";
 
@@ -65,7 +65,7 @@ export class Parser {
     declarationKind(): DataType {
         if (this.match(...this.typeKind)) {
             let kind = this.previous()//声明的类型
-            let declType = new SimpleType(SimpleDataKind[kind.type])//声明 类型
+            let declType = new SimpleType(SimpleKind[kind.type])//声明 类型
             return declType
         } else if (this.peekNext().type == Tokenkind.IDENTIFIER && this.match(Tokenkind.IDENTIFIER)) {
             const struct_name = this.previous()
@@ -90,7 +90,7 @@ export class Parser {
             this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
             if (this.match(...this.typeKind)) {
                 let kind = this.previous()//声明的类型
-                let retType: DataType = new SimpleType(SimpleDataKind[kind.type])//声明 的类型
+                let retType: DataType = new SimpleType(SimpleKind[kind.type])//声明 的类型
                 return new FunType(paramsType, retType)
             }
             this.error(this.peek(), "Expect type after parameters.")
@@ -153,7 +153,7 @@ export class Parser {
 
     //变量声明语句
     varListDeclaration(varT: DataType): Stmt {
-        if (varT instanceof SimpleType && varT.simpleKind === SimpleDataKind.Void) {
+        if (varT instanceof SimpleType && varT.simpleKind === SimpleKind.Void) {
             El.error(this.previous(), "void type is not supported.")
         }
         let varStmt: VarStmt[] = []
@@ -232,13 +232,13 @@ export class Parser {
             this.symbolTable.addVariable(item.name, item)
         })
         // 解析函数体
-        const bodyStatements = []
+        const bodyStatements: Stmt[] = []
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
             bodyStatements.push(this.statement())
         }
         // 如果函数体最后没有 return 语句
         if (!(bodyStatements.at(-1) instanceof ReturnStmt)) {
-            if (dclRetType instanceof SimpleType && dclRetType.simpleKind === SimpleDataKind.Void) {
+            if (dclRetType instanceof SimpleType && dclRetType.simpleKind === SimpleKind.Void) {
                 bodyStatements.push(new ReturnStmt(new Token(Tokenkind.RETURN, "return", null, this.previous().line), null))
             } else {
                 this.error(this.previous(), "Function must have a return value.")
@@ -247,11 +247,11 @@ export class Parser {
 
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after function block.")
         // 如果函数返回值类型为void，切没有明确返回值，则添加一个返回值为void的返回语句
-        const body = new BlockStmt(bodyStatements)
+
 
         this.symbolTable.leaveScope()
         this.funcEnclosing.pop()
-        return new FunctionStmt(dclRetType, fun_var, params, body)
+        return new FunctionStmt(dclRetType, fun_var, params, bodyStatements)
     }
 
     paramDeclaration(): Var[] {
@@ -331,7 +331,7 @@ export class Parser {
         if (!this.check(Tokenkind.SEMICOLON)) {
             value = this.expression()
         }
-        const retType = value ? value.exprType : new SimpleType(SimpleDataKind.Void) //返回值类型
+        const retType = value ? value.exprType : new SimpleType(SimpleKind.Void) //返回值类型
         // 如果返回值类型和函数返回值类型不一致，则抛出错误
         if (!isSameType(funcEn.dclRetType, retType)) {
             El.error(keyword, "Return type does not match function return type.")
@@ -392,7 +392,7 @@ export class Parser {
             initializer = null
         } else if (this.match(...this.typeKind)) {
             const kind = this.previous()
-            let declType = new SimpleType(SimpleDataKind[kind.type])//声明 的类型
+            let declType = new SimpleType(SimpleKind[kind.type])//声明 的类型
             initializer = this.varListDeclaration(declType)
         } else {
             initializer = this.expressionStatement()

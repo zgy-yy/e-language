@@ -178,9 +178,9 @@ export class FunctionStmt implements Stmt {
     retType: DataType;
     fn_name: Var;//函数名，变量类型 “fn”
     params: Var[];
-    body: BlockStmt;
+    body: Stmt[];
 
-    constructor(var_type: DataType, name: Var, params: Var[], body:BlockStmt) {
+    constructor(var_type: DataType, name: Var, params: Var[], body:Stmt[]) {
         this.retType = var_type;
         this.fn_name = name;
         this.params = params;

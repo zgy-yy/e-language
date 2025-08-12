@@ -1,40 +1,29 @@
 
-
  struct A{
         int a,b;
         bool c;
     }
 
+
+struct B{
+    int i;
+    A a;
+}
+
+
 int main(){
-    int a=0;
-    a=a+1;
-    for(int a=1;a<2;a++){
-        print a;
-    }
-    if(a>4){
-        print a;
-    }else{
-        print 2;
-    }
-
-    while(a<12){
-        a++;
-        print a;
-    }
-
-    do{
-        print a;
-        a=a+1;
-    }while(a<15);
-
-
-    A st ={
-        a:1,b:23,
-        c:true
+    A sh={
+        a:12,
+        b:4,
+        c:false
     };
-    st.a=st.a+23;
-    st.a++;
-    print st.a;
+    B bb = {
+        i:1,
+        a:sh
+    };
+   bb.a.b++;
+   print bb.a.b;
+   print sh.b;
 
     return 0;
 }

@@ -472,7 +472,7 @@ declare i32 @printf(i8*, ...)
         const retType = typeToLLVM(expr.exprType)
 
         const bin_val = `%reg_bin_${n}`
-    
+
 
         switch (expr.operator.lexeme) {
             case '+':
@@ -562,26 +562,27 @@ declare i32 @printf(i8*, ...)
     //后缀表达式生成
     visitSuffixSelfExpr(expr: SuffixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
-        const left = expr.left as VariableExpr;
-        let ir_var_name = this.scope.findVariable(left.variable)
+        const left = expr.left;
+
         const leftExpR = left.accept(this)
         const leftType = leftExpR.type
         const leftReg = leftExpR.valReg
         let new_val = `%reg_suffix_${n}`
 
-        if (this.globalVars.find(v => v === left.variable)) {
-            if (expr.operator.lexeme === '++') {
-                this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
-            } else {
-                this.printIR(`${new_val} = sub ${leftType} ${leftReg}, 1`);
-            }
-        } else {
-            if (expr.operator.lexeme === '++') {
-                this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
-            } else {
-                this.printIR(`${new_val} = sub ${leftType} ${leftReg}, 1`);
-            }
+        let ir_var_name = null
+     
+        if (left instanceof VariableExpr) {
+           const leftVar = left.variable
+           ir_var_name = this.scope.findVariable(leftVar)
+        } else if (left instanceof GetFieldExpr) {
+            ir_var_name = this.getFieldPtr(left).valReg
         }
+        if (expr.operator.lexeme === '++') {
+            this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
+        } else if (expr.operator.lexeme === '--') {
+            this.printIR(`${new_val} = sub ${leftType} ${leftReg}, 1`);
+        }
+
         this.printIR(`store ${leftType} ${new_val}, ${leftType}* ${ir_var_name}`);
         return leftExpR;
     }
@@ -606,47 +607,50 @@ declare i32 @printf(i8*, ...)
         return { type: retType, valReg: var_name };
     }
 
+    getFieldPtr(expr: GetFieldExpr): ExprResult {
+        const n = this.sequence.reg++;
+        let targetExpR = null
+        if (expr.target instanceof GetFieldExpr) {
+            targetExpR = this.getFieldPtr(expr.target)
+        } else {
+            const targetVar = expr.target as VariableExpr
+            targetExpR = {
+                type: typeToLLVM(targetVar.variable.type),
+                valReg: this.scope.findVariable(targetVar.variable)
+            }
+        }
+        const targetType = targetExpR.type
+        const targetvar = targetExpR.valReg
+
+        const structType = expr.target.exprType as StructType
+        let field_type = null;
+        const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => {
+            if (name === expr.field) {
+                field_type = typeToLLVM(value)
+                return true
+            }
+            return false
+        })
+        const regFieldPtr = `%reg_field_ptr_${expr.field}_${n}`
+        this.printIR(`${regFieldPtr} = getelementptr ${targetType}, ${targetType}* ${targetvar}, i32 0, i32 ${field_index}`);
+        return { type: field_type, valReg: regFieldPtr };
+
+    }
+
     visitGetFieldExpr(expr: GetFieldExpr): ExprResult {
         const n = this.sequence.reg++;
-        const targetExpR = expr.target.accept(this)
-        const structType = expr.target.exprType as StructType
-        const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
         const regName = `%regfield_${expr.field}_${n}`
-        this.printIR(`${regName} = extractvalue ${typeToLLVM(expr.target.exprType)} ${targetExpR.valReg}, ${field_index}`);
-        return { type: typeToLLVM(expr.exprType), valReg: regName };
+        const fieldPtr = this.getFieldPtr(expr)
+        const field_type = fieldPtr.type
+        const regFieldPtr = fieldPtr.valReg
+        this.printIR(`${regName} = load ${field_type}, ${field_type}* ${regFieldPtr}`);
+        return { type: field_type, valReg: regName };
     }
     visitSetFieldExpr(expr: SetFieldExpr): ExprResult {
         const n = this.sequence.reg++;
         const valueExpR = expr.value.accept(this);
-
-        const setField = (expr: Expr, value: string) => {
-            if (expr instanceof SetFieldExpr) {
-                const targetExpR = expr.target.accept(this)
-                const targetReg = targetExpR.valReg
-                const field_type = typeToLLVM(expr.exprType)
-                const structType = expr.target.exprType as StructType
-                const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
-                const regName = `%temp_${expr.field}_${n}`
-                this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.target.exprType)} ${targetReg}, ${field_type} ${value}, ${field_index}`);
-
-                setField(expr.target, regName)
-            }
-            if (expr instanceof GetFieldExpr) {
-                const targetExpR = expr.target.accept(this)
-                const field_type = typeToLLVM(expr.exprType)
-                const structType = expr.target.exprType as StructType
-                const field_index = Array.from(structType.structure.fields.entries()).findIndex(([name, value]) => name === expr.field)
-                const regName = `%temp_${expr.field}_${n}`
-                this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.target.exprType)} ${targetExpR.valReg}, ${field_type} ${value}, ${field_index}`);
-                setField(expr.target, regName)
-            }
-            if (expr instanceof VariableExpr) {
-                const field_type = typeToLLVM(expr.exprType)
-                this.printIR(`store ${field_type} ${value}, ${field_type}* ${this.scope.findVariable(expr.variable)}`);
-            }
-        }
-        setField(expr, valueExpR.valReg)
-
+        const fieldPtr = this.getFieldPtr(expr)
+        this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${fieldPtr.type}* ${fieldPtr.valReg}`);
         return valueExpR;
     }
     //变量表达式生成 变量表达式 => 变量名,函数名
@@ -664,11 +668,7 @@ declare i32 @printf(i8*, ...)
             this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* ${var_name} to ${retType} (${params.join(', ')})*`);
             return { type: retType, valReg: var_name_n };
         } else {
-            if (this.globalVars.find(v => v === expr.variable)) {
-                this.printIR(`${var_name_n} = load ${varType}, ${varType}* ${var_name}`);
-            } else {
-                this.printIR(`${var_name_n} = load ${varType}, ${varType}* ${var_name}`);
-            }
+            this.printIR(`${var_name_n} = load ${varType}, ${varType}* ${var_name}`);
             return { type: varType, valReg: var_name_n };
         }
     }

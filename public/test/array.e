@@ -12,18 +12,10 @@ struct B{
 
 
 int main(){
-    A sh={
-        a:12,
-        b:4,
-        c:false
-    };
-    B bb = {
-        i:1,
-        a:sh
-    };
-   bb.a.b++;
-   print bb.a.b;
-   print sh.b;
 
+    [3]int arr =[1,2,3];
+    int a =arr[0]++;
+    print a;
+    print arr[0];
     return 0;
 }

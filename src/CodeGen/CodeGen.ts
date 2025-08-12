@@ -381,35 +381,42 @@ declare i32 @printf(i8*, ...)
         return { type: array_type, valReg: undef_array };
     }
 
+
+    getIndexPtr(expr: IndexExpr): ExprResult {
+        const n = this.sequence.reg++;
+        let targetExpR = null
+        if (expr.target instanceof ArrayExpr) {
+            targetExpR = expr.target.accept(this)
+        } else {
+            const targetVar = expr.target as VariableExpr
+            targetExpR = {
+                type: typeToLLVM(targetVar.variable.type),
+                valReg: this.scope.findVariable(targetVar.variable)
+            }
+        }
+        const indexExpR = expr.index.accept(this)
+        const index_val = indexExpR.valReg
+        const index_type = indexExpR.type
+        const target_val = targetExpR.valReg
+        const target_type = targetExpR.type
+        const index_ptr = `%reg_index_ptr_${n}`
+        this.printIR(`${index_ptr} = getelementptr ${target_type}, ${target_type}* ${target_val},${index_type} 0, ${index_type} ${index_val}`);
+        return { type: index_type, valReg: index_ptr };
+    }
+
     visitIndexExpr(expr: IndexExpr): ExprResult {
         const n = this.sequence.reg++;
-        const targetExpR = expr.target.accept(this)
-        const taExprType = expr.target.exprType as ArrayType
-        const lvType = targetExpR.type
-        const elementType = typeToLLVM(taExprType.elementType)
-        const indexExpR = expr.index.accept(this)
-
+        const index_ptr = this.getIndexPtr(expr)
         const index_val = `%reg_index_${n}`
-        const tempArr = `%temp_arr_alloca_${n}`
-        this.printIR(`${tempArr} = alloca ${lvType}`);
-        this.printIR(`store ${lvType} ${targetExpR.valReg}, ${lvType}* ${tempArr}`);
-        this.printIR(`${index_val}_1 = getelementptr ${lvType}, ${lvType}* ${tempArr},${indexExpR.type} 0, ${indexExpR.type} ${indexExpR.valReg}`);
-        this.printIR(`${index_val} = load ${elementType}, ${elementType}* ${index_val}_1`);
-        return { type: elementType, valReg: index_val };
+        this.printIR(`${index_val} = load ${index_ptr.type}, ${index_ptr.type}* ${index_ptr.valReg}`);
+        return { type: index_ptr.type, valReg: index_val };
     }
 
     visitSetIndexExpr(expr: SetIndexExpr): ExprResult {
-        const n = this.sequence.reg++;
-        const arrayExpR = expr.array.accept(this)
-        const indexExpR = expr.index.accept(this)
+        const index_ptr = this.getIndexPtr(expr)
         const valueExpR = expr.value.accept(this)
-        const arrayType = arrayExpR.type
-        const elementType = valueExpR.type
-        const index_val = `%reg_index_${n}`
-        const elemPtr = `%reg_elemPtr_${n}`
-        this.printIR(`${elemPtr} = getelementptr ${arrayType}, ${arrayType}* ${arrayExpR.valReg},${indexExpR.type} 0, ${indexExpR.type} ${indexExpR.valReg}`);
-        this.printIR(`store ${elementType} ${valueExpR.valReg}, ${elementType}* ${elemPtr}`);
-        return { type: elementType, valReg: valueExpR.valReg };
+        this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${index_ptr.type}* ${index_ptr.valReg}`);
+        return valueExpR
     }
 
     //结构体表达式生成
@@ -534,25 +541,24 @@ declare i32 @printf(i8*, ...)
     //前缀自增自减表达式生成
     visitPrefixSelfExpr(expr: PrefixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
-        const var_ = expr.right as VariableExpr;//变量自身
-        let ir_var_name = this.scope.findVariable(var_.variable) //ir中变量
-        const rightExpR = expr.right.accept(this);
-        const rightType = typeToLLVM(expr.right.exprType)
+        const var_ = expr.right 
+        const rightExpR = var_.accept(this);
+        const rightType = rightExpR.type
+        const rightReg = rightExpR.valReg
+        let ir_var_name = null
+        if (var_ instanceof VariableExpr) {
+            ir_var_name = this.scope.findVariable(var_.variable) //ir中变量
+        } else if (var_ instanceof GetFieldExpr) {
+            ir_var_name = this.getFieldPtr(var_).valReg
+        }else if (var_ instanceof IndexExpr) {
+            ir_var_name = this.getIndexPtr(var_).valReg
+        }
         let new_val = `%reg_prefix_${n}`
 
-
-        if (this.globalVars.find(v => v === var_.variable)) {
-            if (expr.operator.lexeme === '++') {
-                this.printIR(`${new_val} = add ${rightType} ${rightExpR.valReg}, 1`);
-            } else {
-                this.printIR(`${new_val} = sub ${rightType} ${rightExpR.valReg}, 1`);
-            }
+        if (expr.operator.lexeme === '++') {
+            this.printIR(`${new_val} = add ${rightType} ${rightReg}, 1`);
         } else {
-            if (expr.operator.lexeme === '++') {
-                this.printIR(`${new_val} = add ${rightType} ${rightExpR.valReg}, 1`);
-            } else {
-                this.printIR(`${new_val} = sub ${rightType} ${rightExpR.valReg}, 1`);
-            }
+            this.printIR(`${new_val} = sub ${rightType} ${rightReg}, 1`);
         }
         this.printIR(`store ${rightType} ${new_val}, ${rightType}* ${ir_var_name}`);
 
@@ -576,6 +582,8 @@ declare i32 @printf(i8*, ...)
            ir_var_name = this.scope.findVariable(leftVar)
         } else if (left instanceof GetFieldExpr) {
             ir_var_name = this.getFieldPtr(left).valReg
+        }else if (left instanceof IndexExpr) {
+            ir_var_name = this.getIndexPtr(left).valReg
         }
         if (expr.operator.lexeme === '++') {
             this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
@@ -647,7 +655,6 @@ declare i32 @printf(i8*, ...)
         return { type: field_type, valReg: regName };
     }
     visitSetFieldExpr(expr: SetFieldExpr): ExprResult {
-        const n = this.sequence.reg++;
         const valueExpR = expr.value.accept(this);
         const fieldPtr = this.getFieldPtr(expr)
         this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${fieldPtr.type}* ${fieldPtr.valReg}`);

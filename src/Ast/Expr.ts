@@ -311,7 +311,7 @@ export class IndexExpr implements Expr {
 
 export class SetIndexExpr implements Expr {
     exprType: DataType;
-    array: Expr;
+    target: Expr;
     index: Expr;
     value: Expr;
     constructor(array: Expr, index: Expr, value: Expr,equals:Token) {
@@ -319,7 +319,7 @@ export class SetIndexExpr implements Expr {
         if (!isSameType(this.exprType, value.exprType)) {
             El.error(equals, "Type mismatch in assignment.")
         }
-        this.array = array;
+        this.target = array;
         this.index = index;
         this.value = value;
     }

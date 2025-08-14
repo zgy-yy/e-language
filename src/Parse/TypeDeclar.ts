@@ -1,5 +1,3 @@
-import { Structure } from "./Symbol";
-
 
 export enum SimpleKind {
     Int = "int",
@@ -67,14 +65,18 @@ export class ArrayType extends DataType {
         return "arr_" + this.elementType.toString()
     }
 }
+
+
 export class StructType extends DataType {
-    structure: Structure
-    constructor(structure: Structure) {
+    name: string
+    fields: Map<string, DataType>
+    constructor(name: string, fields: Map<string, DataType>) {
         super(DataKind.struct)
-        this.structure = structure
+        this.name = name
+        this.fields = fields
     }
     toString(): string {
-        return `struct ${this.structure.name}`
+        return `struct ${this.name}`
     }
 }
 
@@ -131,12 +133,11 @@ export function isSameType(left: DataType, right: DataType): boolean {
         case DataKind.struct:
             const structLeft = left as StructType
             const structRight = right as StructType
-            for (const [name, type] of structLeft.structure.fields) {
-                if (!isSameType(type, structRight.structure.fields.get(name))) {
+            for (const [name, type] of structLeft.fields) {
+                if (!isSameType(type, structRight.fields.get(name))) {
                     return false
                 }
             }
-            structRight.structure = structLeft.structure
             break;
         case DataKind.array:
             const arrayLeft = left as ArrayType

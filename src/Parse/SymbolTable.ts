@@ -1,9 +1,11 @@
-import { Structure, Var } from "./Symbol";
+import { Expr } from "Ast/Expr";
+import { Var } from "./Symbol";
+import { DataType, isSameType, StructType } from "./TypeDeclar";
 
 
-class Env{
+class Env {
     varEnv: Map<string, Var> = new Map<string, Var>();
-    structEnv: Map<string, Structure> = new Map<string, Structure>();
+    structEnv: Map<string, StructType> = new Map<string, StructType>();
 }
 export class SymbolTable {
     global: Env = new Env();
@@ -21,7 +23,7 @@ export class SymbolTable {
 
 
     addVariable(name: string, var_: Var) {
-        if(this.level === 0){ // 全局变量
+        if (this.level === 0) { // 全局变量
             this.global.varEnv.set(name, var_)
         }
         if (this.symTab.length === 0) {
@@ -47,7 +49,7 @@ export class SymbolTable {
         return this.symTab[this.symTab.length - 1].varEnv.has(name);
     }
 
-    addStructure(name: string, structure: Structure) {
+    addStructure(name: string, structure: StructType) {
         if (this.level === 0) {
             this.global.structEnv.set(name, structure)
         }
@@ -58,7 +60,7 @@ export class SymbolTable {
         return structure;
     }
 
-    findStructure(name: string): Structure {
+    findStructure(name: string): StructType {
         for (let i = this.symTab.length - 1; i >= 0; i--) {
             if (this.symTab[i].structEnv.has(name)) {
                 return this.symTab[i].structEnv.get(name);
@@ -66,6 +68,27 @@ export class SymbolTable {
         }
         return null;
     }
+    finddStructure(struct: { name: string, val_type: DataType }[]): StructType {
+        let structType = null
+        for (let i = this.symTab.length - 1; i >= 0; i--) {
+            this.symTab[i].structEnv.forEach((value, key) => {
+                for (let j = 0; j < struct.length; j++) {
+                    const name = struct[j].name
+                    const val_type = struct[j].val_type
+                    if (value.fields.has(name)) {
+                        if (!isSameType(value.fields.get(name), val_type)) {
+                            return
+                        }
+                    }else{
+                        return
+                    }
+                }
+                structType = value
+            })
+        }
+        return structType;
+    }
+
 
     structInCurrentScope(name: string): boolean {// 判断当前作用域是否有这个结构体
         if (this.symTab.length === 0) {

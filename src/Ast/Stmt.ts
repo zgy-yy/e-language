@@ -2,9 +2,9 @@
 * 语句节点
 */
 
-import { DataType } from "../Parse/TypeDeclar";
+import { DataType, StructType } from "../Parse/TypeDeclar";
 import { Token } from "../Lexer/Token";
-import { Structure, Var } from "../Parse/Symbol";
+import {  Var } from "../Parse/Symbol";
 import { Expr } from "./Expr";
 
 
@@ -206,9 +206,9 @@ export class ReturnStmt implements Stmt {
 
 
 export class StructStmt implements Stmt {
-    structure: Structure
-    constructor(structure: Structure) {
-        this.structure = structure;
+    struct: StructType
+    constructor(structType: StructType) {
+        this.struct = structType;
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitStructStmt(this);

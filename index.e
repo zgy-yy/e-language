@@ -38,7 +38,7 @@ tup[1]
 
 Int a =23;
 //指针类型
-@Int ptr => a;
+Int@ ptr  => a;
 ptr = 23; 
 
 

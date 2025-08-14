@@ -36,7 +36,7 @@ export class FunLable extends FuncVar {
 export class StructVar extends Var {
     fields:Map<string, DataType>
     constructor(name: string, structName: string, fields: Map<string, DataType>) {
-        const structType = new StructType(new Structure(structName, fields))
+        const structType = new StructType(structName, fields)
         super(name, structType)
         this.fields = fields
     }
@@ -48,15 +48,5 @@ export class ArrayVar extends Var {
         const arrayType = new ArrayType(elementType, length)
         super(name, arrayType)
         this.elementType = elementType
-    }
-}
-
-//  structure
-export class Structure {
-    name: string
-    fields: Map<string, DataType>
-    constructor(name: string, fields: Map<string, DataType>) {
-        this.name = name
-        this.fields = fields
     }
 }

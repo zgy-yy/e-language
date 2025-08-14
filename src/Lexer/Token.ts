@@ -38,6 +38,7 @@ export enum Tokenkind {
     //冒号
     COLON = ":",
     DOT = ".",
+    AT = "@",
     //逻辑
     BANG = "!",
     AND = "&&",

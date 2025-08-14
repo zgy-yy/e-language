@@ -1,7 +1,7 @@
 import { ArrayType, DataKind, DataType, FunType, isSameType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token"
-import { FuncVar, FunLable, Structure, Var } from "../Parse/Symbol";
+import { FuncVar, Var } from "../Parse/Symbol";
 
 /*
 * 表达式
@@ -263,8 +263,8 @@ export class CallExpr implements Expr {
 export class StructExpr implements Expr {
     exprType: DataType;
     fields: Map<string, Expr>;
-    constructor(fields: { name: string, value: Expr }[]) {
-        this.exprType = new StructType(new Structure("", new Map(fields.map(f => [f.name, f.value.exprType]))))
+    constructor(fields: { name: string, value: Expr }[],structType:StructType) {
+        this.exprType =  structType
         this.fields = new Map(fields.map(f => [f.name, f.value]))
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -334,7 +334,7 @@ export class GetFieldExpr implements Expr {
     field: string;
     constructor(struct: Expr, field: string) {
         const structType = struct.exprType as StructType
-        this.exprType = structType.structure.fields.get(field);
+        this.exprType = structType.fields.get(field);
         this.target = struct;
         this.field = field;
     } 
@@ -350,7 +350,7 @@ export class SetFieldExpr implements Expr {
     value: Expr;
     constructor(struct: Expr, field: string, value: Expr,equals:Token) {
         const structType = struct.exprType as StructType
-        this.exprType = structType.structure.fields.get(field);
+        this.exprType = structType.fields.get(field);
         if (!isSameType(this.exprType, value.exprType)) {
             El.error(equals, "Type mismatch in assignment.")
         }

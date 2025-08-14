@@ -15,7 +15,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitStructStmt(stmt: StructStmt): string {
-        return `struct ${stmt.structure.name} { ${Array.from(stmt.structure.fields.entries()).map(([name, type]) => `${type} ${name}`).join(", ")} }`;
+        return `struct ${stmt.struct.name} { ${Array.from(stmt.struct.fields.entries()).map(([name, type]) => `${type} ${name}`).join(", ")} }`;
     }
 
     visitContinueStmt(stmt: ContinueStmt): string {

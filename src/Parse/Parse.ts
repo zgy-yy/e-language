@@ -4,7 +4,7 @@ import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
 import { ArrayType, DataType, FunType, isSameType, SimpleKind, SimpleType, StructType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
-import { FuncVar, Var, FunLable, Structure, StructVar, ArrayVar } from "./Symbol";
+import { FuncVar, Var, FunLable, StructVar, ArrayVar } from "./Symbol";
 
 type funcEnclosing = {
     funcName: string,
@@ -50,7 +50,6 @@ export class Parser {
                 }
                 return this.varListDeclaration(declType)
             }
-            // this.statement ()
             throw this.error(this.peek(), "Expect declaration.")
         } catch (error) {
             if (error instanceof ParseError) {
@@ -63,17 +62,17 @@ export class Parser {
 
     // 声明类型
     declarationKind(): DataType {
+        let declType = null
         if (this.match(...this.typeKind)) {
             let kind = this.previous()//声明的类型
-            let declType = new SimpleType(SimpleKind[kind.type])//声明 类型
-            return declType
-        } else if (this.peekNext().type == Tokenkind.IDENTIFIER && this.match(Tokenkind.IDENTIFIER)) {
-            const struct_name = this.previous()
-            const struct = this.symbolTable.findStructure(struct_name.lexeme)
+            declType = new SimpleType(SimpleKind[kind.type])//声明 类型
+        } else if (this.peek().type == Tokenkind.IDENTIFIER) {
+            const struct_name = this.peek().lexeme
+            const struct = this.symbolTable.findStructure(struct_name)
             if (struct) {
-                return new StructType(struct)
-            }
-            this.error(struct_name, "Struct with this name not declared.")
+                this.advance()
+                declType = struct
+            } 
         } else if (this.match(Tokenkind.LEFT_PAREN)) {
             const paramsType: DataType[] = []
             if (!this.check(Tokenkind.RIGHT_PAREN)) {
@@ -91,22 +90,23 @@ export class Parser {
             if (this.match(...this.typeKind)) {
                 let kind = this.previous()//声明的类型
                 let retType: DataType = new SimpleType(SimpleKind[kind.type])//声明 的类型
-                return new FunType(paramsType, retType)
+                declType = new FunType(paramsType, retType)
             }
-            this.error(this.peek(), "Expect type after parameters.")
+            else {
+                this.error(this.peek(), "Expect type after parameters.")
+            }
         } else if (this.match(Tokenkind.LEFT_BRACKET)) {
             const lenExpr = this.expression()
             if (lenExpr instanceof LiteralExpr && typeof lenExpr.value === 'number') {
                 const len = lenExpr.value as number
                 this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
                 const array_type = this.declarationKind()
-                return new ArrayType(array_type, len)
+                declType = new ArrayType(array_type, len)
             } else {
                 this.error(this.peek(), "Array length must be a number literal.")
             }
-
         }
-        return null
+        return declType
     }
 
     /* 语句 statement -> printStatement | block | ifStatement | whileStatement | doWhileStatement | forStatement 
@@ -175,7 +175,7 @@ export class Parser {
         if (varT instanceof FunType) {
             var_ = new FuncVar(var_name.lexeme, varT.retType, varT.paramsType)
         } else if (varT instanceof StructType) {
-            var_ = new StructVar(var_name.lexeme, varT.structure.name, varT.structure.fields)
+            var_ = new StructVar(var_name.lexeme, varT.name, varT.fields)
         } else if (varT instanceof ArrayType) {
             var_ = new ArrayVar(var_name.lexeme, varT.elementType, varT.len)
         } else {
@@ -271,7 +271,7 @@ export class Parser {
                     const declParamVar = new FuncVar(identifier_name.lexeme, declType.retType, declType.paramsType)
                     declParamVars.push(declParamVar)
                 } else if (declType instanceof StructType) {
-                    const declParamVar = new StructVar(identifier_name.lexeme, declType.structure.name, declType.structure.fields)
+                    const declParamVar = new StructVar(identifier_name.lexeme, declType.name, declType.fields)
                     declParamVars.push(declParamVar)
                 } else {
                     const declParamVar = new Var(identifier_name.lexeme, declType)
@@ -303,7 +303,7 @@ export class Parser {
         }
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct body.")
 
-        const struct_ = new Structure(struct_name.lexeme, new Map(struct_fields.map(f => [f.name, f.type])))
+        const struct_ = new StructType(struct_name.lexeme, new Map(struct_fields.map(f => [f.name, f.type])))
         this.symbolTable.addStructure(struct_name.lexeme, struct_)
         return new StructStmt(struct_)
     }
@@ -603,7 +603,7 @@ export class Parser {
         }
 
         if (this.match(Tokenkind.LEFT_BRACE)) {
-            const fields = []
+            const fields: { name: string, value: Expr }[] = []
             while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
                 const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
                 this.consume(Tokenkind.COLON, "Expect ':' after field name.")
@@ -617,7 +617,11 @@ export class Parser {
                 }
             }
             this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct expression.")
-            return new StructExpr(fields)
+            const structType = this.symbolTable.finddStructure(fields.map(f => ({ name: f.name, val_type: f.value.exprType })))
+            if (!structType) {
+                this.error(this.peek(), "Struct with this name not declared.")
+            }
+            return new StructExpr(fields, structType)
         }
 
         // 数组表达式

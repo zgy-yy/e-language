@@ -1,5 +1,5 @@
 import { ArrayType } from "../Parse/TypeDeclar";
-import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
@@ -87,6 +87,9 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `${expr.variable.name} = ${expr.value.accept(this)}`;
     }
 
+    visitArrowExpr(expr: ArrowExpr): string {
+        return `${expr.left.accept(this)} => ${expr.right.accept(this)}`;
+    }
     visitArrayExpr(expr: ArrayExpr): string {
         return `[${expr.elements.map((e) => e.accept(this)).join(", ")}]`;
     }

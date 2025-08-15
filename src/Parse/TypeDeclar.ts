@@ -13,6 +13,7 @@ export enum DataKind {
     struct = "struct",
     array = "array",
     class = "class",
+    ptr = "ptr",
 }
 
 
@@ -89,6 +90,19 @@ export class ClassType extends DataType {
         return super.toString() + 'class'
     }
 }
+
+
+export class PtrType extends DataType {
+    elementType: DataType
+    constructor(elementType: DataType) {
+        super(DataKind.ptr)
+        this.elementType = elementType
+    }
+    toString(): string {
+        return `${this.elementType.toString()}@`
+    }
+}
+
 // 
 
 
@@ -97,12 +111,26 @@ export function isSameType(left: DataType, right: DataType): boolean {
     if (!left || !right) {
         return false
     }
+
+    if (left instanceof PtrType || right instanceof PtrType) {
+        if (left instanceof PtrType && right instanceof PtrType) {
+            return isSameType(left.elementType, right.elementType)
+        }
+        if (left instanceof PtrType) {
+            return isSameType(left.elementType, right)
+        }
+        if (right instanceof PtrType) {
+            return isSameType(left, right.elementType)
+        }
+    }
+
     const leftKind = left.kind
     const rightKind = right.kind
     // 类型不一致，直接返回 false
     if (leftKind !== rightKind) {
         return false
     }
+
     // 类型一致，继续判断具体类型
     switch (leftKind) {
         case DataKind.simple:

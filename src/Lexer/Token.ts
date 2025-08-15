@@ -33,6 +33,8 @@ export enum Tokenkind {
     XOR_EQUAL = "^=",
     LEFT_SHIFT_EQUAL = "<<=",
     RIGHT_SHIFT_EQUAL = ">>=",
+    //指针指向
+    ARROW = "=>",
     //逗号
     COMMA = ",",
     //冒号

@@ -118,7 +118,7 @@ export class Scanner {//扫描器，或称为词法分析
                 break;
             case "=":
                 this.addToken(
-                    this.match("=") ? Tokenkind.EQUAL_EQUAL : Tokenkind.EQUAL
+                    this.match("=") ? Tokenkind.EQUAL_EQUAL : this.match(">") ? Tokenkind.ARROW : Tokenkind.EQUAL
                 );
                 break;
             case "<":

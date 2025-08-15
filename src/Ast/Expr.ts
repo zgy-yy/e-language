@@ -1,4 +1,4 @@
-import { ArrayType, DataKind, DataType, FunType, isSameType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
+import { ArrayType, DataKind, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token"
 import { FuncVar, Var } from "../Parse/Symbol";
@@ -24,6 +24,7 @@ export interface ExprVisitor<R> {
     visitSetFieldExpr(expr: SetFieldExpr): R;
     visitIndexExpr(expr: IndexExpr): R;
     visitSetIndexExpr(expr: SetIndexExpr): R;
+    visitArrowExpr(expr: ArrowExpr): R;
 }
 
 export interface Expr { //表达式 基类
@@ -209,6 +210,29 @@ export class AssignExpr implements Expr {
         return visitor.visitAssignExpr(this);
     }
 
+}
+
+export class ArrowExpr implements Expr {
+    exprType: DataType;
+    left: VariableExpr;
+    right: VariableExpr|LiteralExpr;
+    constructor(left: VariableExpr, right: VariableExpr|LiteralExpr, arrow: Token) {
+        this.exprType = right.exprType;
+        this.left = left;
+        this.right = right;
+        if (left.exprType instanceof PtrType) {
+            this.exprType = left.exprType.elementType
+            if (!isSameType(left.exprType.elementType, right.exprType)) {
+                El.error(arrow, "Type mismatch in arrow expression.")
+            }
+        }else{
+            El.error(arrow, "Arrow expression must be used with pointer type.")
+        }
+       
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitArrowExpr(this);
+    }
 }
 
 // 函数调用表达式   

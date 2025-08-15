@@ -1,8 +1,8 @@
-import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
-import { ArrayType, DataType, FunType, isSameType, SimpleKind, SimpleType, StructType } from "./TypeDeclar";
+import { ArrayType, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
 import { FuncVar, Var, FunLable, StructVar, ArrayVar } from "./Symbol";
 
@@ -72,7 +72,7 @@ export class Parser {
             if (struct) {
                 this.advance()
                 declType = struct
-            } 
+            }
         } else if (this.match(Tokenkind.LEFT_PAREN)) {
             const paramsType: DataType[] = []
             if (!this.check(Tokenkind.RIGHT_PAREN)) {
@@ -105,6 +105,9 @@ export class Parser {
             } else {
                 this.error(this.peek(), "Array length must be a number literal.")
             }
+        }
+        if (this.match(Tokenkind.AT)) {
+            declType = new PtrType(declType)
         }
         return declType
     }
@@ -163,13 +166,24 @@ export class Parser {
         }
 
         let initializer = null
-        if (this.match(Tokenkind.EQUAL)) {
-            initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
 
-            if (!isSameType(varT, initializer.exprType)) {
-                El.error(this.previous(), "Initializer type does not match variable type.")
+        if (varT instanceof PtrType) {
+            if (this.match(Tokenkind.ARROW)) {
+                initializer = this.primary()
+                if (!isSameType(varT.elementType, initializer.exprType)) {
+                    El.error(this.previous(), "Initializer type does not match variable type.")
+                }
+            }
+        } else {
+            if (this.match(Tokenkind.EQUAL)) {
+                initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
+
+                if (!isSameType(varT, initializer.exprType)) {
+                    El.error(this.previous(), "Initializer type does not match variable type.")
+                }
             }
         }
+
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
         let var_ = null
         if (varT instanceof FunType) {
@@ -182,6 +196,8 @@ export class Parser {
             var_ = new Var(var_name.lexeme, varT)
         }
         this.symbolTable.addVariable(var_name.lexeme, var_)
+
+
 
         varStmt.push(new VarStmt(var_, initializer))
 
@@ -450,22 +466,30 @@ export class Parser {
     }
     //赋值表达式
     assignment(): Expr {
-        const expr = this.or()
+        const leftExpr   = this.or()
         if (this.match(Tokenkind.EQUAL)) {
             const equals = this.previous()
             const value = this.assignment()
-            if (expr instanceof VariableExpr) {
-                return new AssignExpr(expr.variable, value, equals)
+            if (leftExpr instanceof VariableExpr) {
+                return new AssignExpr(leftExpr.variable, value, equals)
             }
-            if (expr instanceof GetFieldExpr) {
-                return new SetFieldExpr(expr.target, expr.field, value, equals)
+            if (leftExpr instanceof GetFieldExpr) {
+                return new SetFieldExpr(leftExpr.target, leftExpr.field, value, equals)
             }
-            if (expr instanceof IndexExpr) {
-                return new SetIndexExpr(expr.target, expr.index, value, equals)
+            if (leftExpr instanceof IndexExpr) {
+                return new SetIndexExpr(leftExpr.target, leftExpr.index, value, equals)
             }
             El.error(equals, "Invalid assignment target.")
         }
-        return expr
+        if (this.match(Tokenkind.ARROW)) {
+            const arrow = this.previous()
+            const value = this.assignment()
+            if (leftExpr instanceof VariableExpr && (value instanceof VariableExpr || value instanceof LiteralExpr)) {
+                return new ArrowExpr(leftExpr, value, arrow)
+            }
+            El.error(arrow, "Invalid assignment target.")
+        }
+        return leftExpr
     }
     or() {
         let expr = this.and()

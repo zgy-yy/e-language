@@ -1,7 +1,7 @@
-import { ArrayExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { ArrayVar, FuncVar, FunLable, Var } from "../Parse/Symbol";
-import { ArrayType, DataType, FunType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
+import { ArrayType, DataType, FunType, PtrType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 import { Scope } from "./Scope";
 
 type ExprResult = {
@@ -329,30 +329,31 @@ declare i32 @printf(i8*, ...)
             // 全局变量
             const varType = typeToLLVM(stmt.variable.type);
             if (stmt.initializer) {
-                const initExpR = stmt.initializer.accept(this);
-                this.printIR(`${var_name} = global ${varType} ${initExpR.valReg}`);
+                if (stmt.variable instanceof PtrType) {
+                    const initVar = this.scope.findVariable(stmt.variable)
+                    this.printIR(`${var_name} = global ${varType} ${initVar}`);
+                } else {
+                    const initExpR = stmt.initializer.accept(this);
+                    this.printIR(`${var_name} = global ${varType} ${initExpR.valReg}`);
+                }
             } else {
                 this.printIR(`${var_name} = global ${varType}`);
             };
         } else {
-            // 数组变量
-            if (stmt.variable instanceof ArrayVar) {
-                const arrayType = stmt.variable.type as ArrayType
-                const varType = typeToLLVM(arrayType)
-                this.printIR(`${var_name} = alloca ${varType}`);
-                if (stmt.initializer) {
-                    const initExpR = stmt.initializer.accept(this);
-                    this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* ${var_name}`);
-                }
-            } else {
-                const varType = typeToLLVM(stmt.variable.type);
-                // 局部变量
-                this.printIR(`${var_name} = alloca ${varType}`);
-                if (stmt.initializer) {
+            const varType = typeToLLVM(stmt.variable.type);
+            // 局部变量
+            this.printIR(`${var_name} = alloca ${varType}`);
+            if (stmt.initializer) {
+                if (stmt.variable.type instanceof PtrType) {
+                    const initVar = stmt.initializer as VariableExpr
+                    const lv_varName = this.scope.findVariable(initVar.variable)
+                    this.printIR(`store ${varType} ${lv_varName}, ${varType}* ${var_name}`);
+                } else {
                     const initExpR = stmt.initializer.accept(this);
                     this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* ${var_name}`);
                 }
             }
+
         }
     }
 
@@ -364,6 +365,20 @@ declare i32 @printf(i8*, ...)
 
 
     /*-----------------------------Expr-----------------------------*/
+
+    visitArrowExpr(expr: ArrowExpr): ExprResult {
+        const leftType = typeToLLVM(expr.left.exprType)
+
+        const leftReg = this.scope.findVariable(expr.left.variable)
+        let rightReg = null
+        if (expr.right instanceof VariableExpr) {
+            rightReg = this.scope.findVariable(expr.right.variable)
+        } else {
+            rightReg = expr.right.value
+        }
+        this.printIR(`store ${leftType} ${rightReg}, ${leftType}* ${leftReg}`);
+        return { type: leftType, valReg: leftReg };
+    }
 
     //数组表达式生成
     visitArrayExpr(expr: ArrayExpr): ExprResult {
@@ -387,15 +402,15 @@ declare i32 @printf(i8*, ...)
         let targetExpR = null
         if (expr.target instanceof IndexExpr) {
             targetExpR = this.getIndexPtr(expr.target)
-        } else if (expr.target instanceof GetFieldExpr)     {
+        } else if (expr.target instanceof GetFieldExpr) {
             targetExpR = this.getFieldPtr(expr.target)
         } else if (expr.target instanceof VariableExpr) {
-            const targetVar = expr.target 
+            const targetVar = expr.target
             targetExpR = {
                 type: typeToLLVM(targetVar.variable.type),
                 valReg: this.scope.findVariable(targetVar.variable)
             }
-        }else{
+        } else {
             throw new Error("Invalid index expression.")
         }
         const indexExpR = expr.index.accept(this)
@@ -463,7 +478,14 @@ declare i32 @printf(i8*, ...)
         const valueExpR = expr.value.accept(this);
         const varType = typeToLLVM(expr.variable.type)
         const var_name = this.scope.findVariable(expr.variable)
-        this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType}* ${var_name}`);
+        if (expr.variable.type instanceof PtrType) {
+            const n = this.sequence.reg++;
+            const temp_ptr = `${var_name}_ptr_${n}`
+            this.printIR(`${temp_ptr} = load ${varType}, ${varType}* ${var_name}`);
+            this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType} ${temp_ptr}`);
+        } else {
+            this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType}* ${var_name}`);
+        }
         return valueExpR
     }
 
@@ -547,7 +569,7 @@ declare i32 @printf(i8*, ...)
     //前缀自增自减表达式生成
     visitPrefixSelfExpr(expr: PrefixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
-        const var_ = expr.right 
+        const var_ = expr.right
         const rightExpR = var_.accept(this);
         const rightType = rightExpR.type
         const rightReg = rightExpR.valReg
@@ -556,7 +578,7 @@ declare i32 @printf(i8*, ...)
             ir_var_name = this.scope.findVariable(var_.variable) //ir中变量
         } else if (var_ instanceof GetFieldExpr) {
             ir_var_name = this.getFieldPtr(var_).valReg
-        }else if (var_ instanceof IndexExpr) {
+        } else if (var_ instanceof IndexExpr) {
             ir_var_name = this.getIndexPtr(var_).valReg
         }
         let new_val = `%reg_prefix_${n}`
@@ -582,13 +604,13 @@ declare i32 @printf(i8*, ...)
         let new_val = `%reg_suffix_${n}`
 
         let ir_var_name = null
-     
+
         if (left instanceof VariableExpr) {
-           const leftVar = left.variable
-           ir_var_name = this.scope.findVariable(leftVar)
+            const leftVar = left.variable
+            ir_var_name = this.scope.findVariable(leftVar)
         } else if (left instanceof GetFieldExpr) {
             ir_var_name = this.getFieldPtr(left).valReg
-        }else if (left instanceof IndexExpr) {
+        } else if (left instanceof IndexExpr) {
             ir_var_name = this.getIndexPtr(left).valReg
         }
         if (expr.operator.lexeme === '++') {
@@ -626,7 +648,7 @@ declare i32 @printf(i8*, ...)
         let targetExpR = null
         if (expr.target instanceof GetFieldExpr) {
             targetExpR = this.getFieldPtr(expr.target)
-        }else if (expr.target instanceof IndexExpr) {
+        } else if (expr.target instanceof IndexExpr) {
             targetExpR = this.getIndexPtr(expr.target)
         } else if (expr.target instanceof VariableExpr) {
             const targetVar = expr.target as VariableExpr
@@ -634,7 +656,7 @@ declare i32 @printf(i8*, ...)
                 type: typeToLLVM(targetVar.variable.type),
                 valReg: this.scope.findVariable(targetVar.variable)
             }
-        }else{
+        } else {
             throw new Error("Invalid field expression.")
         }
         const targetType = targetExpR.type
@@ -664,7 +686,7 @@ declare i32 @printf(i8*, ...)
         const reg_field = `%reg_field_${expr.field}_${n}`
         const structType = expr.target.exprType as StructType
         this.printIR(`${reg_field} = load ${field_type}, ${field_type}* ${field_val}`);
-        return { type: field_type, valReg: reg_field }; 
+        return { type: field_type, valReg: reg_field };
     }
     visitSetFieldExpr(expr: SetFieldExpr): ExprResult {
         const valueExpR = expr.value.accept(this);
@@ -686,6 +708,12 @@ declare i32 @printf(i8*, ...)
             const params = funVar.paramTypes.map(p => typeToLLVM(p))
             this.printIR(`${var_name_n} = bitcast ${retType} (${params.join(', ')})* ${var_name} to ${retType} (${params.join(', ')})*`);
             return { type: retType, valReg: var_name_n };
+        } else if (expr.variable.type instanceof PtrType) {
+            const temp_ptr = `${var_name}_ptr_${n}`
+            const elementType = typeToLLVM(expr.variable.type.elementType)
+            this.printIR(`${temp_ptr} = load ${varType}, ${varType}* ${var_name}`);
+            this.printIR(`${var_name_n} = load ${elementType}, ${elementType}* ${temp_ptr}`);
+            return { type: elementType, valReg: var_name_n };
         } else {
             this.printIR(`${var_name_n} = load ${varType}, ${varType}* ${var_name}`);
             return { type: varType, valReg: var_name_n };
@@ -730,6 +758,10 @@ function typeToLLVM(type: DataType): string {
     }
     if (type instanceof ArrayType) {
         return `[${type.len} x ${typeToLLVM(type.elementType)}]`
+    }
+    //指针类型  
+    if (type instanceof PtrType) {
+        return `${typeToLLVM(type.elementType)}*`
     }
     return "null";
 }   

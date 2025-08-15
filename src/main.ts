@@ -6,7 +6,7 @@ import { Parser } from "./Parse/Parse"
 let code = ""
 
 async function main() {
-    const test_path = "./test/array.e"
+    const test_path = "./test/ptr.e"
     // 读取测试文件
     if (checkEnv() == 'node') {
         const fs = await import('fs')

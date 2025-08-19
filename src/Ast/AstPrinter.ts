@@ -69,7 +69,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         // 获取变量类型
         const varType = stmt.varStmts[0].variable.type
         if (varType instanceof ArrayType) {
-            return `[${varType.len}]${varType.elementType.toString()} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
+            return `${varType.toString()} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
         }
         return `${varType} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
 
@@ -97,7 +97,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `${expr.target.accept(this)}[${expr.index.accept(this)}]`;
     }
     visitSetIndexExpr(expr: SetIndexExpr): string {
-        return `${expr.target.accept(this)}[${expr.index.accept(this)}] = ${expr.value.accept(this)}`;
+        return `${expr.target.accept(this,true)} = ${expr.value.accept(this)}`;
     }
 
     visitStructExpr(expr: StructExpr): string {
@@ -109,7 +109,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitSetFieldExpr(expr: SetFieldExpr): string {
-        return `${expr.target.accept(this)}.${expr.field} = ${expr.value.accept(this)}`;
+        return `${expr.target.accept(this,true)} = ${expr.value.accept(this)}`;
     }
 
     visitVariableExpr(expr: VariableExpr): string {

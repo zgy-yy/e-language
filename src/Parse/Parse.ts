@@ -478,10 +478,10 @@ export class Parser {
                 }
             }
             if (leftExpr instanceof GetFieldExpr) {
-                return new SetFieldExpr(leftExpr, leftExpr.field, value, equals)
+                return new SetFieldExpr(leftExpr, value, equals)
             }
             if (leftExpr instanceof IndexExpr) {
-                return new SetIndexExpr(leftExpr.target, leftExpr.index, value, equals)
+                return new SetIndexExpr(leftExpr, value, equals)
             }
             El.error(equals, "Invalid assignment target.")
         }

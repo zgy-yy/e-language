@@ -1,4 +1,3 @@
-import { Expr } from "Ast/Expr"
 import { ArrayType, DataType, FunType, StructType } from "./TypeDeclar"
 
 export class Var {

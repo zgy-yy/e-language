@@ -63,7 +63,7 @@ export class ArrayType extends DataType {
         this.len = length
     }
     toString(): string {
-        return "arr_" + this.elementType.toString()
+        return `[${this.len}]${this.elementType.toString()}`
     }
 }
 

@@ -327,9 +327,13 @@ export class IndexExpr implements Expr {
     index: Expr;
     operator: Token;
     constructor(target: Expr, index: Expr) {
-        this.exprType = (target.exprType as ArrayType).elementType;
-        this.target = target;
-        this.index = index;
+        if(target.exprType instanceof ArrayType){
+            this.exprType = target.exprType.elementType;
+            this.target = target;
+            this.index = index;
+        }else{
+            El.error(null, "Index expression must be used with array.")
+        }
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitIndexExpr(this, isLeft);
@@ -339,16 +343,18 @@ export class IndexExpr implements Expr {
 export class SetIndexExpr implements Expr {
     exprType: DataType;
     target: Expr;
-    index: Expr;
     value: Expr;
     operator: Token;
-    constructor(array: Expr, index: Expr, value: Expr, equals: Token) {
-        this.exprType = (array.exprType as ArrayType).elementType;
+    constructor(array: Expr, value: Expr, equals: Token) {
+        if(array instanceof IndexExpr){
+            this.exprType = array.exprType;
+        }else{
+            El.error(equals, "Type mismatch in assignment.")
+        }
         if (!isSameType(this.exprType, value.exprType)) {
             El.error(equals, "Type mismatch in assignment.")
         }
         this.target = array;
-        this.index = index;
         this.value = value;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -384,17 +390,18 @@ export class GetFieldExpr implements Expr {
 export class SetFieldExpr implements Expr {
     exprType: DataType;
     target: Expr;
-    field: string;
     value: Expr;
     operator: Token;
-    constructor(struct: Expr, field: string, value: Expr, equals: Token) {
-        console.log("setfield111", struct, field, value)
-        this.exprType = struct.exprType
+    constructor(struct: Expr, value: Expr, equals: Token) {
+        if(struct instanceof GetFieldExpr){
+            this.exprType = struct.exprType;
+        }else{
+            El.error(equals, "Type mismatch in assignment.")
+        }
         if (!isSameType(this.exprType, value.exprType)) {
             El.error(equals, "Type mismatch in assignment.")
         }
         this.target = struct
-        this.field = field;
         this.value = value;
         this.operator = equals;
     }

@@ -395,36 +395,37 @@ declare i32 @printf(i8*, ...)
 
         return { type: array_type, valReg: undef_array };
     }
-    visitIndexExpr(expr: IndexExpr,isLeft:boolean): ExprResult {
+    visitIndexExpr(expr: IndexExpr, isLeft: boolean): ExprResult {
         const n = this.sequence.reg++;
-        const targetExpR = expr.target.accept(this)
+        console.log("index",expr)
+        const targetExpR = expr.target.accept(this,isLeft)
         const targetType = targetExpR.type
         const targetVal = targetExpR.valReg
 
         const indexExpR = expr.index.accept(this)
-        const indexType = indexExpR.type
+        const fieldType = typeToLLVM(expr.exprType)
         const indexVal = indexExpR.valReg
         const indexPtr = `%reg_index_ptr_${n}`
         const indexReg = `%reg_index_${n}`
-        if(isLeft){
-            this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},${indexType} 0, ${indexType} ${indexVal}`);
-            return { type: indexType, valReg: indexPtr };
-        }else{
+        if (isLeft) {
+            this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},i32 0, i32 ${indexVal}`);
+            return { type: fieldType, valReg: indexPtr };
+        } else {
             const tempArr = `%temp_arr_${n}`
-            if(targetType.endsWith("]")){
+            if (targetType.endsWith("]")) {
                 this.printIR(`${tempArr} = alloca ${targetType}`);
                 this.printIR(`store ${targetType} ${targetVal}, ${targetType}* ${tempArr}`);
-                this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${tempArr},${indexType} 0, ${indexType} ${indexVal}`);
-                this.printIR(`${indexReg} = load ${indexType}, ${indexType}* ${indexPtr}`);
-            }else{
-                
+                this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${tempArr},i32 0, i32 ${indexVal}`);
+                this.printIR(`${indexReg} = load ${fieldType}, ${fieldType}* ${indexPtr}`);
+            } else {
             }
-            return { type: indexType, valReg: indexReg };
+            return { type: fieldType, valReg: indexReg };
         }
     }
 
     visitSetIndexExpr(expr: SetIndexExpr): ExprResult {
-        const index_ptr = expr.target.accept(this,true)
+        console.log("setIndex",expr)
+        const index_ptr = expr.target.accept(this, true)
         const valueExpR = expr.value.accept(this)
         this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${index_ptr.type}* ${index_ptr.valReg}`);
         return valueExpR
@@ -628,40 +629,40 @@ declare i32 @printf(i8*, ...)
     }
 
 
-    visitGetFieldExpr(expr: GetFieldExpr,isLeft:boolean): ExprResult {
+    visitGetFieldExpr(expr: GetFieldExpr, isLeft: boolean): ExprResult {
         const n = this.sequence.reg++;
-        const leftExpR = expr.target.accept(this,isLeft)
+        const leftExpR = expr.target.accept(this, isLeft)
         const leftType = leftExpR.type
         const leftVal = leftExpR.valReg
         const field_type = typeToLLVM(expr.exprType)
         let retType = leftType
         const field_val = `%reg_field_${expr.field}_${n}`
         let field_index = -1
-        if(expr.target.exprType instanceof StructType){
+        if (expr.target.exprType instanceof StructType) {
             field_index = expr.target.exprType.fields.findIndex((f) => f.field === expr.field)
-        }else if(expr.target.exprType instanceof PtrType){
-            if(expr.target.exprType.elementType instanceof StructType){
+        } else if (expr.target.exprType instanceof PtrType) {
+            if (expr.target.exprType.elementType instanceof StructType) {
                 field_index = expr.target.exprType.elementType.fields.findIndex((f) => f.field === expr.field)
             }
         }
-        if(field_index === -1){
+        if (field_index === -1) {
             throw new Error("Invalid field expression.")
         }
-        if(isLeft){
+        if (isLeft) {
             this.printIR(`${field_val} = getelementptr ${leftType}, ${leftType}* ${leftVal}, i32 0, i32 ${field_index}`);
             retType = field_type
-        }else{
-            if(leftType.endsWith("*")){ // 左值为指针
+        } else {
+            if (leftType.endsWith("*")) { // 左值为指针
                 this.printIR(`${field_val} = load ${field_type}, ${leftType} ${leftVal}`);
-            }else{
+            } else {
                 this.printIR(`${field_val} = extractvalue ${leftType} ${leftVal}, ${field_index}`);
                 retType = field_type
             }
         }
-        return { type: retType, valReg: field_val }; 
+        return { type: retType, valReg: field_val };
     }
     visitSetFieldExpr(expr: SetFieldExpr): ExprResult {
-        const leftExpR = expr.target.accept(this,true)
+        const leftExpR = expr.target.accept(this, true)
         const valueExpR = expr.value.accept(this);
         this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${leftExpR.type}* ${leftExpR.valReg}`);
         return valueExpR;

@@ -18,8 +18,9 @@ B b={
 };
 
 int main(){ 
-
+   int c= ++a.age;
     print a.age;
+    print ++c;
 
     return 0;
 }

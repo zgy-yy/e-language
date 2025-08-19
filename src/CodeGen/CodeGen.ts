@@ -56,9 +56,6 @@ declare i32 @printf(i8*, ...)
         stmt.forEach(stmt => {
             stmt.accept(this);
         });
-
-
-
         const codeText = CodeGen.codeText.decle.join('\n') + '\n' + CodeGen.codeText.ir.join('\n')
         console.log('CodeGen.codeText:\n', codeText);
         return codeText;
@@ -118,8 +115,8 @@ declare i32 @printf(i8*, ...)
     visitLoopStmt(stmt: LoopStmt): void {
         this.scope.enterScope("loop")
         const n = this.sequence.loop++;
-        const dec_body = `loop_body_${n}`
-        const dec_end = `loop_end_${n}`
+        const dec_body = `loop_body${n}`
+        const dec_end = `loop_end${n}`
         const body_label = `%${dec_body}`
         const end_label = `%${dec_end}`
         this.enclosing.push({
@@ -138,11 +135,11 @@ declare i32 @printf(i8*, ...)
         this.scope.enterScope("for")
         const n = this.sequence.for++;
 
-        const dec_init = `for_init_${n}`
-        const dec_cond = `for_cond_${n}`
-        const dec_inc = `for_inc_${n}`
-        const dec_body = `for_body_${n}`
-        const dec_end = `for_end_${n}`
+        const dec_init = `for_init${n}`
+        const dec_cond = `for_cond${n}`
+        const dec_inc = `for_inc${n}`
+        const dec_body = `for_body${n}`
+        const dec_end = `for_end${n}`
 
         const init_label = `%${dec_init}`
         const cond_label = `%${dec_cond}`
@@ -164,7 +161,7 @@ declare i32 @printf(i8*, ...)
 
         if (stmt.condition) {
             const condExpR = stmt.condition.accept(this);
-            const cond_val = `%reg_forCond_${n}`
+            const cond_val = `%reg_forCond${n}`
             this.printIR(`${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
             this.printIR(`br i1 ${cond_val}, label ${body_label}, label ${end_label}`);
         } else {
@@ -191,9 +188,9 @@ declare i32 @printf(i8*, ...)
     visitDoWhileStmt(stmt: DoWhileStmt): void {
         this.scope.enterScope("doWhile")
         const n = this.sequence.doWhile++;
-        const dec_body = `do_body_${n}`
-        const dec_cond = `do_cond_${n}`
-        const dec_end = `do_end_${n}`
+        const dec_body = `do_body${n}`
+        const dec_cond = `do_cond${n}`
+        const dec_end = `do_end${n}`
 
         const body_label = `%${dec_body}`
         const cond_label = `%${dec_cond}`
@@ -213,7 +210,7 @@ declare i32 @printf(i8*, ...)
         this.printIR(`${dec_cond}:`);
 
         const condExpR = stmt.condition.accept(this);
-        const cond_val = `%reg_doCond_${n}`
+        const cond_val = `%reg_doCond${n}`
         this.printIR(`${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
         this.printIR(`br i1 ${cond_val}, label ${body_label}, label ${end_label}`);
 
@@ -226,9 +223,9 @@ declare i32 @printf(i8*, ...)
         this.scope.enterScope("while")
         const n = this.sequence.while++;
         //标签名
-        const dec_cond = `while_cond_${n}`
-        const dec_body = `while_body_${n}`
-        const dec_end = `while_end_${n}`
+        const dec_cond = `while_cond${n}`
+        const dec_body = `while_body${n}`
+        const dec_end = `while_end${n}`
         const cond_label = `%${dec_cond}`
         const body_label = `%${dec_body}`
         const end_label = `%${dec_end}`
@@ -242,7 +239,7 @@ declare i32 @printf(i8*, ...)
         this.printIR(`${dec_cond}:`);
 
         const condExpR = stmt.condition.accept(this);
-        const cond_val = `%reg_whileCond_${n}`
+        const cond_val = `%reg_whileCond${n}`
         this.printIR(`${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
         this.printIR(`br i1 ${cond_val}, label ${body_label}, label ${end_label}`);
 
@@ -261,15 +258,15 @@ declare i32 @printf(i8*, ...)
         this.scope.enterScope("if")
         const n = this.sequence.if++;
         const condExpR = stmt.condition.accept(this);
-        const dec_then = `if_then_${n}`
-        const dec_else = `if_else_${n}`
-        const dec_end = `if_end_${n}`
+        const dec_then = `if_then${n}`
+        const dec_else = `if_else${n}`
+        const dec_end = `if_end${n}`
 
         const then_label = `%${dec_then}`
         const else_label = `%${dec_else}`
         const end_label = `%${dec_end}`
 
-        const cond_val = `%reg_ifCond_${n}`
+        const cond_val = `%reg_ifCond${n}`
         this.printIR(`${cond_val} = icmp ne ${condExpR.type} ${condExpR.valReg}, 0`);
 
         if (stmt.elseBranch) {
@@ -395,7 +392,7 @@ declare i32 @printf(i8*, ...)
             for (let i = 0; i < expr.elements.length; i++) {
                 const elExprR = expr.elements[i].accept(this);
                 const element_type = this.typeToLLVM(expr.elements[i].exprType)
-                const regName = `%temp_${n}_${i}`
+                const regName = `%temp_arr${n}_${i}`
                 this.printIR(`${regName} = insertvalue ${array_type} ${undef_array}, ${element_type} ${elExprR.valReg}, ${i}`);
                 undef_array = regName
             }
@@ -412,13 +409,14 @@ declare i32 @printf(i8*, ...)
         const indexExpR = expr.index.accept(this)
         const fieldType = this.typeToLLVM(expr.exprType)
         const indexVal = indexExpR.valReg
-        const indexPtr = `%reg_index_ptr_${n}`
-        const indexReg = `%reg_index_${n}`
+
+        const indexPtr = `%reg_index_ptr${n}`
+        const indexReg = `%reg_index${n}`
         if (isLeft) {
             this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},i32 0, i32 ${indexVal}`);
             return { type: fieldType, valReg: indexPtr };
         } else {
-            const tempArr = `%temp_arr_${n}`
+            const tempArr = `%temp_arr${n}`
             if (targetType.endsWith("]")) {
                 this.printIR(`${tempArr} = alloca ${targetType}`);
                 this.printIR(`store ${targetType} ${targetVal}, ${targetType}* ${tempArr}`);
@@ -452,7 +450,7 @@ declare i32 @printf(i8*, ...)
                     const field_exprR = f.value.accept(this);
                     const field_type = field_exprR.type
                     const field_val = field_exprR.valReg
-                    const regName = `%temp_${n}_${f.field}`
+                    const regName = `%temp_struct${n}_${f.field}`
                     this.printIR(`${regName} = insertvalue ${this.typeToLLVM(expr.exprType)} ${undef_struct}, ${field_type} ${field_val}, ${index}`);
                     undef_struct = regName;
                 })
@@ -469,7 +467,7 @@ declare i32 @printf(i8*, ...)
         const leftExpR = expr.left.accept(this);
         const rightExpR = expr.right.accept(this);
         const n = this.sequence.reg++;
-        const logical_val = `%reg_logical_${n}`
+        const logical_val = `%reg_logical${n}`
 
         if (expr.operator.lexeme === '&&') {
             this.printIR(`${logical_val} = and i1 ${leftExpR.valReg}, ${rightExpR.valReg}`);
@@ -506,7 +504,7 @@ declare i32 @printf(i8*, ...)
 
         const retType = this.typeToLLVM(expr.exprType)
 
-        const bin_val = `%reg_bin_${n}`
+        const bin_val = `%reg_bin${n}`
 
 
         switch (expr.operator.lexeme) {
@@ -553,7 +551,7 @@ declare i32 @printf(i8*, ...)
         const rightExpR = expr.right.accept(this);
         const rightType = rightExpR.type
         const n = this.sequence.reg++;
-        const unary_val = `%reg_unary_${n}`
+        const unary_val = `%reg_unary${n}`
         switch (expr.operator.lexeme) {
             case '-':
                 this.printIR(`${unary_val} = sub ${rightType} 0, ${rightExpR.valReg}`);
@@ -570,27 +568,24 @@ declare i32 @printf(i8*, ...)
     visitPrefixSelfExpr(expr: PrefixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
         const var_ = expr.right
-        const rightExpR = var_.accept(this);
+        const rightExpR = var_.accept(this,true);
         const rightType = rightExpR.type
         const rightReg = rightExpR.valReg
-        let ir_var_name = null
-        if (var_ instanceof VariableExpr) {
-            ir_var_name = this.scope.findVariable(var_.variable) //ir中变量
-        } else if (var_ instanceof GetFieldExpr) {
-            ir_var_name = rightReg
-        } else if (var_ instanceof IndexExpr) {
-            ir_var_name = rightReg
-        }
-        let new_val = `%reg_prefix_${n}`
+        let ir_var_name = rightReg
+
+        let newReg = `%reg_prefix${n}`
+         const oldReg = `%reg_old${n}`
 
         if (expr.operator.lexeme === '++') {
-            this.printIR(`${new_val} = add ${rightType} ${rightReg}, 1`);
+            this.printIR(`${oldReg} = load ${rightType} , ${rightType}* ${rightReg}`);
+            this.printIR(`${newReg} = add ${rightType} ${oldReg}, 1`);
         } else {
-            this.printIR(`${new_val} = sub ${rightType} ${rightReg}, 1`);
+            this.printIR(`${oldReg} = load ${rightType} , ${rightType}* ${rightReg}`);
+            this.printIR(`${newReg} = sub ${rightType} ${oldReg}, 1`);
         }
-        this.printIR(`store ${rightType} ${new_val}, ${rightType}* ${ir_var_name}`);
+        this.printIR(`store ${rightType} ${newReg}, ${rightType}* ${ir_var_name}`);
 
-        return { type: rightType, valReg: new_val };
+        return { type: rightType, valReg: newReg };
     }
 
     //后缀表达式生成
@@ -598,29 +593,25 @@ declare i32 @printf(i8*, ...)
         const n = this.sequence.reg++;
         const left = expr.left;
 
-        const leftExpR = left.accept(this)
+        const leftExpR = left.accept(this,true)
         const leftType = leftExpR.type
         const leftReg = leftExpR.valReg
-        let new_val = `%reg_suffix_${n}`
+        let newReg = `%reg_suffix${n}`
 
-        let ir_var_name = null
+        let ir_var_name = leftReg
 
-        if (left instanceof VariableExpr) {
-            const leftVar = left.variable
-            ir_var_name = this.scope.findVariable(leftVar)
-        } else if (left instanceof GetFieldExpr) {
-            ir_var_name = leftReg
-        } else if (left instanceof IndexExpr) {
-            ir_var_name = leftReg
-        }
+        const oldReg = `%reg_old${n}`
         if (expr.operator.lexeme === '++') {
-            this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
+            
+            this.printIR(`${oldReg} = load ${leftType} , ${leftType}* ${leftReg}`);
+            this.printIR(`${newReg} = add ${leftType} ${oldReg}, 1`);
         } else if (expr.operator.lexeme === '--') {
-            this.printIR(`${new_val} = sub ${leftType} ${leftReg}, 1`);
+            this.printIR(`${oldReg} = load ${leftType} , ${leftType}* ${leftReg}`);
+            this.printIR(`${newReg} = sub ${leftType} ${oldReg}, 1`);
         }
 
-        this.printIR(`store ${leftType} ${new_val}, ${leftType}* ${ir_var_name}`);
-        return leftExpR;
+        this.printIR(`store ${leftType} ${newReg}, ${leftType}* ${ir_var_name}`);
+        return { type: leftType, valReg: oldReg };
     }
 
     visitCallExpr(expr: CallExpr): ExprResult {
@@ -634,7 +625,7 @@ declare i32 @printf(i8*, ...)
         });
         const calleeExpR = expr.callee.accept(this);
         const retType = this.typeToLLVM(expr.exprType)
-        const var_name = `%reg_call_${n}`
+        const var_name = `%reg_call${n}`
         if (retType == 'void') {
             this.printIR(`call ${retType} ${calleeExpR.valReg}(${args.map(arg => `${arg.type} ${arg.value}`).join(', ')})`);
         } else {
@@ -651,7 +642,7 @@ declare i32 @printf(i8*, ...)
         const leftVal = leftExpR.valReg
         const field_type = this.typeToLLVM(expr.exprType)
         let retType = leftType
-        const field_val = `%reg_field_${expr.field}_${n}`
+        const field_val = `%reg_field${expr.field}_${n}`
         let field_index = -1
         if (expr.target.exprType instanceof StructType) {
             field_index = expr.target.exprType.fields.findIndex((f) => f.field === expr.field)

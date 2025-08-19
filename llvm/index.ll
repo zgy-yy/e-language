@@ -13,8 +13,18 @@
 ; 函数定义
 define i32 @main() {
 entry:
-    %reg_a4 = load %struct.global.A, %struct.global.A* @global.a  ; 加载变量值
-    %reg_field_age_3 = extractvalue %struct.global.A %reg_a4, 0
-    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_field_age_3)  ; 函数调用
+    %main.c = alloca i32  ; 分配局部变量
+    %reg_fieldage_4 = getelementptr %struct.global.A, %struct.global.A* @global.a, i32 0, i32 0  ; 获取数组元素指针
+    %reg_old3 = load i32 , i32* %reg_fieldage_4  ; 加载变量值
+    %reg_prefix3 = add i32 %reg_old3, 1
+    store i32 %reg_prefix3, i32* %reg_fieldage_4  ; 存储值到变量
+    store i32 %reg_prefix3, i32* %main.c  ; 存储值到变量
+    %reg_a7 = load %struct.global.A, %struct.global.A* @global.a  ; 加载变量值
+    %reg_fieldage_6 = extractvalue %struct.global.A %reg_a7, 0
+    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_fieldage_6)  ; 函数调用
+    %reg_old8 = load i32 , i32* %main.c  ; 加载变量值
+    %reg_prefix8 = add i32 %reg_old8, 1
+    store i32 %reg_prefix8, i32* %main.c  ; 存储值到变量
+    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_prefix8)  ; 函数调用
     ret i32 0  ; 返回
     }

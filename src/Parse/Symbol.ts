@@ -34,11 +34,11 @@ export class FunLable extends FuncVar {
 }
 
 export class StructVar extends Var {
-    fields:Map<string, DataType>
-    constructor(name: string, structName: string, fields: Map<string, DataType>) {
+    fields: { field: string, type: DataType }[]
+    constructor(name: string, structName: string, fields: { field: string, type: DataType }[]) {
         const structType = new StructType(structName, fields)
         super(name, structType)
-        this.fields = fields
+        this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
     }
 }
 

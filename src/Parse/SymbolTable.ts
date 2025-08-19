@@ -75,8 +75,8 @@ export class SymbolTable {
                 for (let j = 0; j < struct.length; j++) {
                     const name = struct[j].name
                     const val_type = struct[j].val_type
-                    if (value.fields.has(name)) {
-                        if (!isSameType(value.fields.get(name), val_type)) {
+                    if (value.fields.find(f => f.field === name)) {
+                        if (!isSameType(value.fields.find(f => f.field === name).type, val_type)) {
                             return
                         }
                     }else{

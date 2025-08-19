@@ -70,11 +70,11 @@ export class ArrayType extends DataType {
 
 export class StructType extends DataType {
     name: string
-    fields: Map<string, DataType>
-    constructor(name: string, fields: Map<string, DataType>) {
+    fields: { field: string, type: DataType }[]
+    constructor(name: string, fields: { field: string, type: DataType }[]) {
         super(DataKind.struct)
         this.name = name
-        this.fields = fields
+        this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
     }
     toString(): string {
         return `struct ${this.name}`
@@ -161,8 +161,14 @@ export function isSameType(left: DataType, right: DataType): boolean {
         case DataKind.struct:
             const structLeft = left as StructType
             const structRight = right as StructType
-            for (const [name, type] of structLeft.fields) {
-                if (!isSameType(type, structRight.fields.get(name))) {
+            if (structLeft.name !== structRight.name) {
+                return false
+            }
+            if (structLeft.fields.length !== structRight.fields.length) {
+                return false
+            }
+            for (let i = 0; i < structLeft.fields.length; i++) {
+                if (!isSameType(structLeft.fields[i].type, structRight.fields[i].type)) {
                     return false
                 }
             }

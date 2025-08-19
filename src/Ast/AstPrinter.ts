@@ -15,7 +15,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitStructStmt(stmt: StructStmt): string {
-        return `struct ${stmt.struct.name} { ${Array.from(stmt.struct.fields.entries()).map(([name, type]) => `${type} ${name}`).join(", ")} }`;
+        return `struct ${stmt.struct.name} { ${stmt.struct.fields.map((f) => `${f.type} ${f.field}`).join(", ")} }`;
     }
 
     visitContinueStmt(stmt: ContinueStmt): string {
@@ -84,11 +84,11 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitAssignExpr(expr: AssignExpr): string {
-        return `${expr.variable.name} = ${expr.value.accept(this)}`;
+        return `${expr.variable.accept(this,true)} = ${expr.value.accept(this)}`;
     }
 
     visitArrowExpr(expr: ArrowExpr): string {
-        return `${expr.left.accept(this)} => ${expr.right.accept(this)}`;
+        return `${expr.left.accept(this,true)} => ${expr.right.accept(this,true)}`;
     }
     visitArrayExpr(expr: ArrayExpr): string {
         return `[${expr.elements.map((e) => e.accept(this)).join(", ")}]`;
@@ -101,7 +101,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitStructExpr(expr: StructExpr): string {
-        return `{ ${Array.from(expr.fields.entries()).map(([name, value]) => `${name}: ${value.accept(this)}`).join(", ")} }`;
+        return `{ ${expr.fields.map((f) => `${f.field}: ${f.value.accept(this)}`).join(", ")} }`;
     }
 
     visitGetFieldExpr(expr: GetFieldExpr): string {

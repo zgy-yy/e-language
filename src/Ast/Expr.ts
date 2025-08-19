@@ -14,22 +14,22 @@ export interface ExprVisitor<R> {
     visitSuffixSelfExpr(expr: SuffixSelfExpr): R;
     visitPrefixSelfExpr(expr: PrefixSelfExpr): R;
     visitLiteralExpr(expr: LiteralExpr): R;
-    visitVariableExpr(expr: VariableExpr): R;
+    visitVariableExpr(expr: VariableExpr, isLeft: boolean): R;
     visitAssignExpr(expr: AssignExpr): R;
     visitGroupingExpr(expr: GroupingExpr): R;
     visitLogicalBinaryExpr(expr: LogicalBinaryExpr): R;
     visitCallExpr(expr: CallExpr): R;
     visitCommaExpr(expr: CommaExpr): R;
-    visitGetFieldExpr(expr: GetFieldExpr): R;
+    visitGetFieldExpr(expr: GetFieldExpr, isLeft: boolean): R;
     visitSetFieldExpr(expr: SetFieldExpr): R;
-    visitIndexExpr(expr: IndexExpr): R;
+    visitIndexExpr(expr: IndexExpr, isLeft: boolean): R;
     visitSetIndexExpr(expr: SetIndexExpr): R;
     visitArrowExpr(expr: ArrowExpr): R;
 }
 
 export interface Expr { //表达式 基类
     exprType: DataType;
-    accept<R>(visitor: ExprVisitor<R>): R;
+    accept<R>(visitor: ExprVisitor<R>, data?: any): R;
 }
 
 
@@ -174,8 +174,8 @@ export class VariableExpr implements Expr {
         this.exprType = var_.type;
         this.variable = var_;
     }
-    accept<R>(visitor: ExprVisitor<R>): R {
-        return visitor.visitVariableExpr(this);
+    accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
+        return visitor.visitVariableExpr(this, isLeft);
     }
 }
 
@@ -194,17 +194,18 @@ export class GroupingExpr implements Expr {
 
 export class AssignExpr implements Expr {
     exprType: DataType;
-    variable: Var;
+    variable: VariableExpr;
     operator: Token;
     value: Expr;
-    constructor(var_: Var, value: Expr, operator: Token) {
-        if (!isSameType(var_.type, value.exprType)) {
+    constructor(var_: VariableExpr, value: Expr, operator: Token) {
+        if (!isSameType(var_.exprType, value.exprType)) {
             El.error(operator, "Type mismatch in assignment.")
         }
 
-        this.exprType = var_.type;
+        this.exprType = var_.exprType;
         this.variable = var_;
         this.value = value;
+        this.operator = operator;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitAssignExpr(this);
@@ -215,20 +216,22 @@ export class AssignExpr implements Expr {
 export class ArrowExpr implements Expr {
     exprType: DataType;
     left: VariableExpr;
-    right: VariableExpr|LiteralExpr;
-    constructor(left: VariableExpr, right: VariableExpr|LiteralExpr, arrow: Token) {
+    right: VariableExpr | LiteralExpr;
+    arrow: Token;
+    constructor(left: VariableExpr, right: VariableExpr | LiteralExpr, arrow: Token) {
         this.exprType = right.exprType;
         this.left = left;
         this.right = right;
+        this.arrow = arrow;
         if (left.exprType instanceof PtrType) {
             this.exprType = left.exprType.elementType
             if (!isSameType(left.exprType.elementType, right.exprType)) {
                 El.error(arrow, "Type mismatch in arrow expression.")
             }
-        }else{
+        } else {
             El.error(arrow, "Arrow expression must be used with pointer type.")
         }
-       
+
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitArrowExpr(this);
@@ -286,10 +289,10 @@ export class CallExpr implements Expr {
 
 export class StructExpr implements Expr {
     exprType: DataType;
-    fields: Map<string, Expr>;
-    constructor(fields: { name: string, value: Expr }[],structType:StructType) {
-        this.exprType =  structType
-        this.fields = new Map(fields.map(f => [f.name, f.value]))
+    fields: { field: string, value: Expr }[];
+    constructor(fields: { field: string, value: Expr }[], structType: StructType) {
+        this.exprType = structType
+        this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitStructExpr(this);
@@ -309,7 +312,6 @@ export class ArrayExpr implements Expr {
                     El.error(null, "Type mismatch in array expression.")
                 }
             }
-
             this.exprType = new ArrayType(elementType, elements.length)
         }
         this.elements = elements
@@ -323,13 +325,14 @@ export class IndexExpr implements Expr {
     exprType: DataType;
     target: Expr;
     index: Expr;
+    operator: Token;
     constructor(target: Expr, index: Expr) {
         this.exprType = (target.exprType as ArrayType).elementType;
         this.target = target;
         this.index = index;
     }
-    accept<R>(visitor: ExprVisitor<R>): R {
-        return visitor.visitIndexExpr(this);
+    accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
+        return visitor.visitIndexExpr(this, isLeft);
     }
 }
 
@@ -338,7 +341,8 @@ export class SetIndexExpr implements Expr {
     target: Expr;
     index: Expr;
     value: Expr;
-    constructor(array: Expr, index: Expr, value: Expr,equals:Token) {
+    operator: Token;
+    constructor(array: Expr, index: Expr, value: Expr, equals: Token) {
         this.exprType = (array.exprType as ArrayType).elementType;
         if (!isSameType(this.exprType, value.exprType)) {
             El.error(equals, "Type mismatch in assignment.")
@@ -357,13 +361,23 @@ export class GetFieldExpr implements Expr {
     target: Expr;
     field: string;
     constructor(struct: Expr, field: string) {
-        const structType = struct.exprType as StructType
-        this.exprType = structType.fields.get(field);
+        const structType = struct.exprType
+        if (structType instanceof StructType) {
+            this.exprType = structType.fields.find(f => f.field === field)?.type
+        } else if (structType instanceof PtrType) {
+            if (structType.elementType instanceof StructType) {
+                this.exprType = structType.elementType.fields.find(f => f.field === field)?.type
+            } else {
+                El.error(null, "Get field expression must be used with struct.")
+            }
+        } else {
+            El.error(null, "Get field expression must be used with struct.")
+        }
         this.target = struct;
         this.field = field;
-    } 
-    accept<R>(visitor: ExprVisitor<R>): R {
-        return visitor.visitGetFieldExpr(this);
+    }
+    accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
+        return visitor.visitGetFieldExpr(this, isLeft);
     }
 }
 
@@ -372,15 +386,17 @@ export class SetFieldExpr implements Expr {
     target: Expr;
     field: string;
     value: Expr;
-    constructor(struct: Expr, field: string, value: Expr,equals:Token) {
-        const structType = struct.exprType as StructType
-        this.exprType = structType.fields.get(field);
+    operator: Token;
+    constructor(struct: Expr, field: string, value: Expr, equals: Token) {
+        console.log("setfield111", struct, field, value)
+        this.exprType = struct.exprType
         if (!isSameType(this.exprType, value.exprType)) {
             El.error(equals, "Type mismatch in assignment.")
         }
         this.target = struct
         this.field = field;
         this.value = value;
+        this.operator = equals;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitSetFieldExpr(this);
@@ -390,6 +406,7 @@ export class CommaExpr implements Expr {
     exprType: DataType;
     left: Expr;
     right: Expr;
+    operator: Token;
     constructor(left: Expr, right: Expr) {
         this.exprType = right.exprType; //逗号表达式的类型为右操作数的类型
         this.left = left;

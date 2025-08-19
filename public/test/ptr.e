@@ -1,13 +1,16 @@
 
-
+struct A{
+    int a;
+    bool b;
+}
+struct B{
+    int i;
+    A ba;
+}
 int main(){
-    int a=12;
+   [5]int arr=[1,2,3,4,5];
+   arr[0]=8;
+   print arr[0];
 
-    int@ a_ptr => a;
-
-    a_ptr =>a;
-    a_ptr=4;
-    print a_ptr;
-    print a;
     return 0;
 }

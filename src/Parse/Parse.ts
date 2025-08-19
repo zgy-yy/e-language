@@ -306,20 +306,20 @@ export class Parser {
             this.error(struct_name, "Struct with this name already declared in this scope.")
         }
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before struct body.")
-        const struct_fields = []
+        const struct_fields :{field:string,type:DataType}[]= []
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
             const field_type = this.declarationKind()//字段类型
             const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
-            struct_fields.push({ name: field_name.lexeme, type: field_type })
+            struct_fields.push({ field: field_name.lexeme, type: field_type })
             while (this.match(Tokenkind.COMMA)) {
                 const field_name_ = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
-                struct_fields.push({ name: field_name_.lexeme, type: field_type })
+                struct_fields.push({ field: field_name_.lexeme, type: field_type })
             }
             this.consume(Tokenkind.SEMICOLON, "Expect ';' after field declaration.")
         }
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct body.")
 
-        const struct_ = new StructType(struct_name.lexeme, new Map(struct_fields.map(f => [f.name, f.type])))
+        const struct_ = new StructType(struct_name.lexeme, struct_fields)
         this.symbolTable.addStructure(struct_name.lexeme, struct_)
         return new StructStmt(struct_)
     }
@@ -471,10 +471,14 @@ export class Parser {
             const equals = this.previous()
             const value = this.assignment()
             if (leftExpr instanceof VariableExpr) {
-                return new AssignExpr(leftExpr.variable, value, equals)
+                if(leftExpr instanceof VariableExpr){
+                    return new AssignExpr(leftExpr, value, equals)
+                }else{
+                    El.error(equals, "Expression is not assignable.")
+                }
             }
             if (leftExpr instanceof GetFieldExpr) {
-                return new SetFieldExpr(leftExpr.target, leftExpr.field, value, equals)
+                return new SetFieldExpr(leftExpr, leftExpr.field, value, equals)
             }
             if (leftExpr instanceof IndexExpr) {
                 return new SetIndexExpr(leftExpr.target, leftExpr.index, value, equals)
@@ -627,21 +631,21 @@ export class Parser {
         }
 
         if (this.match(Tokenkind.LEFT_BRACE)) {
-            const fields: { name: string, value: Expr }[] = []
+            const fields: { field: string, value: Expr }[] = []
             while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
                 const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
                 this.consume(Tokenkind.COLON, "Expect ':' after field name.")
                 const field_value = this.assignment()
-                if (fields.find(f => f.name === field_name.lexeme)) {
+                if (fields.find(f => f.field === field_name.lexeme)) {
                     this.error(field_name, "Field with this name already declared in this struct.")
                 }
-                fields.push({ name: field_name.lexeme, value: field_value })
+                fields.push({ field: field_name.lexeme, value: field_value })
                 if (this.peek().type !== Tokenkind.RIGHT_BRACE) {
                     this.consume(Tokenkind.COMMA, "Expect ',' after field declaration.")
                 }
             }
             this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct expression.")
-            const structType = this.symbolTable.finddStructure(fields.map(f => ({ name: f.name, val_type: f.value.exprType })))
+                const structType = this.symbolTable.finddStructure(fields.map(f => ({ name: f.field, val_type: f.value.exprType })))
             if (!structType) {
                 this.error(this.peek(), "Struct with this name not declared.")
             }

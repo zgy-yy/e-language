@@ -80,7 +80,7 @@ declare i32 @printf(i8*, ...)
 
 
     visitStructStmt(stmt: StructStmt): void {
-        this.printIR(`%${stmt.struct.name} = type { ${Array.from(stmt.struct.fields.entries()).map(([name, type]) => typeToLLVM(type)).join(', ')} }`);
+        this.printIR(`%${stmt.struct.name} = type { ${stmt.struct.fields.map((f) => typeToLLVM(f.type)).join(', ')} }`);
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
@@ -395,46 +395,36 @@ declare i32 @printf(i8*, ...)
 
         return { type: array_type, valReg: undef_array };
     }
-
-
-    getIndexPtr(expr: IndexExpr): ExprResult {
+    visitIndexExpr(expr: IndexExpr,isLeft:boolean): ExprResult {
         const n = this.sequence.reg++;
-        let targetExpR = null
-        if (expr.target instanceof IndexExpr) {
-            targetExpR = this.getIndexPtr(expr.target)
-        } else if (expr.target instanceof GetFieldExpr) {
-            targetExpR = this.getFieldPtr(expr.target)
-        } else if (expr.target instanceof VariableExpr) {
-            const targetVar = expr.target
-            targetExpR = {
-                type: typeToLLVM(targetVar.variable.type),
-                valReg: this.scope.findVariable(targetVar.variable)
-            }
-        } else {
-            throw new Error("Invalid index expression.")
-        }
+        const targetExpR = expr.target.accept(this)
+        const targetType = targetExpR.type
+        const targetVal = targetExpR.valReg
+
         const indexExpR = expr.index.accept(this)
-        const index_val = indexExpR.valReg
-        const index_type = indexExpR.type
-
-        const target_val = targetExpR.valReg
-        const target_type = targetExpR.type
-        const element_type = typeToLLVM(expr.exprType)
-        const index_ptr = `%reg_index_ptr_${n}`
-        this.printIR(`${index_ptr} = getelementptr ${target_type}, ${target_type}* ${target_val},${index_type} 0, ${index_type} ${index_val}`);
-        return { type: element_type, valReg: index_ptr };
-    }
-
-    visitIndexExpr(expr: IndexExpr): ExprResult {
-        const n = this.sequence.reg++;
-        const index_ptr = this.getIndexPtr(expr)
-        const index_val = `%reg_index_${n}`
-        this.printIR(`${index_val} = load ${index_ptr.type}, ${index_ptr.type}* ${index_ptr.valReg}`);
-        return { type: index_ptr.type, valReg: index_val };
+        const indexType = indexExpR.type
+        const indexVal = indexExpR.valReg
+        const indexPtr = `%reg_index_ptr_${n}`
+        const indexReg = `%reg_index_${n}`
+        if(isLeft){
+            this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},${indexType} 0, ${indexType} ${indexVal}`);
+            return { type: indexType, valReg: indexPtr };
+        }else{
+            const tempArr = `%temp_arr_${n}`
+            if(targetType.endsWith("]")){
+                this.printIR(`${tempArr} = alloca ${targetType}`);
+                this.printIR(`store ${targetType} ${targetVal}, ${targetType}* ${tempArr}`);
+                this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${tempArr},${indexType} 0, ${indexType} ${indexVal}`);
+                this.printIR(`${indexReg} = load ${indexType}, ${indexType}* ${indexPtr}`);
+            }else{
+                
+            }
+            return { type: indexType, valReg: indexReg };
+        }
     }
 
     visitSetIndexExpr(expr: SetIndexExpr): ExprResult {
-        const index_ptr = this.getIndexPtr(expr)
+        const index_ptr = expr.target.accept(this,true)
         const valueExpR = expr.value.accept(this)
         this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${index_ptr.type}* ${index_ptr.valReg}`);
         return valueExpR
@@ -445,12 +435,12 @@ declare i32 @printf(i8*, ...)
         const n = this.sequence.reg++;
         let undef_struct = `undef`
         const structType = expr.exprType as StructType
-        Array.from(expr.fields.entries()).forEach(([name, value]) => {
-            const index = Array.from(structType.fields.entries()).findIndex(([na, type]) => na === name)
-            const field_exprR = value.accept(this);
+        expr.fields.forEach((f) => {
+            const index = structType.fields.findIndex((f2) => f2.field === f.field)
+            const field_exprR = f.value.accept(this);
             const field_type = field_exprR.type
             const field_val = field_exprR.valReg
-            const regName = `%temp_${n}_${name}`
+            const regName = `%temp_${n}_${f.field}`
             this.printIR(`${regName} = insertvalue ${typeToLLVM(expr.exprType)} ${undef_struct}, ${field_type} ${field_val}, ${index}`);
             undef_struct = regName;
         })
@@ -476,16 +466,10 @@ declare i32 @printf(i8*, ...)
     //赋值表达式生成
     visitAssignExpr(expr: AssignExpr): ExprResult {
         const valueExpR = expr.value.accept(this);
-        const varType = typeToLLVM(expr.variable.type)
-        const var_name = this.scope.findVariable(expr.variable)
-        if (expr.variable.type instanceof PtrType) {
-            const n = this.sequence.reg++;
-            const temp_ptr = `${var_name}_ptr_${n}`
-            this.printIR(`${temp_ptr} = load ${varType}, ${varType}* ${var_name}`);
-            this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType} ${temp_ptr}`);
-        } else {
-            this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType}* ${var_name}`);
-        }
+        const var_ = expr.variable.accept(this, true)
+        const varType = var_.type
+        const var_name = var_.valReg
+        this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${varType}* ${var_name}`);
         return valueExpR
     }
 
@@ -577,9 +561,9 @@ declare i32 @printf(i8*, ...)
         if (var_ instanceof VariableExpr) {
             ir_var_name = this.scope.findVariable(var_.variable) //ir中变量
         } else if (var_ instanceof GetFieldExpr) {
-            ir_var_name = this.getFieldPtr(var_).valReg
+            ir_var_name = rightReg
         } else if (var_ instanceof IndexExpr) {
-            ir_var_name = this.getIndexPtr(var_).valReg
+            ir_var_name = rightReg
         }
         let new_val = `%reg_prefix_${n}`
 
@@ -609,9 +593,9 @@ declare i32 @printf(i8*, ...)
             const leftVar = left.variable
             ir_var_name = this.scope.findVariable(leftVar)
         } else if (left instanceof GetFieldExpr) {
-            ir_var_name = this.getFieldPtr(left).valReg
+            ir_var_name = leftReg
         } else if (left instanceof IndexExpr) {
-            ir_var_name = this.getIndexPtr(left).valReg
+            ir_var_name = leftReg
         }
         if (expr.operator.lexeme === '++') {
             this.printIR(`${new_val} = add ${leftType} ${leftReg}, 1`);
@@ -643,61 +627,53 @@ declare i32 @printf(i8*, ...)
         return { type: retType, valReg: var_name };
     }
 
-    getFieldPtr(expr: GetFieldExpr): ExprResult {
+
+    visitGetFieldExpr(expr: GetFieldExpr,isLeft:boolean): ExprResult {
         const n = this.sequence.reg++;
-        let targetExpR = null
-        if (expr.target instanceof GetFieldExpr) {
-            targetExpR = this.getFieldPtr(expr.target)
-        } else if (expr.target instanceof IndexExpr) {
-            targetExpR = this.getIndexPtr(expr.target)
-        } else if (expr.target instanceof VariableExpr) {
-            const targetVar = expr.target as VariableExpr
-            targetExpR = {
-                type: typeToLLVM(targetVar.variable.type),
-                valReg: this.scope.findVariable(targetVar.variable)
+        const leftExpR = expr.target.accept(this,isLeft)
+        const leftType = leftExpR.type
+        const leftVal = leftExpR.valReg
+        const field_type = typeToLLVM(expr.exprType)
+        let retType = leftType
+        const field_val = `%reg_field_${expr.field}_${n}`
+        let field_index = -1
+        if(expr.target.exprType instanceof StructType){
+            field_index = expr.target.exprType.fields.findIndex((f) => f.field === expr.field)
+        }else if(expr.target.exprType instanceof PtrType){
+            if(expr.target.exprType.elementType instanceof StructType){
+                field_index = expr.target.exprType.elementType.fields.findIndex((f) => f.field === expr.field)
             }
-        } else {
+        }
+        if(field_index === -1){
             throw new Error("Invalid field expression.")
         }
-        const targetType = targetExpR.type
-        const targetvar = targetExpR.valReg
-
-        const structType = expr.target.exprType as StructType
-        let field_type = null;
-        const field_index = Array.from(structType.fields.entries()).findIndex(([name, value]) => {
-            if (name === expr.field) {
-                field_type = typeToLLVM(value)
-                return true
+        if(isLeft){
+            this.printIR(`${field_val} = getelementptr ${leftType}, ${leftType}* ${leftVal}, i32 0, i32 ${field_index}`);
+            retType = field_type
+        }else{
+            if(leftType.endsWith("*")){ // 左值为指针
+                this.printIR(`${field_val} = load ${field_type}, ${leftType} ${leftVal}`);
+            }else{
+                this.printIR(`${field_val} = extractvalue ${leftType} ${leftVal}, ${field_index}`);
+                retType = field_type
             }
-            return false
-        })
-        const regFieldPtr = `%reg_field_ptr_${expr.field}_${n}`
-        this.printIR(`${regFieldPtr} = getelementptr ${targetType}, ${targetType}* ${targetvar}, i32 0, i32 ${field_index}`);
-        return { type: field_type, valReg: regFieldPtr };
-
-    }
-
-    visitGetFieldExpr(expr: GetFieldExpr): ExprResult {
-        const n = this.sequence.reg++;
-        const fieldPtr = this.getFieldPtr(expr)
-
-        const field_type = fieldPtr.type
-        const field_val = fieldPtr.valReg
-        const reg_field = `%reg_field_${expr.field}_${n}`
-        const structType = expr.target.exprType as StructType
-        this.printIR(`${reg_field} = load ${field_type}, ${field_type}* ${field_val}`);
-        return { type: field_type, valReg: reg_field };
+        }
+        return { type: retType, valReg: field_val }; 
     }
     visitSetFieldExpr(expr: SetFieldExpr): ExprResult {
+        const leftExpR = expr.target.accept(this,true)
         const valueExpR = expr.value.accept(this);
-        const fieldPtr = this.getFieldPtr(expr)
-        this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${fieldPtr.type}* ${fieldPtr.valReg}`);
+        this.printIR(`store ${valueExpR.type} ${valueExpR.valReg}, ${leftExpR.type}* ${leftExpR.valReg}`);
         return valueExpR;
     }
     //变量表达式生成 变量表达式 => 变量名,函数名
-    visitVariableExpr(expr: VariableExpr): ExprResult {
+    visitVariableExpr(expr: VariableExpr, isLeft: boolean): ExprResult {
         const var_name = this.scope.findVariable(expr.variable);
         const varType = typeToLLVM(expr.variable.type);
+
+        if (isLeft) {
+            return { type: varType, valReg: var_name };
+        }
         const n = this.sequence.reg++;
         const var_name_n = `${var_name}_reg_${n}`
 

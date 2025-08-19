@@ -17,35 +17,32 @@ export class Var {
 export class FuncVar extends Var {
     retType: DataType //返回值类型
     paramTypes: DataType[] //参数列表
-    constructor(name: string, _retType: DataType, paramTypes: DataType[]) {
-        const funType = new FunType(paramTypes, _retType)
+    constructor(name: string, funType: FunType) {
         super(name, funType) //函数类型为变量类型
-        this.retType = _retType //返回值类型
-        this.paramTypes = paramTypes
+        this.retType = funType.retType //返回值类型
+        this.paramTypes = funType.paramsType
     }
 }
 
 //声明的函数
 export class FunLable extends FuncVar {
-    constructor(name: string, _retType: DataType, paramTypes: DataType[]) {
-        super(name, _retType, paramTypes)
+    constructor(name: string, funType: FunType) {
+        super(name, funType)
     }
 }
 
 export class StructVar extends Var {
     fields: { field: string, type: DataType }[]
-    constructor(name: string, structName: string, fields: { field: string, type: DataType }[]) {
-        const structType = new StructType(structName, fields)
-        super(name, structType)
+    constructor(name: string, type_: DataType, fields: { field: string, type: DataType }[]) {
+        super(name, type_)
         this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
     }
 }
 
 export class ArrayVar extends Var {
     elementType: DataType
-    constructor(name: string, elementType: DataType, length: number) {
-        const arrayType = new ArrayType(elementType, length)
+    constructor(name: string, arrayType: ArrayType) {
         super(name, arrayType)
-        this.elementType = elementType
+        this.elementType = arrayType.elementType
     }
 }

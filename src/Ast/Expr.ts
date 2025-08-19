@@ -217,12 +217,12 @@ export class ArrowExpr implements Expr {
     exprType: DataType;
     left: VariableExpr;
     right: VariableExpr | LiteralExpr;
-    arrow: Token;
+    operator: Token;
     constructor(left: VariableExpr, right: VariableExpr | LiteralExpr, arrow: Token) {
         this.exprType = right.exprType;
         this.left = left;
         this.right = right;
-        this.arrow = arrow;
+        this.operator = arrow;
         if (left.exprType instanceof PtrType) {
             this.exprType = left.exprType.elementType
             if (!isSameType(left.exprType.elementType, right.exprType)) {
@@ -290,8 +290,10 @@ export class CallExpr implements Expr {
 export class StructExpr implements Expr {
     exprType: DataType;
     fields: { field: string, value: Expr }[];
-    constructor(fields: { field: string, value: Expr }[], structType: StructType) {
+    paren: Token;
+    constructor(fields: { field: string, value: Expr }[], structType: StructType,paren:Token) {
         this.exprType = structType
+        this.paren = paren;
         this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -302,7 +304,8 @@ export class StructExpr implements Expr {
 export class ArrayExpr implements Expr {
     exprType: DataType;
     elements: Expr[];
-    constructor(elements: Expr[]) {
+    paren: Token;
+    constructor(elements: Expr[],paren:Token) {
         if (elements.length === 0) {
             this.exprType = new ArrayType(new SimpleType(SimpleKind.Void), 0)
         } else {
@@ -315,6 +318,7 @@ export class ArrayExpr implements Expr {
             this.exprType = new ArrayType(elementType, elements.length)
         }
         this.elements = elements
+        this.paren = paren;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitArrayExpr(this);
@@ -325,8 +329,8 @@ export class IndexExpr implements Expr {
     exprType: DataType;
     target: Expr;
     index: Expr;
-    operator: Token;
-    constructor(target: Expr, index: Expr) {
+    paren: Token;
+    constructor(target: Expr, index: Expr,paren:Token) {
         if(target.exprType instanceof ArrayType){
             this.exprType = target.exprType.elementType;
             this.target = target;
@@ -334,6 +338,7 @@ export class IndexExpr implements Expr {
         }else{
             El.error(null, "Index expression must be used with array.")
         }
+        this.paren = paren;
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitIndexExpr(this, isLeft);
@@ -366,7 +371,8 @@ export class GetFieldExpr implements Expr {
     exprType: DataType;
     target: Expr;
     field: string;
-    constructor(struct: Expr, field: string) {
+    paren: Token;
+    constructor(struct: Expr, field: string,paren:Token) {
         const structType = struct.exprType
         if (structType instanceof StructType) {
             this.exprType = structType.fields.find(f => f.field === field)?.type
@@ -381,6 +387,7 @@ export class GetFieldExpr implements Expr {
         }
         this.target = struct;
         this.field = field;
+        this.paren = paren;
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitGetFieldExpr(this, isLeft);
@@ -413,11 +420,12 @@ export class CommaExpr implements Expr {
     exprType: DataType;
     left: Expr;
     right: Expr;
-    operator: Token;
-    constructor(left: Expr, right: Expr) {
+    comma: Token;
+    constructor(left: Expr, right: Expr,comma:Token) {
         this.exprType = right.exprType; //逗号表达式的类型为右操作数的类型
         this.left = left;
         this.right = right;
+        this.comma = comma;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitCommaExpr(this);

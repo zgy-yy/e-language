@@ -22,17 +22,18 @@ export class Parser {
 
     typeKind = [Tokenkind.INT, Tokenkind.CHAR, Tokenkind.VOID, Tokenkind.BOOLEAN, Tokenkind.STRING]
 
+    statements: Stmt[] = []
+
     constructor(tokens: Token[]) {
         this.tokens = tokens
     }
 
     parse() {//解析程序
-        const statements = [];//语句
         while (!this.isAtEnd()) {
-            statements.push(this.declaration())//程序由多个声明语句组成
+            this.statements.push(this.declaration())//程序由多个声明语句组成
         }
         return { //返回程序的抽象语法树，包含变量表和语句
-            stmt: statements
+            stmt: this.statements
         }
     }
 
@@ -177,7 +178,7 @@ export class Parser {
         } else {
             if (this.match(Tokenkind.EQUAL)) {
                 initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
-
+                console.log('zzf', varT, initializer.exprType)
                 if (!isSameType(varT, initializer.exprType)) {
                     El.error(this.previous(), "Initializer type does not match variable type.")
                 }
@@ -187,17 +188,16 @@ export class Parser {
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
         let var_ = null
         if (varT instanceof FunType) {
-            var_ = new FuncVar(var_name.lexeme, varT.retType, varT.paramsType)
+            var_ = new FuncVar(var_name.lexeme, varT)
         } else if (varT instanceof StructType) {
-            var_ = new StructVar(var_name.lexeme, varT.name, varT.fields)
+            var_ = new StructVar(var_name.lexeme, varT, varT.fields)
         } else if (varT instanceof ArrayType) {
-            var_ = new ArrayVar(var_name.lexeme, varT.elementType, varT.len)
+            var_ = new ArrayVar(var_name.lexeme,varT)
         } else {
             var_ = new Var(var_name.lexeme, varT)
         }
         this.symbolTable.addVariable(var_name.lexeme, var_)
-
-
+        
 
         varStmt.push(new VarStmt(var_, initializer))
 
@@ -211,7 +211,7 @@ export class Parser {
             let initializer = null
             if (this.match(Tokenkind.EQUAL)) {
                 initializer = this.assignment()
-                if (varT !== initializer.exprType) {
+                if (!isSameType(varT, initializer.exprType)) {
                     El.error(this.previous(), "Initializer type does not match variable type.")
                 }
             }
@@ -231,7 +231,7 @@ export class Parser {
         if (!this.check(Tokenkind.RIGHT_PAREN)) {
             params.push(...this.paramDeclaration())
         }
-        const fun_var = new FunLable(fun_name.lexeme, dclRetType, params.map(item => item.type)) //函数声明 视为变
+        const fun_var = new FunLable(fun_name.lexeme, new FunType(params.map(item => item.type), dclRetType)) //函数声明 视为变
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
 
         const funcEn: funcEnclosing = {
@@ -284,10 +284,10 @@ export class Parser {
                 }
                 let identifier_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
                 if (declType instanceof FunType) {
-                    const declParamVar = new FuncVar(identifier_name.lexeme, declType.retType, declType.paramsType)
+                    const declParamVar = new FuncVar(identifier_name.lexeme, declType)
                     declParamVars.push(declParamVar)
                 } else if (declType instanceof StructType) {
-                    const declParamVar = new StructVar(identifier_name.lexeme, declType.name, declType.fields)
+                    const declParamVar = new StructVar(identifier_name.lexeme, declType, declType.fields)
                     declParamVars.push(declParamVar)
                 } else {
                     const declParamVar = new Var(identifier_name.lexeme, declType)
@@ -306,7 +306,7 @@ export class Parser {
             this.error(struct_name, "Struct with this name already declared in this scope.")
         }
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before struct body.")
-        const struct_fields :{field:string,type:DataType}[]= []
+        const struct_fields: { field: string, type: DataType }[] = []
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
             const field_type = this.declarationKind()//字段类型
             const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
@@ -460,20 +460,20 @@ export class Parser {
 
         while (this.match(Tokenkind.COMMA)) {
             const right = this.assignment();
-            expr = new CommaExpr(expr, right);
+            expr = new CommaExpr(expr, right, this.previous());
         }
         return expr;
     }
     //赋值表达式
     assignment(): Expr {
-        const leftExpr   = this.or()
+        const leftExpr = this.or()
         if (this.match(Tokenkind.EQUAL)) {
             const equals = this.previous()
             const value = this.assignment()
             if (leftExpr instanceof VariableExpr) {
-                if(leftExpr instanceof VariableExpr){
+                if (leftExpr instanceof VariableExpr) {
                     return new AssignExpr(leftExpr, value, equals)
-                }else{
+                } else {
                     El.error(equals, "Expression is not assignable.")
                 }
             }
@@ -579,12 +579,12 @@ export class Parser {
             }
             else if (this.match(Tokenkind.DOT)) {
                 const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
-                expr = new GetFieldExpr(expr, field_name.lexeme)
+                expr = new GetFieldExpr(expr, field_name.lexeme, this.previous())
             }
             else if (this.match(Tokenkind.LEFT_BRACKET)) {
                 const index = this.assignment()
                 this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after index.")
-                expr = new IndexExpr(expr, index)
+                expr = new IndexExpr(expr, index, this.previous())
             }
             else if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
                 const operator = this.previous()
@@ -624,7 +624,23 @@ export class Parser {
             const varExpr = this.previous()
             let varName = varExpr.lexeme
             if (this.symbolTable.findVariable(varName)) {
-                return new VariableExpr(this.symbolTable.findVariable(varName))
+                // 如果是全局变量，则需要从语句中找到变量声明，并返回其初始化表达式
+                if (this.symbolTable.currentLevel === 0) {
+                    let tempExpr = null
+                    this.statements.forEach(s => {
+                        if (s instanceof VarListStmt) {
+                            s.varStmts.forEach(v => {
+                                if (v.variable.name === varName) {
+                                    tempExpr = v.initializer
+                                }
+                            })
+                        }
+                    })
+                    if (tempExpr) {
+                        return tempExpr
+                    }
+                }
+                return new VariableExpr(this.symbolTable.findVariable(varName))   
             }
 
             throw this.error(varExpr, "Undefined variable '" + varName + "'.")
@@ -645,11 +661,11 @@ export class Parser {
                 }
             }
             this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct expression.")
-                const structType = this.symbolTable.finddStructure(fields.map(f => ({ name: f.field, val_type: f.value.exprType })))
+            const structType = this.symbolTable.finddStructure(fields.map(f => ({ name: f.field, val_type: f.value.exprType })))
             if (!structType) {
                 this.error(this.peek(), "Struct with this name not declared.")
             }
-            return new StructExpr(fields, structType)
+            return new StructExpr(fields, structType, this.previous())
         }
 
         // 数组表达式
@@ -662,7 +678,7 @@ export class Parser {
                 }
             }
             this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
-            return new ArrayExpr(elements)
+            return new ArrayExpr(elements, this.previous())
         }
 
         throw this.error(this.peek(), "Expect expression.");

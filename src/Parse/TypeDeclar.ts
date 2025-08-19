@@ -177,8 +177,10 @@ export function isSameType(left: DataType, right: DataType): boolean {
             const arrayLeft = left as ArrayType
             const arrayRight = right as ArrayType
             //右侧元素类型为void时 代表空数组
-            const arrayRightElementTypeIsVoid = arrayRight.elementType instanceof SimpleType && arrayRight.elementType.simpleKind === SimpleKind.Void
-            if (!isSameType(arrayLeft.elementType, arrayRight.elementType) && !arrayRightElementTypeIsVoid) {
+            if(arrayLeft.len!==arrayRight.len){
+                return false
+            }
+            if (!isSameType(arrayLeft.elementType, arrayRight.elementType)) {
                 return false
             }
             break;

@@ -1,11 +1,16 @@
-import { Var } from "Parse/Symbol";
+import { Var } from "../Parse/Symbol";
+import { StructType } from "../Parse/TypeDeclar";
 
 class Env {
     level: number;
+    scopeName: string;
     vars: Map<Var, string>;
-    constructor(level: number) {
+    declares: Map<any, string>;
+    constructor(level: number, scopeName: string) {
         this.level = level;
+        this.scopeName = scopeName;
         this.vars = new Map();
+        this.declares = new Map();
     }
 }
 
@@ -16,19 +21,19 @@ export class Scope {
     static sequence = 0;
     constructor() {
         this.level = 0;
-        this.env.push(new Env(this.level));
+        this.env.push(new Env(this.level, "global"));
     }
-    enterScope() {
+    enterScope(name: string) {
         Scope.sequence++;
         this.level++;
-        this.env.push(new Env(this.level));
+        this.env.push(new Env(this.level, name));
     }
     leaveScope() {
         this.level--;
         this.env.pop();
     }
     addVariable(var_: Var, name: string): string {
-        let lv_name = name + '_' + Scope.sequence
+        let lv_name = name
         if (this.level == 0) {
             lv_name = '@' + lv_name
         } else {
@@ -47,5 +52,23 @@ export class Scope {
             }
         }
         return null;
+    }
+    addDeclare(declare: any, name: string): string {
+        if (declare instanceof StructType) {
+            const declareName = `struct.${this.env.at(-1).scopeName}.${declare.name}`
+            this.env.at(-1).declares.set(declare, declareName);
+            return declareName
+        }
+    }
+    findDeclare(declare: any): string {
+        for (let i = this.env.length - 1; i >= 0; i--) {
+            if (this.env.at(i).declares.has(declare)) {
+                return this.env.at(i).declares.get(declare);
+            }
+        }
+        return null;
+    }
+    get currentScope(): Env {
+        return this.env.at(-1)
     }
 }

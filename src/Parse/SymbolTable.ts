@@ -1,34 +1,34 @@
-import { Expr } from "Ast/Expr";
 import { Var } from "./Symbol";
 import { DataType, isSameType, StructType } from "./TypeDeclar";
 
 
 class Env {
+    level: number;
     varEnv: Map<string, Var> = new Map<string, Var>();
     structEnv: Map<string, StructType> = new Map<string, StructType>();
+    constructor(level: number) {
+        this.level = level;
+    }
 }
 export class SymbolTable {
-    global: Env = new Env();
-    private level: number = 0;
+    currentLevel: number = 0;
     private symTab: Env[] = [];
 
+    constructor() {
+        this.symTab.push(new Env(0));
+    }
+
     enterScope() {
-        this.level++;
-        this.symTab.push(new Env());
+        this.currentLevel++;
+        this.symTab.push(new Env(this.currentLevel));
     }
     leaveScope() {
-        this.level--;
+        this.currentLevel--;
         this.symTab.pop();
     }
 
 
     addVariable(name: string, var_: Var) {
-        if (this.level === 0) { // 全局变量
-            this.global.varEnv.set(name, var_)
-        }
-        if (this.symTab.length === 0) {
-            this.symTab.push(new Env());
-        }
         this.symTab.at(-1).varEnv.set(name, var_);
         return var_;
     }
@@ -50,12 +50,6 @@ export class SymbolTable {
     }
 
     addStructure(name: string, structure: StructType) {
-        if (this.level === 0) {
-            this.global.structEnv.set(name, structure)
-        }
-        if (this.symTab.length === 0) {
-            this.symTab.push(new Env());
-        }
         this.symTab.at(-1).structEnv.set(name, structure)
         return structure;
     }

@@ -691,7 +691,7 @@ declare i32 @printf(i8*, ...)
 
         //函数类型的变量
         if (expr.variable instanceof FunLable) {
-            const funVar = expr.variable as FuncVar
+            const funVar = expr.variable
             const retType = this.typeToLLVM(funVar.retType) //函数变量 的返回值类型
             const params = funVar.paramTypes.map(p => this.typeToLLVM(p))
             this.printIR(`${reg_name} = bitcast ${retType} (${params.join(', ')})* ${var_name} to ${retType} (${params.join(', ')})*`);

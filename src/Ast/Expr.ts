@@ -291,7 +291,7 @@ export class StructExpr implements Expr {
     exprType: DataType;
     fields: { field: string, value: Expr }[];
     paren: Token;
-    constructor(fields: { field: string, value: Expr }[], structType: StructType,paren:Token) {
+    constructor(fields: { field: string, value: Expr }[], structType: StructType, paren: Token) {
         this.exprType = structType
         this.paren = paren;
         this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
@@ -305,7 +305,7 @@ export class ArrayExpr implements Expr {
     exprType: DataType;
     elements: Expr[];
     paren: Token;
-    constructor(elements: Expr[],paren:Token) {
+    constructor(elements: Expr[], paren: Token) {
         if (elements.length === 0) {
             this.exprType = new ArrayType(new SimpleType(SimpleKind.Void), 0)
         } else {
@@ -330,14 +330,23 @@ export class IndexExpr implements Expr {
     target: Expr;
     index: Expr;
     paren: Token;
-    constructor(target: Expr, index: Expr,paren:Token) {
-        if(target.exprType instanceof ArrayType){
-            this.exprType = target.exprType.elementType;
-            this.target = target;
-            this.index = index;
-        }else{
+    constructor(target: Expr, index: Expr, paren: Token) {
+        const targetType = target.exprType
+        if (targetType instanceof ArrayType) {
+            this.exprType = targetType.elementType;
+        } else if (targetType instanceof PtrType) {
+            if (targetType.elementType instanceof ArrayType) {
+                this.exprType = targetType.elementType.elementType
+            } else {
+                El.error(null, "Index expression must be use with array")
+            }
+        } else {
             El.error(null, "Index expression must be used with array.")
         }
+
+        this.target = target;
+        this.index = index;
+
         this.paren = paren;
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
@@ -351,9 +360,9 @@ export class SetIndexExpr implements Expr {
     value: Expr;
     operator: Token;
     constructor(array: Expr, value: Expr, equals: Token) {
-        if(array instanceof IndexExpr){
+        if (array instanceof IndexExpr) {
             this.exprType = array.exprType;
-        }else{
+        } else {
             El.error(equals, "Type mismatch in assignment.")
         }
         if (!isSameType(this.exprType, value.exprType)) {
@@ -372,13 +381,13 @@ export class GetFieldExpr implements Expr {
     target: Expr;
     field: string;
     paren: Token;
-    constructor(struct: Expr, field: string,paren:Token) {
-        const structType = struct.exprType
-        if (structType instanceof StructType) {
-            this.exprType = structType.fields.find(f => f.field === field)?.type
-        } else if (structType instanceof PtrType) {
-            if (structType.elementType instanceof StructType) {
-                this.exprType = structType.elementType.fields.find(f => f.field === field)?.type
+    constructor(struct: Expr, field: string, paren: Token) {
+        const targetType = struct.exprType
+        if (targetType instanceof StructType) {
+            this.exprType = targetType.fields.find(f => f.field === field)?.type
+        } else if (targetType instanceof PtrType) {
+            if (targetType.elementType instanceof StructType) {
+                this.exprType = targetType.elementType.fields.find(f => f.field === field)?.type
             } else {
                 El.error(null, "Get field expression must be used with struct.")
             }
@@ -400,9 +409,9 @@ export class SetFieldExpr implements Expr {
     value: Expr;
     operator: Token;
     constructor(struct: Expr, value: Expr, equals: Token) {
-        if(struct instanceof GetFieldExpr){
+        if (struct instanceof GetFieldExpr) {
             this.exprType = struct.exprType;
-        }else{
+        } else {
             El.error(equals, "Type mismatch in assignment.")
         }
         if (!isSameType(this.exprType, value.exprType)) {
@@ -421,7 +430,7 @@ export class CommaExpr implements Expr {
     left: Expr;
     right: Expr;
     comma: Token;
-    constructor(left: Expr, right: Expr,comma:Token) {
+    constructor(left: Expr, right: Expr, comma: Token) {
         this.exprType = right.exprType; //逗号表达式的类型为右操作数的类型
         this.left = left;
         this.right = right;

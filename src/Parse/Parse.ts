@@ -74,6 +74,9 @@ export class Parser {
                 this.advance()
                 declType = struct
             }
+            if (this.match(Tokenkind.AT)) {
+                declType = new PtrType(declType)
+            }
         } else if (this.match(Tokenkind.LEFT_PAREN)) {
             const paramsType: DataType[] = []
             if (!this.check(Tokenkind.RIGHT_PAREN)) {
@@ -92,6 +95,9 @@ export class Parser {
                 let kind = this.previous()//声明的类型
                 let retType: DataType = new SimpleType(SimpleKind[kind.type])//声明 的类型
                 declType = new FunType(paramsType, retType)
+                if (this.match(Tokenkind.AT)) {
+                    declType = new PtrType(declType)
+                }
             }
             else {
                 this.error(this.peek(), "Expect type after parameters.")
@@ -103,13 +109,14 @@ export class Parser {
                 this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
                 const array_type = this.declarationKind()
                 declType = new ArrayType(array_type, len)
+                if (this.match(Tokenkind.AT)) {
+                    declType = new PtrType(declType)
+                }
             } else {
                 this.error(this.peek(), "Array length must be a number literal.")
             }
         }
-        if (this.match(Tokenkind.AT)) {
-            declType = new PtrType(declType)
-        }
+      
         return declType
     }
 
@@ -177,7 +184,39 @@ export class Parser {
             }
         } else {
             if (this.match(Tokenkind.EQUAL)) {
-                initializer = this.assignment()//初始化表达式 不能包含 逗号表达式
+                initializer = this.assignment()//初始化表达式 不能包含 逗号表达式z
+
+                // 将初始化表达式中的变量 转换为 原始表达式
+                const varToExpr = (init: Expr) => {
+                    if (init instanceof VariableExpr) {
+                        let varStmt = null
+                        this.statements.forEach(s => {
+                            if (s instanceof VarListStmt) {
+                                s.varStmts.forEach(v => {
+                                    if (v.variable.name === init.variable.name) {
+                                        varStmt = v
+                                    }
+                                })
+                            }
+                        })
+                        if (varStmt) {
+                            return varToExpr(varStmt.initializer)
+                        }
+                        return init
+                    }
+                    if (init instanceof StructExpr) {
+                        init.fields.forEach(f => {
+                            f.value = varToExpr(f.value)
+                        })
+                    }
+                    return init
+                }
+                if (this.symbolTable.currentLevel === 0) {
+                    if (initializer) {
+                        initializer = varToExpr(initializer)
+                    }
+                }
+
                 if (!isSameType(varT, initializer.exprType)) {
                     El.error(this.previous(), "Initializer type does not match variable type.")
                 }
@@ -191,12 +230,11 @@ export class Parser {
         } else if (varT instanceof StructType) {
             var_ = new StructVar(var_name.lexeme, varT, varT.fields)
         } else if (varT instanceof ArrayType) {
-            var_ = new ArrayVar(var_name.lexeme,varT)
+            var_ = new ArrayVar(var_name.lexeme, varT)
         } else {
             var_ = new Var(var_name.lexeme, varT)
         }
         this.symbolTable.addVariable(var_name.lexeme, var_)
-        
 
         varStmt.push(new VarStmt(var_, initializer))
 
@@ -583,6 +621,7 @@ export class Parser {
             else if (this.match(Tokenkind.LEFT_BRACKET)) {
                 const index = this.assignment()
                 this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after index.")
+                console.log("postfix",expr,index)
                 expr = new IndexExpr(expr, index, this.previous())
             }
             else if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
@@ -623,23 +662,7 @@ export class Parser {
             const varExpr = this.previous()
             let varName = varExpr.lexeme
             if (this.symbolTable.findVariable(varName)) {
-                // 如果是全局变量，则需要从语句中找到变量声明，并返回其初始化表达式
-                if (this.symbolTable.currentLevel === 0) {
-                    let tempExpr = null
-                    this.statements.forEach(s => {
-                        if (s instanceof VarListStmt) {
-                            s.varStmts.forEach(v => {
-                                if (v.variable.name === varName) {
-                                    tempExpr = v.initializer
-                                }
-                            })
-                        }
-                    })
-                    if (tempExpr) {
-                        return tempExpr
-                    }
-                }
-                return new VariableExpr(this.symbolTable.findVariable(varName))   
+                return new VariableExpr(this.symbolTable.findVariable(varName))
             }
 
             throw this.error(varExpr, "Undefined variable '" + varName + "'.")

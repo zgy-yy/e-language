@@ -1,4 +1,4 @@
-import { ArrayType } from "../Parse/TypeDeclar";
+import { ArrayType, PtrType } from "../Parse/TypeDeclar";
 import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
@@ -75,7 +75,11 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
     }
     visitVarStmt(stmt: VarStmt): string {
-        return stmt.initializer ? `${stmt.variable.name} = ${stmt.initializer.accept(this)}` : stmt.variable.name;
+        let equals ='='
+        if(stmt.variable.type instanceof PtrType){
+            equals = '=>'
+        }
+        return stmt.initializer ? `${stmt.variable.name} ${equals} ${stmt.initializer.accept(this)}` : stmt.variable.name;
     }
 
     // Expr 
@@ -94,6 +98,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `[${expr.elements.map((e) => e.accept(this)).join(", ")}]`;
     }
     visitIndexExpr(expr: IndexExpr): string {
+        console.log("expr",expr)
         return `${expr.target.accept(this)}[${expr.index.accept(this)}]`;
     }
     visitSetIndexExpr(expr: SetIndexExpr): string {

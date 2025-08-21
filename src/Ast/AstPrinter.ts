@@ -98,7 +98,6 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `[${expr.elements.map((e) => e.accept(this)).join(", ")}]`;
     }
     visitIndexExpr(expr: IndexExpr): string {
-        console.log("expr",expr)
         return `${expr.target.accept(this)}[${expr.index.accept(this)}]`;
     }
     visitSetIndexExpr(expr: SetIndexExpr): string {

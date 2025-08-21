@@ -63,60 +63,59 @@ export class Parser {
 
     // 声明类型
     declarationKind(): DataType {
-        let declType = null
-        if (this.match(...this.typeKind)) {
-            let kind = this.previous()//声明的类型
-            declType = new SimpleType(SimpleKind[kind.type])//声明 类型
-        } else if (this.peek().type == Tokenkind.IDENTIFIER) {
-            const struct_name = this.peek().lexeme
-            const struct = this.symbolTable.findStructure(struct_name)
-            if (struct) {
-                this.advance()
-                declType = struct
-            }
-            if (this.match(Tokenkind.AT)) {
-                declType = new PtrType(declType)
-            }
-        } else if (this.match(Tokenkind.LEFT_PAREN)) {
-            const paramsType: DataType[] = []
-            if (!this.check(Tokenkind.RIGHT_PAREN)) {
-                do {
-                    if (paramsType.length >= 255) {
-                        this.error(this.peek(), "Can't have more than 255 parameters.")
-                    }
-                    const declType = this.declarationKind()
-                    if (declType) {
-                        paramsType.push(declType)
-                    }
-                } while (this.match(Tokenkind.COMMA))
-            }
-            this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
+        const declaration = ()=>{
+            let declType: DataType = null
             if (this.match(...this.typeKind)) {
                 let kind = this.previous()//声明的类型
-                let retType: DataType = new SimpleType(SimpleKind[kind.type])//声明 的类型
-                declType = new FunType(paramsType, retType)
-                if (this.match(Tokenkind.AT)) {
-                    declType = new PtrType(declType)
+                declType = new SimpleType(SimpleKind[kind.type])//声明 类型
+            } else if (this.peek().type == Tokenkind.IDENTIFIER) {
+                const struct_name = this.peek().lexeme
+                const struct = this.symbolTable.findStructure(struct_name)
+                if (struct) {
+                    this.advance()
+                    declType = struct
+                }
+            } else if (this.match(Tokenkind.LEFT_PAREN)) {
+                const paramsType: DataType[] = []
+                if (!this.check(Tokenkind.RIGHT_PAREN)) {
+                    do {
+                        if (paramsType.length >= 255) {
+                            this.error(this.peek(), "Can't have more than 255 parameters.")
+                        }
+                        const declType = declaration()
+                        if (declType) {
+                            paramsType.push(declType)
+                        }
+                    } while (this.match(Tokenkind.COMMA))
+                }
+                this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
+                if (this.match(...this.typeKind)) {
+                    let kind = this.previous()//声明的类型
+                    let retType: DataType = new SimpleType(SimpleKind[kind.type])//声明 的类型
+                    declType = new FunType(paramsType, retType)
+                }
+                else {
+                    this.error(this.peek(), "Expect type after parameters.")
+                }
+            } else if (this.match(Tokenkind.LEFT_BRACKET)) {
+                const lenExpr = this.expression()
+                if (lenExpr instanceof LiteralExpr && typeof lenExpr.value === 'number') {
+                    const len = lenExpr.value as number
+                    this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
+                    const array_type = declaration()
+                    declType = new ArrayType(array_type, len)
+                } else {
+                    this.error(this.peek(), "Array length must be a number literal.")
                 }
             }
-            else {
-                this.error(this.peek(), "Expect type after parameters.")
-            }
-        } else if (this.match(Tokenkind.LEFT_BRACKET)) {
-            const lenExpr = this.expression()
-            if (lenExpr instanceof LiteralExpr && typeof lenExpr.value === 'number') {
-                const len = lenExpr.value as number
-                this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
-                const array_type = this.declarationKind()
-                declType = new ArrayType(array_type, len)
-                if (this.match(Tokenkind.AT)) {
-                    declType = new PtrType(declType)
-                }
-            } else {
-                this.error(this.peek(), "Array length must be a number literal.")
-            }
+            return declType
         }
-      
+        
+        let declType = declaration()
+        if (this.match(Tokenkind.AT)) {
+            declType = new PtrType(declType)
+        }
+
         return declType
     }
 
@@ -209,14 +208,19 @@ export class Parser {
                             f.value = varToExpr(f.value)
                         })
                     }
+                    if (init instanceof ArrayExpr) {
+                        for (let i = 0; i < init.elements.length; i++) {
+                            init.elements[i] = varToExpr(init.elements[i])
+                        }
+                    }
                     return init
                 }
                 if (this.symbolTable.currentLevel === 0) {
+                    
                     if (initializer) {
                         initializer = varToExpr(initializer)
                     }
                 }
-
                 if (!isSameType(varT, initializer.exprType)) {
                     El.error(this.previous(), "Initializer type does not match variable type.")
                 }
@@ -621,7 +625,6 @@ export class Parser {
             else if (this.match(Tokenkind.LEFT_BRACKET)) {
                 const index = this.assignment()
                 this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after index.")
-                console.log("postfix",expr,index)
                 expr = new IndexExpr(expr, index, this.previous())
             }
             else if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {

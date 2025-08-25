@@ -15,15 +15,33 @@ type EncloseLoop = {
 }
 
 
+class LLVMIRCode {
+    decle: string[]//声明
+    currentFunc: number = -1
+    funcIr: {//函数ir指令
+        ir: string[]
+    }[] = []
+    constructor() {
+        this.decle = []
+        this.funcIr = []
+    }
+    enterFunc() {
+        this.funcIr.push({ ir: [] })
+        this.currentFunc++
+    }
+    leaveFunc() {
+        this.currentFunc--
+    }
+    addDecle(decle: string) {
+        this.decle.push(decle)
+    }
+    addFuncIr(ir: string) {
+        this.funcIr.at(this.currentFunc).ir.push(ir)
+    }
+}
 
 export class CodeGen implements ExprVisitor<ExprResult>, StmtVisitor<void> {
-    static codeText: {
-        decle: string[], //声明
-        ir: string[] //ir指令
-    } = {
-            decle: [],
-            ir: []
-        };
+    static codeText: LLVMIRCode = new LLVMIRCode()
     private scope: Scope = new Scope(); // 作用域 index 0为全局作用域
     private enclosing: EncloseLoop[] = []
     private sequence: {
@@ -32,8 +50,9 @@ export class CodeGen implements ExprVisitor<ExprResult>, StmtVisitor<void> {
         doWhile: number,
         while: number,
         if: number,
+        block: number,
         reg: number,
-    } = { loop: 0, for: 0, doWhile: 0, while: 0, if: 0, reg: 0 }
+    } = { loop: 0, for: 0, doWhile: 0, while: 0, if: 0, block: 0, reg: 0 }
     private functionDeclarations: string[] = []; //函数声明
 
     constructor() {
@@ -56,7 +75,7 @@ declare i32 @printf(i8*, ...)
         stmt.forEach(stmt => {
             stmt.accept(this);
         });
-        const codeText = CodeGen.codeText.decle.join('\n') + '\n' + CodeGen.codeText.ir.join('\n')
+        const codeText = CodeGen.codeText.decle.join('\n') + '\n' + CodeGen.codeText.funcIr.map(f => f.ir.join('\n')).join('\n')
         console.log('CodeGen.codeText:\n', codeText);
         return codeText;
     }
@@ -68,29 +87,29 @@ declare i32 @printf(i8*, ...)
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
-        const lv_funName = stmt.fn_name.name === "main" ? "@main" : `@fn_${stmt.fn_name}` //函数名
+        CodeGen.codeText.enterFunc()
         // 添加函数变量到全局作用域
-        this.scope.addVariable(stmt.fn_name, lv_funName)
+        const lv_funName = this.scope.addVariable(stmt.fn_name, stmt.fn_name.name)
         // 进入函数作用域
         this.scope.enterScope(stmt.fn_name.name)
-        // 添加参数到函数作用域
-        stmt.params.forEach(p => {
-            this.scope.addVariable(p, `${p.name}_P`)
-        })
+
         // 生成函数定义
         const retType = this.typeToLLVM(stmt.retType);
-        this.printIR(`define ${retType} ${lv_funName}(${stmt.params.map(p => this.typeToLLVM(p.type) + ' ' + this.scope.findVariable(p)).join(', ')}) {`)
+        this.printIR(`define ${retType} ${lv_funName}(${stmt.params.map(p => this.typeToLLVM(p.type) + ' %' + p.name).join(', ')}) {`)
         this.printIR(`entry:`)
         stmt.params.forEach(p => {
-            const lv_name = this.scope.findVariable(p)
+            // 添加参数到函数作用域
+            const lv_name = this.scope.addVariable(p, `${stmt.fn_name.name}.${p.name}`)
+
             this.printIR(`${lv_name} = alloca ${this.typeToLLVM(p.type)}`);
-            this.printIR(`store ${this.typeToLLVM(p.type)} ${lv_name}, ${this.typeToLLVM(p.type)}* ${lv_name}`);
+            this.printIR(`store ${this.typeToLLVM(p.type)} %${p.name}, ${this.typeToLLVM(p.type)}* ${lv_name}`);
         })
         stmt.body.forEach(s => {
             s.accept(this);
         })
         this.printIR(`}`)
         this.scope.leaveScope()
+        CodeGen.codeText.leaveFunc()
     }
     // 语句生成
     visitReturnStmt(stmt: ReturnStmt): void {
@@ -113,8 +132,8 @@ declare i32 @printf(i8*, ...)
     }
 
     visitLoopStmt(stmt: LoopStmt): void {
-        this.scope.enterScope("loop")
         const n = this.sequence.loop++;
+        this.scope.enterScope("loop" + n)
         const dec_body = `loop_body${n}`
         const dec_end = `loop_end${n}`
         const body_label = `%${dec_body}`
@@ -132,8 +151,8 @@ declare i32 @printf(i8*, ...)
         this.scope.leaveScope()
     }
     visitForStmt(stmt: ForStmt): void {
-        this.scope.enterScope("for")
         const n = this.sequence.for++;
+        this.scope.enterScope("for" + n)
 
         const dec_init = `for_init${n}`
         const dec_cond = `for_cond${n}`
@@ -186,8 +205,8 @@ declare i32 @printf(i8*, ...)
     }
 
     visitDoWhileStmt(stmt: DoWhileStmt): void {
-        this.scope.enterScope("doWhile")
         const n = this.sequence.doWhile++;
+        this.scope.enterScope("doWhile" + n)
         const dec_body = `do_body${n}`
         const dec_cond = `do_cond${n}`
         const dec_end = `do_end${n}`
@@ -220,8 +239,8 @@ declare i32 @printf(i8*, ...)
     }
 
     visitWhileStmt(stmt: WhileStmt): void {
-        this.scope.enterScope("while")
         const n = this.sequence.while++;
+        this.scope.enterScope("while" + n)
         //标签名
         const dec_cond = `while_cond${n}`
         const dec_body = `while_body${n}`
@@ -255,8 +274,8 @@ declare i32 @printf(i8*, ...)
 
     //if 语句生成
     visitIfStmt(stmt: IfStmt): void {
-        this.scope.enterScope("if")
         const n = this.sequence.if++;
+        this.scope.enterScope("if" + n)
         const condExpR = stmt.condition.accept(this);
         const dec_then = `if_then${n}`
         const dec_else = `if_else${n}`
@@ -290,7 +309,8 @@ declare i32 @printf(i8*, ...)
 
     //块语句生成
     visitBlockStmt(stmt: BlockStmt): void {
-        this.scope.enterScope("block")
+        const n = this.sequence.block++;
+        this.scope.enterScope("block" + n)
         for (const s of stmt.statements) {
             s.accept(this);
         }
@@ -312,34 +332,40 @@ declare i32 @printf(i8*, ...)
 
         const var_name = this.scope.addVariable(stmt.variable, varName)
         const varType = this.typeToLLVM(stmt.variable.type);
+
         if (this.scope.currentScope.scopeName === "global") {
             if (stmt.initializer) {
                 if (stmt.variable.type instanceof PtrType) {
                     const initVar = stmt.initializer
                     if (initVar instanceof VariableExpr) {
                         const lv_varName = this.scope.findVariable(initVar.variable)
-                        this.printIR(`${var_name} = global ${varType} ${lv_varName}`);
+                        this.printDecle(`${var_name} = global ${varType} ${lv_varName}`);
                     }
                 } else {
                     if (stmt.initializer instanceof VariableExpr) {
                         const lv_varName = this.scope.findVariable(stmt.initializer.variable)
-                        this.printIR(`${var_name} = global ${varType} ${lv_varName}`);
+                        this.printDecle(`${var_name} = global ${varType} ${lv_varName}`);
                     } else if (stmt.initializer instanceof LiteralExpr) {
-                        this.printIR(`${var_name} = global ${varType} ${stmt.initializer.value}`);
+                        this.printDecle(`${var_name} = global ${varType} ${stmt.initializer.value}`);
                     } else if (stmt.initializer instanceof StructExpr) {
-                        this.printIR(`${var_name} = global ${varType} ${stmt.initializer.accept(this).valReg}`);
+                        this.printDecle(`${var_name} = global ${varType} ${stmt.initializer.accept(this).valReg}`);
                     } else if (stmt.initializer instanceof ArrayExpr) {
-                        this.printIR(`${var_name} = global ${varType} ${stmt.initializer.accept(this).valReg}`);
+                        this.printDecle(`${var_name} = global ${varType} ${stmt.initializer.accept(this).valReg}`);
                     } else {
                         throw new Error("Invalid initializer for global variable")
                     }
                 }
             } else {
-                this.printIR(`${var_name} = global ${varType}`);
+                this.printDecle(`${var_name} = global ${varType} zeroinitializer`);
             }
             return
         } else {
-            this.printIR(`${var_name} = alloca ${varType}`);
+            //被闭包捕获的变量
+            if (stmt.variable.inClosure) {
+                this.printDecle(`${var_name} = global ${varType} zeroinitializer`);
+            } else {
+                this.printIR(`${var_name} = alloca ${varType}`);
+            }
         }
         if (stmt.initializer) {
             if (stmt.variable.type instanceof PtrType) {
@@ -568,13 +594,13 @@ declare i32 @printf(i8*, ...)
     visitPrefixSelfExpr(expr: PrefixSelfExpr): ExprResult {
         const n = this.sequence.reg++;
         const var_ = expr.right
-        const rightExpR = var_.accept(this,true);
+        const rightExpR = var_.accept(this, true);
         const rightType = rightExpR.type
         const rightReg = rightExpR.valReg
         let ir_var_name = rightReg
 
         let newReg = `%reg_prefix${n}`
-         const oldReg = `%reg_old${n}`
+        const oldReg = `%reg_old${n}`
 
         if (expr.operator.lexeme === '++') {
             this.printIR(`${oldReg} = load ${rightType} , ${rightType}* ${rightReg}`);
@@ -593,7 +619,7 @@ declare i32 @printf(i8*, ...)
         const n = this.sequence.reg++;
         const left = expr.left;
 
-        const leftExpR = left.accept(this,true)
+        const leftExpR = left.accept(this, true)
         const leftType = leftExpR.type
         const leftReg = leftExpR.valReg
         let newReg = `%reg_suffix${n}`
@@ -602,7 +628,7 @@ declare i32 @printf(i8*, ...)
 
         const oldReg = `%reg_old${n}`
         if (expr.operator.lexeme === '++') {
-            
+
             this.printIR(`${oldReg} = load ${leftType} , ${leftType}* ${leftReg}`);
             this.printIR(`${newReg} = add ${leftType} ${oldReg}, 1`);
         } else if (expr.operator.lexeme === '--') {
@@ -692,7 +718,7 @@ declare i32 @printf(i8*, ...)
         //函数类型的变量
         if (expr.variable instanceof FunLable) {
             const funVar = expr.variable
-            const retType = this.typeToLLVM(funVar.retType) //函数变量 的返回值类型
+            const retType = this.typeToLLVM(funVar.type) //函数变量 的返回值类型
             const params = funVar.paramTypes.map(p => this.typeToLLVM(p))
             this.printIR(`${reg_name} = bitcast ${retType} (${params.join(', ')})* ${var_name} to ${retType} (${params.join(', ')})*`);
             return { type: retType, valReg: reg_name };
@@ -717,10 +743,10 @@ declare i32 @printf(i8*, ...)
     }
 
     private printIR(code: string): void {
-        CodeGen.codeText.ir.push(code)
+        CodeGen.codeText.addFuncIr(code)
     }
     private printDecle(code: string): void {
-        CodeGen.codeText.decle.push(code)
+        CodeGen.codeText.addDecle(code)
     }
 
     private typeToLLVM(type: DataType): string {

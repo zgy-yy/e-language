@@ -5,33 +5,67 @@
     declare i32 @printf(i8*, ...)
 
 
-    %struct.global.St = type { [2 x i32], i1 }
+    @global.a = global i32 12
+    @foo.fn = global i32* zeroinitializer
+    @for0.c = global i32 zeroinitializer
+
+; 函数定义
+define i32* @foo() {
+entry:
+    br label %for_init0  ; 跳转到标签
+
+for_init0:
+    store i32 0, i32* @for0.c  ; 存储值到变量
+    br label %for_cond0  ; 跳转到标签
+
+for_cond0:
+    %reg_c1 = load i32, i32* @for0.c  ; 加载变量值
+    %reg_bin0 = icmp slt i32 %reg_c1, 3  ; 比较小于
+    %reg_forCond0 = icmp ne i1 %reg_bin0, 0  ; 比较不等于
+    br i1 %reg_forCond0, label %for_body0, label %for_end0  ; 条件跳转
+
+for_body0:
+    %reg_bar4 = bitcast i32* (i32)* @foo.for0.block0.bar to i32* (i32)*
+    store i32* %reg_bar4, i32** @foo.fn  ; 存储值到变量
+    br label %for_inc0  ; 跳转到标签
+
+for_inc0:
+    %reg_old6 = load i32 , i32* @for0.c  ; 加载变量值
+    %reg_suffix6 = add i32 %reg_old6, 1
+    store i32 %reg_suffix6, i32* @for0.c  ; 存储值到变量
+    br label %for_cond0  ; 跳转到标签
+
+for_end0:
+    %reg_fn8 = load i32*, i32** @foo.fn  ; 加载变量值
+    ret i32* %reg_fn8  ; 返回
+    }
 
 ; 函数定义
 define i32 @main() {
 entry:
-    %main.a = alloca [2 x %struct.global.St]  ; 分配局部变量
-    %temp_arr2_0 = insertvalue [2 x i32] undef, i32 23, 0
-    %temp_arr2_1 = insertvalue [2 x i32] %temp_arr2_0, i32 56, 1
-    %temp_struct1_age = insertvalue %struct.global.St undef, [2 x i32] %temp_arr2_1, 0
-    %temp_struct1_is = insertvalue %struct.global.St %temp_struct1_age, i1 false, 1
-    %temp_arr0_0 = insertvalue [2 x %struct.global.St] undef, %struct.global.St %temp_struct1_is, 0
-    %temp_arr4_0 = insertvalue [2 x i32] undef, i32 21, 0
-    %temp_arr4_1 = insertvalue [2 x i32] %temp_arr4_0, i32 45, 1
-    %temp_struct3_age = insertvalue %struct.global.St undef, [2 x i32] %temp_arr4_1, 0
-    %temp_struct3_is = insertvalue %struct.global.St %temp_struct3_age, i1 true, 1
-    %temp_arr0_1 = insertvalue [2 x %struct.global.St] %temp_arr0_0, %struct.global.St %temp_struct3_is, 1
-    store [2 x %struct.global.St] %temp_arr0_1, [2 x %struct.global.St]* %main.a  ; 存储值到变量
-    %reg_a8 = load [2 x %struct.global.St], [2 x %struct.global.St]* %main.a  ; 加载变量值
-    %temp_arr7 = alloca [2 x %struct.global.St]  ; 分配局部变量
-    store [2 x %struct.global.St] %reg_a8, [2 x %struct.global.St]* %temp_arr7  ; 存储值到变量
-    %reg_index_ptr7 = getelementptr [2 x %struct.global.St], [2 x %struct.global.St]* %temp_arr7,i32 0, i32 0  ; 获取数组元素指针
-    %reg_index7 = load %struct.global.St, %struct.global.St* %reg_index_ptr7  ; 加载变量值
-    %reg_fieldage_6 = extractvalue %struct.global.St %reg_index7, 0
-    %temp_arr5 = alloca [2 x i32]  ; 分配局部变量
-    store [2 x i32] %reg_fieldage_6, [2 x i32]* %temp_arr5  ; 存储值到变量
-    %reg_index_ptr5 = getelementptr [2 x i32], [2 x i32]* %temp_arr5,i32 0, i32 1  ; 获取数组元素指针
-    %reg_index5 = load i32, i32* %reg_index_ptr5  ; 加载变量值
-    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_index5)  ; 函数调用
-    ret i32 0  ; 返回
+    %main.fn = alloca i32*  ; 分配局部变量
+    %reg_foo10 = bitcast i32* ()* @foo to i32* ()*
+    %reg_call9 = call i32* %reg_foo10()  ; 函数调用
+    store i32* %reg_call9, i32** %main.fn  ; 存储值到变量
+    %main.fun = alloca i32*  ; 分配局部变量
+    %reg_foo12 = bitcast i32* ()* @foo to i32* ()*
+    %reg_call11 = call i32* %reg_foo12()  ; 函数调用
+    store i32* %reg_call11, i32** %main.fun  ; 存储值到变量
+    %reg_fn14 = load i32*, i32** %main.fn  ; 加载变量值
+    call void %reg_fn14(i32 1)  ; 函数调用
+    %reg_fun16 = load i32*, i32** %main.fun  ; 加载变量值
+    call void %reg_fun16(i32 1)  ; 函数调用
+    ret i32 23  ; 返回
+    }
+
+; 函数定义
+define void @foo.for0.block0.bar(i32 %i) {
+entry:
+    %bar.i = alloca i32  ; 分配局部变量
+    store i32 %i, i32* %bar.i  ; 存储值到变量
+    %reg_c2 = load i32, i32* @for0.c  ; 加载变量值
+    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_c2)  ; 函数调用
+    %reg_i3 = load i32, i32* %bar.i  ; 加载变量值
+    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_i3)  ; 函数调用
+    ret void  ; 返回
     }

@@ -34,9 +34,17 @@ export class SymbolTable {
     }
 
     findVariable(name: string): Var {// 从当前作用域开始查找
+        const inCurScope =this.varInCurrentScope(name)
+        if(inCurScope){
+            return this.symTab.at(-1).varEnv.get(name)
+        }
         for (let i = this.symTab.length - 1; i >= 0; i--) {
             if (this.symTab[i].varEnv.has(name)) {
-                return this.symTab[i].varEnv.get(name);
+                const var_ = this.symTab[i].varEnv.get(name)
+                if (i !== 0) {
+                    var_.inClosure = true // 非全局变量，在闭包中,捕获变量
+                }
+                return var_
             }
         }
         return null;
@@ -73,7 +81,7 @@ export class SymbolTable {
                         if (!isSameType(value.fields.find(f => f.field === name).type, val_type)) {
                             return
                         }
-                    }else{
+                    } else {
                         return
                     }
                 }

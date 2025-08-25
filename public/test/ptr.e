@@ -1,21 +1,22 @@
+link   "./arr.e" fpt:ui,ffo,nwoij;
+link "./clos.e";
 
+void  cc(){
+    print 56;
+}
 
-struct St{
-    [2]int age;
-    bool is;
+()void boo(){
+
+return cc;
 }
 
 int main(){ 
+    ()void fc =  boo();
+    fc();
 
-    [2]St a=[{
-        age:[23,56],
-        is:false
-    },{
-        age:[21,45],
-        is:true
-    }];
-
-    print a[0].age[1];
-
+   
+   
     return 0;
 }
+
+expose e23,232;

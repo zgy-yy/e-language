@@ -4,20 +4,19 @@ import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
 import { ArrayType, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType } from "./TypeDeclar";
 import { SymbolTable } from "./SymbolTable";
-import { FuncVar, Var, FunLable, StructVar, ArrayVar } from "./Symbol";
+import { FuncVar, Var, StructVar, ArrayVar, FunLable } from "./Symbol";
 
-type funcEnclosing = {
+type FuncEnclosing = {
     funcName: string,
     params: Var[]
     dclRetType: DataType //声明的返回值类型
-    // retExprType?: DataType //实际返回值类型
 }
 export class Parser {
     tokens: Token[]
     current: number = 0;//tokens 游标
 
     symbolTable: SymbolTable = new SymbolTable();//符号表 
-    funcEnclosing: funcEnclosing[] = []//函数块
+    funcEnclosing: FuncEnclosing[] = []//函数块
     loopEnclosing: string[] = []//循环块
 
     typeKind = [Tokenkind.INT, Tokenkind.CHAR, Tokenkind.VOID, Tokenkind.BOOLEAN, Tokenkind.STRING]
@@ -275,7 +274,7 @@ export class Parser {
         const fun_var = new FunLable(fun_name.lexeme, new FunType(params.map(item => item.type), dclRetType)) //函数声明 视为变
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
 
-        const funcEn: funcEnclosing = {
+        const funcEn: FuncEnclosing = {
             funcName: fun_name.lexeme,
             params: params,
             dclRetType: dclRetType

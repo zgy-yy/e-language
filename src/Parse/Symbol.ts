@@ -1,7 +1,7 @@
 import { ArrayType, DataType, FunType, StructType } from "./TypeDeclar"
 
 export class Var {
-    static incremental = 0
+    inClosure: boolean = false
     type: DataType //变量类型
     name: string
     constructor(name: string, type_: DataType) {
@@ -26,8 +26,12 @@ export class FuncVar extends Var {
 
 //声明的函数
 export class FunLable extends FuncVar {
+    closureEnv: Var[]
     constructor(name: string, funType: FunType) {
         super(name, funType)
+    }
+    addEnvVar(envVar: Var) {
+        this.closureEnv.push(envVar)
     }
 }
 

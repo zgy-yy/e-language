@@ -1,4 +1,4 @@
-import { Var } from "../Parse/Symbol";
+import { FunLable, Var } from "../Parse/Symbol";
 import { StructType } from "../Parse/TypeDeclar";
 
 class Env {
@@ -34,14 +34,24 @@ export class Scope {
     }
     addVariable(var_: Var, name: string): string {
         let lv_name = name
-        if (this.level == 0) {
-            lv_name = '@' + lv_name
+        if (var_ instanceof FunLable) {
+            if (this.level == 0) {
+                lv_name = '@' + lv_name
+            } else {
+                lv_name = '@' + this.env.filter(e => e.level !== 0).map(e => e.scopeName).join('.') + '.' + lv_name
+            }
         } else {
-            lv_name = '%' + lv_name
+            //被闭包捕获的变量
+            if (var_.inClosure) {
+                lv_name = '@' + lv_name
+            } else if (this.level == 0) {
+                lv_name = '@' + lv_name
+            } else {
+                lv_name = '%' + lv_name
+            }
+
         }
-        if (name === "@main") {
-            lv_name = name
-        }
+
         this.env.at(-1).vars.set(var_, lv_name);
         return lv_name;
     }

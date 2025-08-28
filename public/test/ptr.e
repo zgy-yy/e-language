@@ -1,5 +1,5 @@
-link   "./arr.e" fpt:ui,ffo,nwoij;
-link "./clos.e";
+link  fpt:ui,ffo,nwoij by "./arr.e";
+link  foc by "./clos.e";
 
 void  cc(){
     print 56;
@@ -13,10 +13,7 @@ return cc;
 int main(){ 
     ()void fc =  boo();
     fc();
-
-   
-   
     return 0;
 }
 
-expose e23,232;
+expose cc,boo;

@@ -29,6 +29,7 @@ export interface ExprVisitor<R> {
 
 export interface Expr { //表达式 基类
     exprType: DataType;
+    operator: Token;
     accept<R>(visitor: ExprVisitor<R>, data?: any): R;
 }
 
@@ -40,14 +41,14 @@ export class LogicalBinaryExpr implements Expr {
     operator: Token;
     right: Expr;
     constructor(left: Expr, operator: Token, right: Expr) {
+        this.left = left;
+        this.operator = operator;
+        this.right = right;
         if (isSameType(left.exprType, new SimpleType(SimpleKind.Boolean)) && isSameType(right.exprType, new SimpleType(SimpleKind.Boolean))) {
             this.exprType = new SimpleType(SimpleKind.Boolean); //逻辑运算符的类型为布尔类型
         } else {
             El.error(operator, "Logical operator must be used with boolean values.")
         }
-        this.left = left;
-        this.operator = operator;
-        this.right = right;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitLogicalBinaryExpr(this);
@@ -62,6 +63,9 @@ export class BinaryExpr implements Expr {
     operator: Token;
     right: Expr;
     constructor(left: Expr, operator: Token, right: Expr) {
+        this.left = left;
+        this.operator = operator;
+        this.right = right;
         if (isSameType(left.exprType, right.exprType)) {
             if (operator.type === Tokenkind.PLUS || operator.type === Tokenkind.MINUS || operator.type === Tokenkind.STAR || operator.type === Tokenkind.SLASH) {
                 this.exprType = left.exprType;
@@ -73,9 +77,6 @@ export class BinaryExpr implements Expr {
         } else {
             El.error(operator, "Type mismatch in binary expression.")
         }
-        this.left = left;
-        this.operator = operator;
-        this.right = right;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitBinaryExpr(this)
@@ -87,6 +88,8 @@ export class UnaryExpr implements Expr {
     operator: Token;
     right: Expr;
     constructor(operator: Token, right: Expr) {
+        this.operator = operator;
+        this.right = right;
         if ((operator.type === Tokenkind.MINUS || operator.type === Tokenkind.BANG) && isSameType(right.exprType, new SimpleType(SimpleKind.Int))) {
             this.exprType = new SimpleType(SimpleKind.Int); //一元表达式的类型为Int
         } else if (operator.type === Tokenkind.BANG && right.exprType instanceof SimpleType && isSameType(right.exprType, new SimpleType(SimpleKind.Boolean))) {
@@ -94,8 +97,7 @@ export class UnaryExpr implements Expr {
         } else {
             El.error(operator, "Unary operator must be used with integer or boolean values.")
         }
-        this.operator = operator;
-        this.right = right;
+
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitUnaryExpr(this);
@@ -108,13 +110,13 @@ export class PrefixSelfExpr implements Expr {
     right: Expr;
     operator: Token;
     constructor(operator: Token, right: Expr) {
+        this.right = right;
+        this.operator = operator;
         if (right.exprType instanceof SimpleType && right.exprType.simpleKind === SimpleKind.Int) {
             this.exprType = new SimpleType(SimpleKind.Int); //前缀自增自减表达式的类型为Int
         } else {
             El.error(operator, "Prefix self operator must be used with integer values.")
         }
-        this.right = right;
-        this.operator = operator;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitPrefixSelfExpr(this);
@@ -127,13 +129,14 @@ export class SuffixSelfExpr implements Expr {
     left: Expr;
     operator: Token;
     constructor(left: Expr, operator: Token) {
+        this.left = left;
+        this.operator = operator;
         if (left.exprType instanceof SimpleType && left.exprType.simpleKind === SimpleKind.Int) {
             this.exprType = new SimpleType(SimpleKind.Int); //后缀自增自减表达式的类型为Int
         } else {
             El.error(operator, "Suffix self operator must be used with integer values.")
         }
-        this.left = left;
-        this.operator = operator;
+
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitSuffixSelfExpr(this);
@@ -145,7 +148,10 @@ export class LiteralExpr implements Expr {
 
     exprType: DataType;
     value: any;
+    operator: Token;
     constructor(_val: any) {
+        this.value = _val;
+        this.operator = _val.operator
         const _valType = typeof _val;
         if (_valType === 'string') {
             // this.exprType = new SimpleType(SimpleKind.String);
@@ -159,7 +165,7 @@ export class LiteralExpr implements Expr {
         } else {
             El.error(_val, "Invalid literal value.")
         }
-        this.value = _val;
+
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitLiteralExpr(this);
@@ -170,9 +176,11 @@ export class LiteralExpr implements Expr {
 export class VariableExpr implements Expr {
     exprType: DataType;
     variable: Var;
-    constructor(var_: Var) {
-        this.exprType = var_.type;
+    operator: Token;
+    constructor(var_: Var, operator: Token) {
+        this.exprType = var_?.type;
         this.variable = var_;
+        this.operator = operator
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitVariableExpr(this, isLeft);
@@ -183,9 +191,11 @@ export class VariableExpr implements Expr {
 export class GroupingExpr implements Expr {
     exprType: DataType;
     expression: Expr;
-    constructor(expression: Expr) {
+    operator: Token;
+    constructor(expression: Expr, operator: Token) {
         this.exprType = expression.exprType;
         this.expression = expression;
+        this.operator = operator;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitGroupingExpr(this);
@@ -198,14 +208,18 @@ export class AssignExpr implements Expr {
     operator: Token;
     value: Expr;
     constructor(var_: VariableExpr, value: Expr, operator: Token) {
-        if (!isSameType(var_.exprType, value.exprType)) {
-            El.error(operator, "Type mismatch in assignment.")
+        if (var_.variable == null) {
+            return
         }
-
         this.exprType = var_.exprType;
         this.variable = var_;
         this.value = value;
         this.operator = operator;
+        if (!isSameType(var_.exprType, value.exprType)) {
+            El.error(operator, "Type mismatch in assignment.")
+        }
+
+
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitAssignExpr(this);
@@ -242,7 +256,7 @@ export class ArrowExpr implements Expr {
 export class CallExpr implements Expr {
     exprType: DataType; //函数调用表达式的类型为函数的返回值类型
     callee: Expr;
-    paren: Token;
+    operator: Token;
     args: Array<Expr>;
     constructor(callee: Expr, paren: Token, args: Array<Expr>) {
         // callee是函数声明
@@ -278,7 +292,7 @@ export class CallExpr implements Expr {
         }
 
         this.callee = callee;
-        this.paren = paren;
+        this.operator = paren;
         this.args = args;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -290,10 +304,10 @@ export class CallExpr implements Expr {
 export class StructExpr implements Expr {
     exprType: DataType;
     fields: { field: string, value: Expr }[];
-    paren: Token;
-    constructor(fields: { field: string, value: Expr }[], structType: StructType, paren: Token) {
-        this.exprType = structType
-        this.paren = paren;
+    operator: Token;
+    constructor(fields: { field: string, value: Expr }[], paren: Token) {
+        this.exprType = new StructType('anonymous', fields.map(f => ({ field: f.field, type: f.value.exprType })))
+        this.operator = paren;
         this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -304,8 +318,9 @@ export class StructExpr implements Expr {
 export class ArrayExpr implements Expr {
     exprType: DataType;
     elements: Expr[];
-    paren: Token;
+    operator: Token;
     constructor(elements: Expr[], paren: Token) {
+
         if (elements.length === 0) {
             this.exprType = new ArrayType(new SimpleType(SimpleKind.Void), 0)
         } else {
@@ -318,7 +333,7 @@ export class ArrayExpr implements Expr {
             this.exprType = new ArrayType(elementType, elements.length)
         }
         this.elements = elements
-        this.paren = paren;
+        this.operator = paren;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitArrayExpr(this);
@@ -329,8 +344,9 @@ export class IndexExpr implements Expr {
     exprType: DataType;
     target: Expr;
     index: Expr;
-    paren: Token;
+    operator: Token;
     constructor(target: Expr, index: Expr, paren: Token) {
+
         const targetType = target.exprType
         if (targetType instanceof ArrayType) {
             this.exprType = targetType.elementType;
@@ -347,7 +363,7 @@ export class IndexExpr implements Expr {
         this.target = target;
         this.index = index;
 
-        this.paren = paren;
+        this.operator = paren;
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitIndexExpr(this, isLeft);
@@ -380,7 +396,7 @@ export class GetFieldExpr implements Expr {
     exprType: DataType;
     target: Expr;
     field: string;
-    paren: Token;
+    operator: Token;
     constructor(struct: Expr, field: string, paren: Token) {
         const targetType = struct.exprType
         if (targetType instanceof StructType) {
@@ -396,7 +412,7 @@ export class GetFieldExpr implements Expr {
         }
         this.target = struct;
         this.field = field;
-        this.paren = paren;
+        this.operator = paren;
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitGetFieldExpr(this, isLeft);
@@ -429,12 +445,12 @@ export class CommaExpr implements Expr {
     exprType: DataType;
     left: Expr;
     right: Expr;
-    comma: Token;
+    operator: Token;
     constructor(left: Expr, right: Expr, comma: Token) {
         this.exprType = right.exprType; //逗号表达式的类型为右操作数的类型
         this.left = left;
         this.right = right;
-        this.comma = comma;
+        this.operator = comma;
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitCommaExpr(this);

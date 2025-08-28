@@ -2,10 +2,11 @@
 * 语句节点
 */
 
-import { DataType, StructType } from "../Parse/TypeDeclar";
+import { DataType, isSameType, StructType } from "../Parse/TypeDeclar";
 import { Token } from "../Lexer/Token";
-import {  Var } from "../Parse/Symbol";
+import { Var } from "../Parse/Symbol";
 import { Expr } from "./Expr";
+import { El } from "../El/El";
 
 
 
@@ -66,6 +67,11 @@ export class VarStmt implements Stmt {
     constructor(var_: Var, initializer?: Expr) {
         this.variable = var_;
         this.initializer = initializer;
+        if (initializer) {
+            if (!isSameType(var_.type, initializer.exprType)) {
+                El.error(initializer.operator, "Initializer type does not match variable type.")
+            }
+        }
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitVarStmt(this);

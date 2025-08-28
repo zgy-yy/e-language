@@ -75,6 +75,14 @@ export class Scope {
             if (this.env.at(i).declares.has(declare)) {
                 return this.env.at(i).declares.get(declare);
             }
+            const curEnv = this.env.at(i)
+            for (const [key, value] of curEnv.declares.entries()) {
+                if (declare instanceof StructType) {
+                    if (key.name === declare.name) {
+                        return value
+                    }
+                }
+            }
         }
         return null;
     }

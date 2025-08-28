@@ -23,6 +23,8 @@ export class Parser {
 
     statements: Stmt[] = []
 
+    postfuncdeclarations: Map<string,Expr> = new Map()
+
     constructor(tokens: Token[]) {
         this.tokens = tokens
     }
@@ -62,7 +64,7 @@ export class Parser {
 
     // 声明类型
     declarationKind(): DataType {
-        const declaration = ()=>{
+        const declaration = () => {
             let declType: DataType = null
             if (this.match(...this.typeKind)) {
                 let kind = this.previous()//声明的类型
@@ -109,7 +111,7 @@ export class Parser {
             }
             return declType
         }
-        
+
         let declType = declaration()
         if (this.match(Tokenkind.AT)) {
             declType = new PtrType(declType)
@@ -176,9 +178,6 @@ export class Parser {
         if (varT instanceof PtrType) {
             if (this.match(Tokenkind.ARROW)) {
                 initializer = this.primary()
-                if (!isSameType(varT.elementType, initializer.exprType)) {
-                    El.error(this.previous(), "Initializer type does not match variable type.")
-                }
             }
         } else {
             if (this.match(Tokenkind.EQUAL)) {
@@ -215,13 +214,10 @@ export class Parser {
                     return init
                 }
                 if (this.symbolTable.currentLevel === 0) {
-                    
+
                     if (initializer) {
                         initializer = varToExpr(initializer)
                     }
-                }
-                if (!isSameType(varT, initializer.exprType)) {
-                    El.error(this.previous(), "Initializer type does not match variable type.")
                 }
             }
         }
@@ -251,9 +247,6 @@ export class Parser {
             let initializer = null
             if (this.match(Tokenkind.EQUAL)) {
                 initializer = this.assignment()
-                if (!isSameType(varT, initializer.exprType)) {
-                    El.error(this.previous(), "Initializer type does not match variable type.")
-                }
             }
             varStmt.push(new VarStmt(var_, initializer))
         }
@@ -273,6 +266,15 @@ export class Parser {
         }
         const fun_var = new FunLable(fun_name.lexeme, new FunType(params.map(item => item.type), dclRetType)) //函数声明 视为变
         this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
+
+        if(this.postfuncdeclarations.has(fun_name.lexeme)){
+            const exp = this.postfuncdeclarations.get(fun_name.lexeme)
+            console.log("zz",exp)
+            this.postfuncdeclarations.delete(fun_name.lexeme)
+            if(exp instanceof VariableExpr){
+                exp.variable = fun_var
+            }
+        }
 
         const funcEn: FuncEnclosing = {
             funcName: fun_name.lexeme,
@@ -388,10 +390,6 @@ export class Parser {
             value = this.expression()
         }
         const retType = value ? value.exprType : new SimpleType(SimpleKind.Void) //返回值类型
-        // 如果返回值类型和函数返回值类型不一致，则抛出错误
-        if (!isSameType(funcEn.dclRetType, retType)) {
-            El.error(keyword, "Return type does not match function return type.")
-        }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after return value.")
         // funcEn.retExprType = retType
         return new ReturnStmt(keyword, value)
@@ -658,13 +656,18 @@ export class Parser {
         if (this.match(Tokenkind.LEFT_PAREN)) {
             const expr = this.expression()
             this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after expression.")
-            return new GroupingExpr(expr)
+            return new GroupingExpr(expr,this.previous())
         }
         if (this.match(Tokenkind.IDENTIFIER)) {
             const varExpr = this.previous()
             let varName = varExpr.lexeme
             if (this.symbolTable.findVariable(varName)) {
-                return new VariableExpr(this.symbolTable.findVariable(varName))
+                return new VariableExpr(this.symbolTable.findVariable(varName),varExpr)
+            }
+            if (this.peek().type == Tokenkind.LEFT_PAREN) {
+                const exp = new VariableExpr(null,varExpr)
+                this.postfuncdeclarations.set(varName,exp)
+                return exp
             }
 
             throw this.error(varExpr, "Undefined variable '" + varName + "'.")
@@ -685,11 +688,11 @@ export class Parser {
                 }
             }
             this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after struct expression.")
-            const structType = this.symbolTable.finddStructure(fields.map(f => ({ name: f.field, val_type: f.value.exprType })))
-            if (!structType) {
-                this.error(this.peek(), "Struct with this name not declared.")
-            }
-            return new StructExpr(fields, structType, this.previous())
+            // const structType = this.symbolTable.finddStructure(fields.map(f => ({ name: f.field, val_type: f.value.exprType })))
+            // if (!structType) {
+            //     this.error(this.peek(), "Struct with this name not declared.")
+            // }
+            return new StructExpr(fields, this.previous())
         }
 
         // 数组表达式

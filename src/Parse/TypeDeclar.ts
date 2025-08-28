@@ -161,23 +161,29 @@ export function isSameType(left: DataType, right: DataType): boolean {
         case DataKind.struct:
             const structLeft = left as StructType
             const structRight = right as StructType
-            if (structLeft.name !== structRight.name) {
+            if (structLeft !== structRight && structRight.name !== 'anonymous') {
                 return false
             }
             if (structLeft.fields.length !== structRight.fields.length) {
                 return false
             }
             for (let i = 0; i < structLeft.fields.length; i++) {
+                if (structLeft.fields[i].field !== structRight.fields[i].field) {
+                    return false
+                }
                 if (!isSameType(structLeft.fields[i].type, structRight.fields[i].type)) {
                     return false
                 }
+            }
+            if (structRight.name === 'anonymous') {
+                structRight.name = structLeft.name
             }
             break;
         case DataKind.array:
             const arrayLeft = left as ArrayType
             const arrayRight = right as ArrayType
             //右侧元素类型为void时 代表空数组
-            if(arrayLeft.len!==arrayRight.len){
+            if (arrayLeft.len !== arrayRight.len) {
                 return false
             }
             if (!isSameType(arrayLeft.elementType, arrayRight.elementType)) {

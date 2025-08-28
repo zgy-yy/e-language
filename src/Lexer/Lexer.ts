@@ -28,6 +28,10 @@ export class Scanner {//扫描器，或称为词法分析
         ["return", Tokenkind.RETURN],
         ["struct", Tokenkind.STRUCT],
         ["class", Tokenkind.CLASS],
+        //导入、导出
+        ["link", Tokenkind.LINK],
+        ["by", Tokenkind.BY],
+        ["expose", Tokenkind.EXPOSE],
 
         //字面量
         [SimpleKind.Null, Tokenkind.NULL],

@@ -1,26 +1,21 @@
 
-int a=12;
-
-(int)void foo(){
-
-    (int) void fn;
-    for( int c=0;c<3;c++){
-        void bar(int i){
-            print c;
-            print i;
-        }
-        fn = bar;
-    }
-    return fn;
+struct St{
+    int a;
 }
 
 
+int foo(){
+    return 23;
+}
 
+St bar(){
+ St s ={
+        a:foo()
+    };
+    return s;
+}
 int main(){
-    (int)void fn = foo();
-    (int)void fun = foo();
-    fn(1);
-    fun(1);
-
+   St s = bar();
+   print s.a;
     return 23;
 }

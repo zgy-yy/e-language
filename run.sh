@@ -60,11 +60,7 @@ if [ $? -eq 0 ]; then
     "$OUTPUT_DIR/index"
     
     # 运行完成后清理所有生成的文件
-    echo "清理生成的文件..."
-    rm -f "$OUTPUT_DIR/index.s"
-    rm -f "$OUTPUT_DIR/index.o"
-    rm -f "$OUTPUT_DIR/index"
-    echo "清理完成！"
+    echo "执行完毕"
 else
     echo "编译失败！"
     exit 1

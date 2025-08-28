@@ -81,6 +81,11 @@ export enum Tokenkind {
     STRUCT = "Struct",
     CLASS = "Class",
 
+    //导入、导出
+    LINK = "Link",
+    BY = "By",
+    EXPOSE = "Expose",
+
 
     //数据类型
     INT = "Int",

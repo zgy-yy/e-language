@@ -70,26 +70,6 @@ export class SymbolTable {
         }
         return null;
     }
-    finddStructure(struct: { name: string, val_type: DataType }[]): StructType {
-        let structType = null
-        for (let i = this.symTab.length - 1; i >= 0; i--) {
-            this.symTab[i].structEnv.forEach((value, key) => {
-                for (let j = 0; j < struct.length; j++) {
-                    const name = struct[j].name
-                    const val_type = struct[j].val_type
-                    if (value.fields.find(f => f.field === name)) {
-                        if (!isSameType(value.fields.find(f => f.field === name).type, val_type)) {
-                            return
-                        }
-                    } else {
-                        return
-                    }
-                }
-                structType = value
-            })
-        }
-        return structType;
-    }
 
 
     structInCurrentScope(name: string): boolean {// 判断当前作用域是否有这个结构体

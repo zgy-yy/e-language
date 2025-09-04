@@ -177,11 +177,11 @@ export class Parser {
 
         if (varT instanceof PtrType) {
             if (this.match(Tokenkind.ARROW)) {
-                initializer = this.primary()
+                initializer = this.expression()
             }
         } else {
             if (this.match(Tokenkind.EQUAL)) {
-                initializer = this.assignment()//初始化表达式 不能包含 逗号表达式z
+                initializer = this.expression()//初始化表达式 不能包含 逗号表达式z
 
                 // 将初始化表达式中的变量 转换为 原始表达式
                 const varToExpr = (init: Expr) => {
@@ -490,7 +490,10 @@ export class Parser {
 
     //表达式
     expression(): Expr {//表达式
-        return this.comma()
+        const expr = this.comma()
+        console.log("expression",expr)
+        expr.verify()
+        return expr
     }
     // 逗号表达式 //的返回值是左值
     comma(): Expr {
@@ -651,7 +654,7 @@ export class Parser {
 
     primary(): Expr { //主表达式 =>字面量，this ， boolean ，标识符(变量名)
         if (this.match(Tokenkind.NUMBER, Tokenkind.STRING, Tokenkind.CHARACTER, Tokenkind.TRUE, Tokenkind.FALSE, Tokenkind.NULL)) {
-            return new LiteralExpr(this.previous().literal); //字面量 表达式
+            return new LiteralExpr(this.previous()); //字面量 表达式
         }
         if (this.match(Tokenkind.LEFT_PAREN)) {
             const expr = this.expression()

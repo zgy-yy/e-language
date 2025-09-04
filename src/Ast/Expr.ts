@@ -30,7 +30,8 @@ export interface ExprVisitor<R> {
 export interface Expr { //表达式 基类
     exprType: DataType;
     operator: Token;
-    accept<R>(visitor: ExprVisitor<R>, data?: any): R;
+    accept<R>(visitor: ExprVisitor<R>, data?: any): R
+    verify(): void
 }
 
 
@@ -44,10 +45,15 @@ export class LogicalBinaryExpr implements Expr {
         this.left = left;
         this.operator = operator;
         this.right = right;
-        if (isSameType(left.exprType, new SimpleType(SimpleKind.Boolean)) && isSameType(right.exprType, new SimpleType(SimpleKind.Boolean))) {
-            this.exprType = new SimpleType(SimpleKind.Boolean); //逻辑运算符的类型为布尔类型
+        this.exprType = new SimpleType(SimpleKind.Boolean); //逻辑运算符的类型为布尔类型
+    }
+    verify(): void {
+        this.left.verify()
+        this.right.verify()
+
+        if (isSameType(this.left.exprType, new SimpleType(SimpleKind.Boolean)) && isSameType(this.right.exprType, new SimpleType(SimpleKind.Boolean))) {
         } else {
-            El.error(operator, "Logical operator must be used with boolean values.")
+            El.error(this.operator, "Logical operator must be used with boolean values.")
         }
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -66,16 +72,19 @@ export class BinaryExpr implements Expr {
         this.left = left;
         this.operator = operator;
         this.right = right;
-        if (isSameType(left.exprType, right.exprType)) {
-            if (operator.type === Tokenkind.PLUS || operator.type === Tokenkind.MINUS || operator.type === Tokenkind.STAR || operator.type === Tokenkind.SLASH) {
-                this.exprType = left.exprType;
-            } else if (operator.type === Tokenkind.GREATER || operator.type === Tokenkind.GREATER_EQUAL || operator.type === Tokenkind.LESS || operator.type === Tokenkind.LESS_EQUAL || operator.type === Tokenkind.EQUAL_EQUAL || operator.type === Tokenkind.BANG_EQUAL) {
-                this.exprType = new SimpleType(SimpleKind.Boolean);
-            } else {
-                El.error(operator, "Invalid operator in binary expression.")
-            }
+        if (operator.type === Tokenkind.PLUS || operator.type === Tokenkind.MINUS || operator.type === Tokenkind.STAR || operator.type === Tokenkind.SLASH) {
+            this.exprType = new SimpleType(SimpleKind.Int);
+        } else if (operator.type === Tokenkind.GREATER || operator.type === Tokenkind.GREATER_EQUAL || operator.type === Tokenkind.LESS || operator.type === Tokenkind.LESS_EQUAL || operator.type === Tokenkind.EQUAL_EQUAL || operator.type === Tokenkind.BANG_EQUAL) {
+            this.exprType = new SimpleType(SimpleKind.Boolean);
         } else {
-            El.error(operator, "Type mismatch in binary expression.")
+            El.error(operator, "Invalid operator in binary expression.")
+        }
+    }
+    verify(): void {
+        this.left.verify()
+        this.right.verify()
+        if (!isSameType(this.left.exprType, this.right.exprType)) {
+            El.error(this.operator, "Type mismatch in binary expression.")
         }
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -90,14 +99,19 @@ export class UnaryExpr implements Expr {
     constructor(operator: Token, right: Expr) {
         this.operator = operator;
         this.right = right;
-        if ((operator.type === Tokenkind.MINUS || operator.type === Tokenkind.BANG) && isSameType(right.exprType, new SimpleType(SimpleKind.Int))) {
-            this.exprType = new SimpleType(SimpleKind.Int); //一元表达式的类型为Int
-        } else if (operator.type === Tokenkind.BANG && right.exprType instanceof SimpleType && isSameType(right.exprType, new SimpleType(SimpleKind.Boolean))) {
-            this.exprType = new SimpleType(SimpleKind.Boolean); //一元表达式的类型为boolean
+        if (operator.type === Tokenkind.PLUS || operator.type === Tokenkind.MINUS) {
+            this.exprType = new SimpleType(SimpleKind.Int);
+        } else if (operator.type === Tokenkind.BANG) {
+            this.exprType = new SimpleType(SimpleKind.Boolean);
         } else {
-            El.error(operator, "Unary operator must be used with integer or boolean values.")
+            El.error(operator, "Invalid operator in unary expression.")
         }
-
+    }
+    verify(): void {
+        this.right.verify()
+        if (!isSameType(this.right.exprType, this.exprType)) {
+            El.error(this.operator, "Type mismatch in unary expression.")
+        }
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitUnaryExpr(this);
@@ -112,10 +126,16 @@ export class PrefixSelfExpr implements Expr {
     constructor(operator: Token, right: Expr) {
         this.right = right;
         this.operator = operator;
-        if (right.exprType instanceof SimpleType && right.exprType.simpleKind === SimpleKind.Int) {
+        if (operator.type === Tokenkind.PLUS_PLUS || operator.type === Tokenkind.MINUS_MINUS) {
             this.exprType = new SimpleType(SimpleKind.Int); //前缀自增自减表达式的类型为Int
         } else {
-            El.error(operator, "Prefix self operator must be used with integer values.")
+            El.error(operator, "Invalid operator in prefix self expression.")
+        }
+    }
+    verify(): void {
+        this.right.verify()
+        if (!isSameType(this.right.exprType, this.exprType)) {
+            El.error(this.operator, "Type mismatch in prefix self expression.")
         }
     }
     accept<R>(visitor: ExprVisitor<R>): R {
@@ -131,12 +151,17 @@ export class SuffixSelfExpr implements Expr {
     constructor(left: Expr, operator: Token) {
         this.left = left;
         this.operator = operator;
-        if (left.exprType instanceof SimpleType && left.exprType.simpleKind === SimpleKind.Int) {
+        if (operator.type === Tokenkind.PLUS_PLUS || operator.type === Tokenkind.MINUS_MINUS) {
             this.exprType = new SimpleType(SimpleKind.Int); //后缀自增自减表达式的类型为Int
         } else {
-            El.error(operator, "Suffix self operator must be used with integer values.")
+            El.error(operator, "Invalid operator in suffix self expression.")
         }
-
+    }
+    verify(): void {
+        this.left.verify()
+        if (!isSameType(this.left.exprType, this.exprType)) {
+            El.error(this.operator, "Type mismatch in suffix self expression.")
+        }
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitSuffixSelfExpr(this);
@@ -145,14 +170,13 @@ export class SuffixSelfExpr implements Expr {
 
 //字面量表达式
 export class LiteralExpr implements Expr {
-
     exprType: DataType;
-    value: any;
+    value: Token;
     operator: Token;
-    constructor(_val: any) {
+    constructor(_val: Token) {
         this.value = _val;
-        this.operator = _val.operator
-        const _valType = typeof _val;
+        this.operator = _val
+        const _valType = typeof _val.literal;
         if (_valType === 'string') {
             // this.exprType = new SimpleType(SimpleKind.String);
             // if (_val.length === 1) {
@@ -163,9 +187,11 @@ export class LiteralExpr implements Expr {
         } else if (_valType === 'boolean') {
             this.exprType = new SimpleType(SimpleKind.Boolean);
         } else {
-            El.error(_val, "Invalid literal value.")
+            El.error(this.operator, "Invalid literal value.")
         }
 
+    }
+    verify(): void {
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitLiteralExpr(this);
@@ -178,9 +204,15 @@ export class VariableExpr implements Expr {
     variable: Var;
     operator: Token;
     constructor(var_: Var, operator: Token) {
-        this.exprType = var_?.type;
         this.variable = var_;
         this.operator = operator
+    }
+    verify(): void {
+        if (!this.variable) {
+            El.error(this.operator, "Undefined variable.")
+        } else {
+            this.exprType = this.variable.type;
+        }
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitVariableExpr(this, isLeft);
@@ -193,9 +225,15 @@ export class GroupingExpr implements Expr {
     expression: Expr;
     operator: Token;
     constructor(expression: Expr, operator: Token) {
-        this.exprType = expression.exprType;
         this.expression = expression;
         this.operator = operator;
+        this.exprType = expression.exprType;
+    }
+    verify(): void {
+        this.expression.verify()
+        if (!isSameType(this.expression.exprType, this.exprType)) {
+            El.error(this.operator, "Type mismatch in grouping expression.")
+        }
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitGroupingExpr(this);
@@ -208,18 +246,17 @@ export class AssignExpr implements Expr {
     operator: Token;
     value: Expr;
     constructor(var_: VariableExpr, value: Expr, operator: Token) {
-        if (var_.variable == null) {
-            return
-        }
         this.exprType = var_.exprType;
         this.variable = var_;
         this.value = value;
         this.operator = operator;
-        if (!isSameType(var_.exprType, value.exprType)) {
-            El.error(operator, "Type mismatch in assignment.")
+    }
+    verify(): void {
+        this.variable.verify()
+        this.value.verify()
+        if (!isSameType(this.variable.exprType, this.value.exprType)) {
+            El.error(this.operator, "Type mismatch in assignment.")
         }
-
-
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitAssignExpr(this);
@@ -237,15 +274,18 @@ export class ArrowExpr implements Expr {
         this.left = left;
         this.right = right;
         this.operator = arrow;
-        if (left.exprType instanceof PtrType) {
-            this.exprType = left.exprType.elementType
-            if (!isSameType(left.exprType.elementType, right.exprType)) {
-                El.error(arrow, "Type mismatch in arrow expression.")
+    }
+    verify(): void {
+        this.left.verify()
+        this.right.verify()
+        if (this.left.exprType instanceof PtrType) {
+            this.exprType = this.left.exprType.elementType
+            if (!isSameType(this.left.exprType.elementType, this.right.exprType)) {
+                El.error(this.operator, "Type mismatch in arrow expression.")
             }
         } else {
-            El.error(arrow, "Arrow expression must be used with pointer type.")
+            El.error(this.operator, "Arrow expression must be used with pointer type.")
         }
-
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitArrowExpr(this);
@@ -259,41 +299,51 @@ export class CallExpr implements Expr {
     operator: Token;
     args: Array<Expr>;
     constructor(callee: Expr, paren: Token, args: Array<Expr>) {
-        // callee是函数声明
-        if (callee instanceof VariableExpr && callee.variable instanceof FuncVar) {
-
-            const paramsType = callee.variable.paramTypes
-            if (paramsType.length !== args.length) {
-                El.error(paren, "Type mismatch in call expression.")
-            }
-            for (let i = 0; i < paramsType.length; i++) {
-                if (!isSameType(paramsType[i], args[i].exprType)) {
-                    El.error(paren, "Type mismatch in call expression.")
-                }
-            }
-            this.exprType = callee.variable.retType
-        } else if (callee instanceof CallExpr) { //callee是函数调用表达式
-            if (callee.exprType instanceof FunType) {
-                const paramsType = callee.exprType.paramsType
-                if (paramsType.length !== args.length) {
-                    El.error(paren, "Type mismatch in call expression.")
-                }
-                for (let i = 0; i < paramsType.length; i++) {
-                    if (!isSameType(paramsType[i], args[i].exprType)) {
-                        El.error(paren, "Type mismatch in call expression.")
-                    }
-                }
-                this.exprType = callee.exprType.retType
-            } else {
-                El.error(paren, "Call expression must be used with function.")
-            }
-        } else {
-            El.error(paren, "Call expression must be used with function.")
-        }
-
         this.callee = callee;
         this.operator = paren;
         this.args = args;
+
+    }
+    verify(): void {
+        this.callee.verify()
+        this.args.forEach(arg => arg.verify())
+        if (this.callee instanceof VariableExpr && this.callee.variable instanceof FuncVar) {
+            this.exprType = this.callee.variable.retType
+        } else if (this.callee instanceof CallExpr) {
+            this.exprType = this.callee.exprType
+        } else {
+            El.error(this.operator, "Call expression must be used with function.")
+        }
+        // callee是函数声明
+        if (this.callee instanceof VariableExpr && this.callee.variable instanceof FuncVar) {
+            const paramsType = this.callee.variable.paramTypes
+            if (paramsType.length !== this.args.length) {
+                El.error(this.operator, "Type mismatch in call expression.")
+            }
+            for (let i = 0; i < paramsType.length; i++) {
+                if (!isSameType(paramsType[i], this.args[i].exprType)) {
+                    El.error(this.operator, "Type mismatch in call expression.")
+                }
+            }
+            this.exprType = this.callee.variable.retType
+        } else if (this.callee instanceof CallExpr) { //callee是函数调用表达式
+            if (this.callee.exprType instanceof FunType) {
+                const paramsType = this.callee.exprType.paramsType
+                if (paramsType.length !== this.args.length) {
+                    El.error(this.operator, "Type mismatch in call expression.")
+                }
+                for (let i = 0; i < paramsType.length; i++) {
+                    if (!isSameType(paramsType[i], this.args[i].exprType)) {
+                        El.error(this.operator, "Type mismatch in call expression.")
+                    }
+                }
+                this.exprType = this.callee.exprType
+            } else {
+                El.error(this.operator, "Call expression must be used with function.")
+            }
+        } else {
+            El.error(this.operator, "Call expression must be used with function.")
+        }
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitCallExpr(this);
@@ -310,6 +360,9 @@ export class StructExpr implements Expr {
         this.operator = paren;
         this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
     }
+    verify(): void {
+        this.fields.forEach(f => f.value.verify())
+    }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitStructExpr(this);
     }
@@ -320,20 +373,24 @@ export class ArrayExpr implements Expr {
     elements: Expr[];
     operator: Token;
     constructor(elements: Expr[], paren: Token) {
+        this.elements = elements
+        this.operator = paren;
 
-        if (elements.length === 0) {
+    }
+    verify(): void {
+        this.elements.forEach(e => e.verify())
+        if (this.elements.length === 0) {
             this.exprType = new ArrayType(new SimpleType(SimpleKind.Void), 0)
         } else {
-            const elementType = elements[0].exprType
-            for (const element of elements) {
+            const elementType = this.elements[0].exprType
+            for (const element of this.elements) {
                 if (!isSameType(elementType, element.exprType)) {
                     El.error(null, "Type mismatch in array expression.")
                 }
             }
-            this.exprType = new ArrayType(elementType, elements.length)
+            this.exprType = new ArrayType(elementType, this.elements.length)
         }
-        this.elements = elements
-        this.operator = paren;
+
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitArrayExpr(this);
@@ -346,24 +403,26 @@ export class IndexExpr implements Expr {
     index: Expr;
     operator: Token;
     constructor(target: Expr, index: Expr, paren: Token) {
+        this.target = target;
+        this.index = index;
+        this.operator = paren;
+    }
 
-        const targetType = target.exprType
+    verify(): void {
+        this.target.verify()
+        this.index.verify()
+        const targetType = this.target.exprType
         if (targetType instanceof ArrayType) {
             this.exprType = targetType.elementType;
         } else if (targetType instanceof PtrType) {
             if (targetType.elementType instanceof ArrayType) {
                 this.exprType = targetType.elementType.elementType
             } else {
-                El.error(null, "Index expression must be use with array")
+                El.error(this.operator, "Index expression must be use with array")
             }
         } else {
-            El.error(null, "Index expression must be used with array.")
+            El.error(this.operator, "Index expression must be used with array.")
         }
-
-        this.target = target;
-        this.index = index;
-
-        this.operator = paren;
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitIndexExpr(this, isLeft);
@@ -376,16 +435,21 @@ export class SetIndexExpr implements Expr {
     value: Expr;
     operator: Token;
     constructor(array: Expr, value: Expr, equals: Token) {
-        if (array instanceof IndexExpr) {
-            this.exprType = array.exprType;
-        } else {
-            El.error(equals, "Type mismatch in assignment.")
-        }
-        if (!isSameType(this.exprType, value.exprType)) {
-            El.error(equals, "Type mismatch in assignment.")
-        }
         this.target = array;
         this.value = value;
+        this.operator = equals;
+    }
+    verify(): void {
+        this.target.verify()
+        this.value.verify()
+        if (this.target instanceof IndexExpr) {
+            this.exprType = this.target.exprType;
+        } else {
+            El.error(this.operator, "Type mismatch in assignment.")
+        }
+        if (!isSameType(this.exprType, this.value.exprType)) {
+            El.error(this.operator, "Type mismatch in assignment.")
+        }
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitSetIndexExpr(this);
@@ -398,21 +462,24 @@ export class GetFieldExpr implements Expr {
     field: string;
     operator: Token;
     constructor(struct: Expr, field: string, paren: Token) {
-        const targetType = struct.exprType
+        this.target = struct;
+        this.field = field;
+        this.operator = paren;
+    }
+    verify(): void {
+        this.target.verify()
+        const targetType = this.target.exprType
         if (targetType instanceof StructType) {
-            this.exprType = targetType.fields.find(f => f.field === field)?.type
+            this.exprType = targetType.fields.find(f => f.field === this.field)?.type
         } else if (targetType instanceof PtrType) {
             if (targetType.elementType instanceof StructType) {
-                this.exprType = targetType.elementType.fields.find(f => f.field === field)?.type
+                this.exprType = targetType.elementType.fields.find(f => f.field === this.field)?.type
             } else {
                 El.error(null, "Get field expression must be used with struct.")
             }
         } else {
             El.error(null, "Get field expression must be used with struct.")
         }
-        this.target = struct;
-        this.field = field;
-        this.operator = paren;
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitGetFieldExpr(this, isLeft);
@@ -425,17 +492,21 @@ export class SetFieldExpr implements Expr {
     value: Expr;
     operator: Token;
     constructor(struct: Expr, value: Expr, equals: Token) {
-        if (struct instanceof GetFieldExpr) {
-            this.exprType = struct.exprType;
-        } else {
-            El.error(equals, "Type mismatch in assignment.")
-        }
-        if (!isSameType(this.exprType, value.exprType)) {
-            El.error(equals, "Type mismatch in assignment.")
-        }
         this.target = struct
         this.value = value;
         this.operator = equals;
+    }
+    verify(): void {
+        this.target.verify()
+        this.value.verify()
+        if (this.target instanceof GetFieldExpr) {
+            this.exprType = this.target.exprType;
+        } else {
+            El.error(this.operator, "Type mismatch in assignment.")
+        }
+        if (!isSameType(this.exprType, this.value.exprType)) {
+            El.error(this.operator, "Type mismatch in assignment.")
+        }
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitSetFieldExpr(this);
@@ -451,6 +522,10 @@ export class CommaExpr implements Expr {
         this.left = left;
         this.right = right;
         this.operator = comma;
+    }
+    verify(): void {
+        this.left.verify()
+        this.right.verify()
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitCommaExpr(this);

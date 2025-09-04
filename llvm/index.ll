@@ -5,30 +5,15 @@ target triple = "arm64-apple-macosx"
 declare i32 @printf(i8*, ...)
 
 
-%struct.global.St = type { i32 }
 define i32 @foo() {
 entry:
-ret i32 23
-}
-define %struct.global.St @bar() {
-entry:
-%bar.s = alloca %struct.global.St
-%reg_foo2 = bitcast i32* ()* @foo to i32* ()*
-%reg_call1 = call i32 %reg_foo2()
-%temp_struct0_a = insertvalue %struct.global.St undef, i32 %reg_call1, 0
-store %struct.global.St %temp_struct0_a, %struct.global.St* %bar.s
-%reg_s3 = load %struct.global.St, %struct.global.St* %bar.s
-ret %struct.global.St %reg_s3
+ret i32 Number 23 23
 }
 define i32 @main() {
 entry:
-%main.s = alloca %struct.global.St
-%reg_bar5 = bitcast i32* ()* @bar to i32* ()*
-%reg_call4 = call %struct.global.St %reg_bar5()
-store %struct.global.St %reg_call4, %struct.global.St* %main.s
-%reg_s7 = load %struct.global.St, %struct.global.St* %main.s
-%reg_fielda_6 = extractvalue %struct.global.St %reg_s7, 0
-call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_fielda_6)
-ret i32 23
+%main.a = alloca i32
+%reg_foo1 = bitcast i32* ()* @foo to i32* ()*
+%reg_call0 = call i32 %reg_foo1()
+store i32 %reg_call0, i32* %main.a
+ret i32 Number 2 2
 }
-

@@ -75,8 +75,8 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
     }
     visitVarStmt(stmt: VarStmt): string {
-        let equals ='='
-        if(stmt.variable.type instanceof PtrType){
+        let equals = '='
+        if (stmt.variable.type instanceof PtrType) {
             equals = '=>'
         }
         return stmt.initializer ? `${stmt.variable.name} ${equals} ${stmt.initializer.accept(this)}` : stmt.variable.name;
@@ -88,11 +88,11 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitAssignExpr(expr: AssignExpr): string {
-        return `${expr.variable.accept(this,true)} = ${expr.value.accept(this)}`;
+        return `${expr.variable.accept(this, true)} = ${expr.value.accept(this)}`;
     }
 
     visitArrowExpr(expr: ArrowExpr): string {
-        return `${expr.left.accept(this,true)} => ${expr.right.accept(this,true)}`;
+        return `${expr.left.accept(this, true)} => ${expr.right.accept(this, true)}`;
     }
     visitArrayExpr(expr: ArrayExpr): string {
         return `[${expr.elements.map((e) => e.accept(this)).join(", ")}]`;
@@ -101,7 +101,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `${expr.target.accept(this)}[${expr.index.accept(this)}]`;
     }
     visitSetIndexExpr(expr: SetIndexExpr): string {
-        return `${expr.target.accept(this,true)} = ${expr.value.accept(this)}`;
+        return `${expr.target.accept(this, true)} = ${expr.value.accept(this)}`;
     }
 
     visitStructExpr(expr: StructExpr): string {
@@ -113,7 +113,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitSetFieldExpr(expr: SetFieldExpr): string {
-        return `${expr.target.accept(this,true)} = ${expr.value.accept(this)}`;
+        return `${expr.target.accept(this, true)} = ${expr.value.accept(this)}`;
     }
 
     visitVariableExpr(expr: VariableExpr): string {
@@ -138,14 +138,14 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `${expr.callee.accept(this)}(${expr.args.map((arg) => arg.accept(this)).join(", ")})`;
     }
     visitLiteralExpr(expr: LiteralExpr): string {
-        if (typeof expr.value === "string") {
-            if (expr.value.length === 1) {
-                return `'${expr.value}'`;
+        if (typeof expr.value.literal === "string") {
+            if (expr.value.literal.length === 1) {
+                return `'${expr.value.literal}'`;
             }
-            return `"${expr.value}"`;
+            return `"${expr.value.literal}"`;
         }
 
-        return expr.value;
+        return expr.value.literal;
     }
     visitGroupingExpr(expr: GroupingExpr): string {
         return this.parenthesize("group", expr.expression);

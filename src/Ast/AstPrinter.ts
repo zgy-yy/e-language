@@ -1,5 +1,5 @@
 import { ArrayType, PtrType } from "../Parse/TypeDeclar";
-import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
@@ -119,6 +119,11 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     visitVariableExpr(expr: VariableExpr): string {
         return expr.variable.name;
     }
+
+    visitInitializerExpr(expr: InitializerExpr): string {
+        return `${expr.initializer.accept(this)}`;
+    }
+
     visitBinaryExpr(expr: BinaryExpr): string {
         return this.parenthesize(expr.operator.lexeme, expr.left, expr.right);
     }
@@ -138,14 +143,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `${expr.callee.accept(this)}(${expr.args.map((arg) => arg.accept(this)).join(", ")})`;
     }
     visitLiteralExpr(expr: LiteralExpr): string {
-        if (typeof expr.value.literal === "string") {
-            if (expr.value.literal.length === 1) {
-                return `'${expr.value.literal}'`;
-            }
-            return `"${expr.value.literal}"`;
-        }
-
-        return expr.value.literal;
+        return expr.value;
     }
     visitGroupingExpr(expr: GroupingExpr): string {
         return this.parenthesize("group", expr.expression);
@@ -153,6 +151,9 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
     visitCommaExpr(expr: CommaExpr): string {
         return `${expr.left.accept(this)}, ${expr.right.accept(this)}`;
+    }
+    visitFunctionExpr(expr: FunctionExpr): string {
+        return `${expr.fun_lable.name}`;
     }
 
 

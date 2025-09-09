@@ -1,11 +1,12 @@
-import { Var } from "./Symbol";
+import { FunLable, Var } from "./Symbol";
 import { DataType, isSameType, StructType } from "./TypeDeclar";
 
 
 class Env {
     level: number;
     varEnv: Map<string, Var> = new Map<string, Var>();
-    structEnv: Map<string, StructType> = new Map<string, StructType>();
+    structDeclareEnv: Map<string, StructType> = new Map<string, StructType>();
+    funDeclareEnv: Map<string, FunLable> = new Map<string, FunLable>();
     constructor(level: number) {
         this.level = level;
     }
@@ -28,44 +29,49 @@ export class SymbolTable {
     }
 
 
-    addVariable(name: string, var_: Var) {
-        this.symTab.at(-1).varEnv.set(name, var_);
-        return var_;
+    addIdentifier(name: string, idne: Var|FunLable) {
+        if(idne instanceof Var){
+            this.symTab.at(-1).varEnv.set(name, idne);
+        }else{
+            this.symTab.at(-1).funDeclareEnv.set(name, idne);
+        }
+
+        return idne;
     }
 
-    findVariable(name: string): Var {// 从当前作用域开始查找
-        const inCurScope =this.varInCurrentScope(name)
+    findIdentifier(name: string): Var|FunLable {// 从当前作用域开始查找
+        const inCurScope =this.identifierInCurrentScope(name)
         if(inCurScope){
-            return this.symTab.at(-1).varEnv.get(name)
+            return this.symTab.at(-1).varEnv.get(name)||this.symTab.at(-1).funDeclareEnv.get(name)
         }
         for (let i = this.symTab.length - 1; i >= 0; i--) {
-            if (this.symTab[i].varEnv.has(name)) {
-                const var_ = this.symTab[i].varEnv.get(name)
+            if (this.symTab[i].varEnv.has(name)||this.symTab[i].funDeclareEnv.has(name)) {
+                const idne = this.symTab[i].varEnv.get(name) || this.symTab[i].funDeclareEnv.get(name)
                 if (i !== 0) {
-                    var_.inClosure = true // 非全局变量，在闭包中,捕获变量
+                    idne.inClosure = true // 非全局变量，在闭包中,捕获变量
                 }
-                return var_
+                return idne
             }
         }
         return null;
     }
 
-    varInCurrentScope(name: string): boolean {// 判断当前作用域是否有这个变量
+    identifierInCurrentScope(name: string): boolean {// 判断当前作用域是否有这个变量
         if (this.symTab.length === 0) {
             return false;
         }
-        return this.symTab[this.symTab.length - 1].varEnv.has(name);
+        return this.symTab[this.symTab.length - 1].varEnv.has(name)||this.symTab[this.symTab.length - 1].funDeclareEnv.has(name)
     }
 
     addStructure(name: string, structure: StructType) {
-        this.symTab.at(-1).structEnv.set(name, structure)
+        this.symTab.at(-1).structDeclareEnv.set(name, structure)
         return structure;
     }
 
     findStructure(name: string): StructType {
         for (let i = this.symTab.length - 1; i >= 0; i--) {
-            if (this.symTab[i].structEnv.has(name)) {
-                return this.symTab[i].structEnv.get(name);
+            if (this.symTab[i].structDeclareEnv.has(name)) {
+                return this.symTab[i].structDeclareEnv.get(name);
             }
         }
         return null;
@@ -76,6 +82,6 @@ export class SymbolTable {
         if (this.symTab.length === 0) {
             return false;
         }
-        return this.symTab.at(-1).structEnv.has(name);
+        return this.symTab.at(-1).structDeclareEnv.has(name);
     }
 }

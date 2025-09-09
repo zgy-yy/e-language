@@ -16,22 +16,11 @@ export class Var {
 // 函数变量
 export class FuncVar extends Var {
     retType: DataType //返回值类型
-    paramTypes: DataType[] //参数列表
+    paramsType: DataType[] //参数列表
     constructor(name: string, funType: FunType) {
         super(name, funType) //函数类型为变量类型
         this.retType = funType.retType //返回值类型
-        this.paramTypes = funType.paramsType
-    }
-}
-
-//声明的函数
-export class FunLable extends FuncVar {
-    closureEnv: Var[]
-    constructor(name: string, funType: FunType) {
-        super(name, funType)
-    }
-    addEnvVar(envVar: Var) {
-        this.closureEnv.push(envVar)
+        this.paramsType = funType.paramsType
     }
 }
 
@@ -48,5 +37,26 @@ export class ArrayVar extends Var {
     constructor(name: string, arrayType: ArrayType) {
         super(name, arrayType)
         this.elementType = arrayType.elementType
+    }
+}
+
+
+//声明的函数
+export class FunLable{
+    inClosure: boolean = false
+    type: FunType
+    retType: DataType
+    paramsType: DataType[]
+    name: string
+    closureEnv: Var[]
+    constructor(name: string, funType: FunType) {
+        this.name = name
+        this.type = funType
+        this.retType = funType.retType
+        this.paramsType = funType.paramsType
+        this.closureEnv = []
+    }
+    addEnvVar(envVar: Var) {
+        this.closureEnv.push(envVar)
     }
 }

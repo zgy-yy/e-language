@@ -1,4 +1,4 @@
-import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
@@ -23,7 +23,10 @@ export class Parser {
 
     statements: Stmt[] = []
 
-    postfuncdeclarations: Map<string,Expr> = new Map()
+    //含有未声明的变量的表达式语句
+    unKnowFuncLabelExprSmt: Map<Expr, Map<string, FunctionExpr>> = new Map()
+    //当前解析的表达式语句里 未声明的变量
+    curExprSmtUnknowFuncLabel: Map<string, FunctionExpr> = new Map()
 
     constructor(tokens: Token[]) {
         this.tokens = tokens
@@ -169,20 +172,23 @@ export class Parser {
         }
         let varStmt: VarStmt[] = []
         const var_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.")//变量名
-        if (this.symbolTable.varInCurrentScope(var_name.lexeme)) {
+        if (this.symbolTable.identifierInCurrentScope(var_name.lexeme)) {
             this.error(var_name, "Variable with this name already declared in this scope.")
         }
 
-        let initializer = null
+        let initializer: Expr = null
+
+        let operator: Token = null
 
         if (varT instanceof PtrType) {
             if (this.match(Tokenkind.ARROW)) {
-                initializer = this.expression()
+                initializer = this.assignment()
+                operator = this.previous()
             }
         } else {
             if (this.match(Tokenkind.EQUAL)) {
-                initializer = this.expression()//初始化表达式 不能包含 逗号表达式z
-
+                initializer = this.assignment()//初始化表达式 不能包含 逗号表达式z
+                operator = this.previous()
                 // 将初始化表达式中的变量 转换为 原始表达式
                 const varToExpr = (init: Expr) => {
                     if (init instanceof VariableExpr) {
@@ -214,7 +220,6 @@ export class Parser {
                     return init
                 }
                 if (this.symbolTable.currentLevel === 0) {
-
                     if (initializer) {
                         initializer = varToExpr(initializer)
                     }
@@ -223,7 +228,7 @@ export class Parser {
         }
 
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
-        let var_ = null
+        let var_: Var = null
         if (varT instanceof FunType) {
             var_ = new FuncVar(var_name.lexeme, varT)
         } else if (varT instanceof StructType) {
@@ -233,22 +238,34 @@ export class Parser {
         } else {
             var_ = new Var(var_name.lexeme, varT)
         }
-        this.symbolTable.addVariable(var_name.lexeme, var_)
+        this.symbolTable.addIdentifier(var_name.lexeme, var_)
+        let initializerExpr = null
+        if (initializer && this.curExprSmtUnknowFuncLabel.size > 0) {
+            initializerExpr = new InitializerExpr(initializer, operator, var_)
+            this.unKnowFuncLabelExprSmt.set(initializerExpr, this.curExprSmtUnknowFuncLabel)
+            this.curExprSmtUnknowFuncLabel = new Map()
+        }
 
-        varStmt.push(new VarStmt(var_, initializer))
+        varStmt.push(new VarStmt(var_, initializerExpr))
 
         while (this.match(Tokenkind.COMMA)) {
             let var_name = this.consume(Tokenkind.IDENTIFIER, "Expect identifier name.") //标识符名称
-            if (this.symbolTable.varInCurrentScope(var_name.lexeme)) {
+            if (this.symbolTable.identifierInCurrentScope(var_name.lexeme)) {
                 this.error(var_name, "Variable with this name already declared in this scope.")
             }
             const var_ = new Var(var_name.lexeme, varT)
-            this.symbolTable.addVariable(var_name.lexeme, var_)
+            this.symbolTable.addIdentifier(var_name.lexeme, var_)
             let initializer = null
             if (this.match(Tokenkind.EQUAL)) {
                 initializer = this.assignment()
             }
-            varStmt.push(new VarStmt(var_, initializer))
+            let initializerExpr = null
+            if (initializer && this.curExprSmtUnknowFuncLabel.size > 0) {
+                initializerExpr = new InitializerExpr(initializer, operator, var_)
+                this.unKnowFuncLabelExprSmt.set(initializerExpr, this.curExprSmtUnknowFuncLabel)
+                this.curExprSmtUnknowFuncLabel = new Map()
+            }
+            varStmt.push(new VarStmt(var_, initializerExpr))
         }
         this.consume(Tokenkind.SEMICOLON, "Expect ';' after variable declaration.")
         return new VarListStmt(varStmt)
@@ -264,17 +281,8 @@ export class Parser {
         if (!this.check(Tokenkind.RIGHT_PAREN)) {
             params.push(...this.paramDeclaration())
         }
-        const fun_var = new FunLable(fun_name.lexeme, new FunType(params.map(item => item.type), dclRetType)) //函数声明 视为变
-        this.symbolTable.addVariable(fun_name.lexeme, fun_var)//将函数名加入符号表
-
-        if(this.postfuncdeclarations.has(fun_name.lexeme)){
-            const exp = this.postfuncdeclarations.get(fun_name.lexeme)
-            console.log("zz",exp)
-            this.postfuncdeclarations.delete(fun_name.lexeme)
-            if(exp instanceof VariableExpr){
-                exp.variable = fun_var
-            }
-        }
+        const fun_lable = new FunLable(fun_name.lexeme, new FunType(params.map(item => item.type), dclRetType)) //函数声明 视为变
+        this.symbolTable.addIdentifier(fun_name.lexeme, fun_lable)//将函数名加入符号表
 
         const funcEn: FuncEnclosing = {
             funcName: fun_name.lexeme,
@@ -287,7 +295,7 @@ export class Parser {
         // 进入函数作用域
         this.symbolTable.enterScope()
         params.forEach(item => {
-            this.symbolTable.addVariable(item.name, item)
+            this.symbolTable.addIdentifier(item.name, item)
         })
         // 解析函数体
         const bodyStatements: Stmt[] = []
@@ -309,7 +317,7 @@ export class Parser {
 
         this.symbolTable.leaveScope()
         this.funcEnclosing.pop()
-        return new FunctionStmt(dclRetType, fun_var, params, bodyStatements)
+        return new FunctionStmt(dclRetType, fun_lable, params, bodyStatements)
     }
 
     paramDeclaration(): Var[] {
@@ -490,9 +498,27 @@ export class Parser {
 
     //表达式
     expression(): Expr {//表达式
+        this.unKnowFuncLabelExprSmt.forEach((value, key) => {
+            console.log("value", value, key)
+            value.forEach((funcLabelExpr, name) => {
+                const funLabel = this.symbolTable.findIdentifier(name)
+                if (funLabel && funLabel instanceof FunLable) {
+                    funcLabelExpr.fun_lable = funLabel
+                    value.delete(name)
+                }
+            })
+            if (value.size === 0) {
+                key.verify()
+                this.unKnowFuncLabelExprSmt.delete(key)
+            }
+        })
         const expr = this.comma()
-        console.log("expression",expr)
-        expr.verify()
+        if (this.curExprSmtUnknowFuncLabel.size > 0) {
+            this.unKnowFuncLabelExprSmt.set(expr, this.curExprSmtUnknowFuncLabel)
+            this.curExprSmtUnknowFuncLabel = new Map()
+        } else {
+            expr.verify()
+        }
         return expr
     }
     // 逗号表达式 //的返回值是左值
@@ -659,21 +685,24 @@ export class Parser {
         if (this.match(Tokenkind.LEFT_PAREN)) {
             const expr = this.expression()
             this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after expression.")
-            return new GroupingExpr(expr,this.previous())
+            return new GroupingExpr(expr, this.previous())
         }
         if (this.match(Tokenkind.IDENTIFIER)) {
-            const varExpr = this.previous()
-            let varName = varExpr.lexeme
-            if (this.symbolTable.findVariable(varName)) {
-                return new VariableExpr(this.symbolTable.findVariable(varName),varExpr)
-            }
-            if (this.peek().type == Tokenkind.LEFT_PAREN) {
-                const exp = new VariableExpr(null,varExpr)
-                this.postfuncdeclarations.set(varName,exp)
-                return exp
+            const var_ = this.previous()
+            let varName = var_.lexeme
+
+            const idne = this.symbolTable.findIdentifier(varName)
+            if (idne instanceof FunLable) {
+                return new FunctionExpr(idne, var_)
+            } else if (idne instanceof Var) {
+                return new VariableExpr(idne, var_)
+            } else {
+                const varExpr = new FunctionExpr(null, var_)
+                this.curExprSmtUnknowFuncLabel.set(varName, varExpr)
+                return varExpr
             }
 
-            throw this.error(varExpr, "Undefined variable '" + varName + "'.")
+            throw this.error(var_, "Undefined variable '" + varName + "'.")
         }
 
         if (this.match(Tokenkind.LEFT_BRACE)) {

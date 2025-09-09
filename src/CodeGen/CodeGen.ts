@@ -1,4 +1,4 @@
-import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, GetFieldExpr, GroupingExpr, IndexExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { ArrayVar, FuncVar, FunLable, Var } from "../Parse/Symbol";
 import { ArrayType, DataType, FunType, PtrType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
@@ -714,15 +714,7 @@ declare i32 @printf(i8*, ...)
             }
             return { type: varType, valReg: var_name };
         }
-
-        //函数类型的变量
-        if (expr.variable instanceof FunLable) {
-            const funVar = expr.variable
-            const retType = this.typeToLLVM(funVar.type) //函数变量 的返回值类型
-            const params = funVar.paramTypes.map(p => this.typeToLLVM(p))
-            this.printIR(`${reg_name} = bitcast ${retType} (${params.join(', ')})* ${var_name} to ${retType} (${params.join(', ')})*`);
-            return { type: retType, valReg: reg_name };
-        } else if (expr.variable.type instanceof PtrType) {
+        if (expr.variable.type instanceof PtrType) {
             const reg_ptr = `${reg_name}_ptr${n}`
             const elementType = this.typeToLLVM(expr.variable.type.elementType)
             this.printIR(`${reg_ptr} = load ${varType}, ${varType}* ${var_name}`);
@@ -734,8 +726,26 @@ declare i32 @printf(i8*, ...)
         }
     }
 
+    visitFunctionExpr(expr: FunctionExpr): ExprResult {
+        const n = this.sequence.reg++;
+        const reg_name = `%reg_function${n}`
+        const fun = expr.fun_lable
+        // 函数表达式 => 函数名
+        const fnName = `@${expr.fun_lable.name}`
+        const retType = this.typeToLLVM(fun.type)
+        const params = fun.paramsType.map(p => this.typeToLLVM(p))
+        this.printIR(`${reg_name} = bitcast ${retType} (${params.join(', ')})* ${fnName} to ${retType} (${params.join(', ')})*`);
+
+        return { type: retType, valReg: reg_name };
+    }
+
+    visitInitializerExpr(expr: InitializerExpr): ExprResult {
+        const initExpR = expr.initializer.accept(this);
+        return { type: this.typeToLLVM(expr._var.type), valReg: initExpR.valReg };
+    }
+
     visitLiteralExpr(expr: LiteralExpr): ExprResult {
-        return { type: this.typeToLLVM(expr.exprType), valReg: expr.value.toString() };
+        return { type: this.typeToLLVM(expr.exprType), valReg: expr.value };
     }
 
     visitGroupingExpr(expr: GroupingExpr): ExprResult {

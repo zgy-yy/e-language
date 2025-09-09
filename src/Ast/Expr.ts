@@ -1,7 +1,7 @@
 import { ArrayType, DataKind, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token"
-import { FuncVar, Var } from "../Parse/Symbol";
+import { FuncVar, FunLable, Var } from "../Parse/Symbol";
 
 /*
 * 表达式
@@ -25,6 +25,8 @@ export interface ExprVisitor<R> {
     visitIndexExpr(expr: IndexExpr, isLeft: boolean): R;
     visitSetIndexExpr(expr: SetIndexExpr): R;
     visitArrowExpr(expr: ArrowExpr): R;
+    visitInitializerExpr(expr: InitializerExpr): R;
+    visitFunctionExpr(expr: FunctionExpr): R;
 }
 
 export interface Expr { //表达式 基类
@@ -171,10 +173,10 @@ export class SuffixSelfExpr implements Expr {
 //字面量表达式
 export class LiteralExpr implements Expr {
     exprType: DataType;
-    value: Token;
+    value: string;
     operator: Token;
     constructor(_val: Token) {
-        this.value = _val;
+        this.value = _val.lexeme;
         this.operator = _val
         const _valType = typeof _val.literal;
         if (_valType === 'string') {
@@ -292,6 +294,29 @@ export class ArrowExpr implements Expr {
     }
 }
 
+//初始化表达式
+export class InitializerExpr implements Expr {
+    exprType: DataType;
+    operator: Token;
+    _var: Var;
+    initializer: Expr;
+    constructor(expr: Expr, operator: Token, _var: Var) {
+        this.exprType = expr.exprType;
+        this.operator = operator;
+        this.initializer = expr;
+        this._var = _var;
+    }
+    verify(): void {
+        this.initializer.verify()
+        if (!isSameType(this.initializer.exprType, this._var.type)) {
+            El.error(this.operator, "Type mismatch in initializer expression.")
+        }
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitInitializerExpr(this);
+    }
+}
+
 // 函数调用表达式   
 export class CallExpr implements Expr {
     exprType: DataType; //函数调用表达式的类型为函数的返回值类型
@@ -307,16 +332,9 @@ export class CallExpr implements Expr {
     verify(): void {
         this.callee.verify()
         this.args.forEach(arg => arg.verify())
-        if (this.callee instanceof VariableExpr && this.callee.variable instanceof FuncVar) {
-            this.exprType = this.callee.variable.retType
-        } else if (this.callee instanceof CallExpr) {
-            this.exprType = this.callee.exprType
-        } else {
-            El.error(this.operator, "Call expression must be used with function.")
-        }
         // callee是函数声明
-        if (this.callee instanceof VariableExpr && this.callee.variable instanceof FuncVar) {
-            const paramsType = this.callee.variable.paramTypes
+        if (this.callee instanceof FunctionExpr) {
+            const paramsType = this.callee.fun_lable.paramsType
             if (paramsType.length !== this.args.length) {
                 El.error(this.operator, "Type mismatch in call expression.")
             }
@@ -325,7 +343,7 @@ export class CallExpr implements Expr {
                     El.error(this.operator, "Type mismatch in call expression.")
                 }
             }
-            this.exprType = this.callee.variable.retType
+            this.exprType = this.callee.fun_lable.retType
         } else if (this.callee instanceof CallExpr) { //callee是函数调用表达式
             if (this.callee.exprType instanceof FunType) {
                 const paramsType = this.callee.exprType.paramsType
@@ -529,5 +547,21 @@ export class CommaExpr implements Expr {
     }
     accept<R>(visitor: ExprVisitor<R>): R {
         return visitor.visitCommaExpr(this);
+    }
+}
+
+export class FunctionExpr implements Expr {
+    exprType: DataType;
+    fun_lable: FunLable;
+    operator: Token;
+    constructor(fun_lable: FunLable, paren: Token) {
+        this.fun_lable = fun_lable;
+        this.operator = paren;
+    }
+    verify(): void {
+        this.exprType = this.fun_lable.type
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitFunctionExpr(this);
     }
 }

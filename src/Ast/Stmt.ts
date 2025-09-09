@@ -4,7 +4,7 @@
 
 import { DataType, isSameType, StructType } from "../Parse/TypeDeclar";
 import { Token } from "../Lexer/Token";
-import { Var } from "../Parse/Symbol";
+import { FunLable, Var } from "../Parse/Symbol";
 import { Expr } from "./Expr";
 import { El } from "../El/El";
 
@@ -67,11 +67,6 @@ export class VarStmt implements Stmt {
     constructor(var_: Var, initializer?: Expr) {
         this.variable = var_;
         this.initializer = initializer;
-        if (initializer) {
-            if (!isSameType(var_.type, initializer.exprType)) {
-                El.error(initializer.operator, "Initializer type does not match variable type.")
-            }
-        }
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitVarStmt(this);
@@ -182,11 +177,11 @@ export class ContinueStmt implements Stmt {
 
 export class FunctionStmt implements Stmt {
     retType: DataType;
-    fn_name: Var;//函数名，变量类型 “fn”
+    fn_name: FunLable;//函数名，变量类型 “fn”
     params: Var[];
     body: Stmt[];
 
-    constructor(var_type: DataType, name: Var, params: Var[], body:Stmt[]) {
+    constructor(var_type: DataType, name: FunLable, params: Var[], body:Stmt[]) {
         this.retType = var_type;
         this.fn_name = name;
         this.params = params;

@@ -63,13 +63,3 @@ function checkEnv(): 'node' | 'browser' {
     }
     return 'browser'
 }
-
-
-function la(){
-    return 12
-}
-let a={
-    i:la()
-}
-console.log(a)
-

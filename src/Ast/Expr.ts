@@ -2,6 +2,7 @@ import { ArrayType, DataKind, DataType, FunType, isSameType, PtrType, SimpleKind
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token"
 import { FuncVar, FunLable, Var } from "../Parse/Symbol";
+import { Stmt } from "./Stmt";
 
 /*
 * 表达式
@@ -208,13 +209,9 @@ export class VariableExpr implements Expr {
     constructor(var_: Var, operator: Token) {
         this.variable = var_;
         this.operator = operator
+        this.exprType = var_.type;
     }
     verify(): void {
-        if (!this.variable) {
-            El.error(this.operator, "Undefined variable.")
-        } else {
-            this.exprType = this.variable.type;
-        }
     }
     accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
         return visitor.visitVariableExpr(this, isLeft);
@@ -356,6 +353,23 @@ export class CallExpr implements Expr {
                     }
                 }
                 this.exprType = this.callee.exprType
+            } else {
+                El.error(this.operator, "Call expression must be used with function.")
+            }
+        } else if (this.callee instanceof VariableExpr) {
+            if (this.callee.variable instanceof FuncVar) {
+                const fun_var= this.callee.variable
+                const paramsType =fun_var.paramsType
+                if (paramsType.length !== this.args.length) {
+                    El.error(this.operator, "Type mismatch in call expression.")
+                }
+                for (let i = 0; i < paramsType.length; i++) {
+                    if (!isSameType(paramsType[i], this.args[i].exprType)) {
+                        El.error(this.operator, "Type mismatch in call expression.")
+                    }
+                }
+                this.exprType = this.callee.variable.retType
+                
             } else {
                 El.error(this.operator, "Call expression must be used with function.")
             }
@@ -554,11 +568,18 @@ export class FunctionExpr implements Expr {
     exprType: DataType;
     fun_lable: FunLable;
     operator: Token;
-    constructor(fun_lable: FunLable, paren: Token) {
+    params: Var[];
+    body?: Stmt[];
+    constructor(fun_lable: FunLable, paren: Token, body?: Stmt[], params?: Var[]) {
         this.fun_lable = fun_lable;
         this.operator = paren;
+        this.body = body;
+        this.params = params ?? [];
     }
     verify(): void {
+        if (!this.fun_lable) {
+            El.error(this.operator, "Undefined function.")
+        }
         this.exprType = this.fun_lable.type
     }
     accept<R>(visitor: ExprVisitor<R>): R {

@@ -88,8 +88,7 @@ declare i32 @printf(i8*, ...)
 
     visitFunctionStmt(stmt: FunctionStmt): void {
         CodeGen.codeText.enterFunc()
-        // 添加函数变量到全局作用域
-        const lv_funName = this.scope.addVariable(stmt.fn_name, stmt.fn_name.name)
+        const lv_funName = `@${stmt.fn_name.name}`
         // 进入函数作用域
         this.scope.enterScope(stmt.fn_name.name)
 
@@ -728,15 +727,35 @@ declare i32 @printf(i8*, ...)
 
     visitFunctionExpr(expr: FunctionExpr): ExprResult {
         const n = this.sequence.reg++;
-        const reg_name = `%reg_function${n}`
+
         const fun = expr.fun_lable
         // 函数表达式 => 函数名
-        const fnName = `@${expr.fun_lable.name}`
-        const retType = this.typeToLLVM(fun.type)
+        const lv_fnName = `@${expr.fun_lable.name}`
+        const retType = this.typeToLLVM(fun.retType)
         const params = fun.paramsType.map(p => this.typeToLLVM(p))
-        this.printIR(`${reg_name} = bitcast ${retType} (${params.join(', ')})* ${fnName} to ${retType} (${params.join(', ')})*`);
 
-        return { type: retType, valReg: reg_name };
+        if (expr.body) {
+            CodeGen.codeText.enterFunc()
+            this.scope.enterScope(expr.fun_lable.name)
+            this.printIR(`define ${retType} ${lv_fnName} (${expr.params.map(p => this.typeToLLVM(p.type) + ' %' + p.name).join(', ')}) {`)
+            this.printIR(`entry:`)
+            expr.params?.forEach(p => {
+                const lv_name = this.scope.addVariable(p, `${expr.fun_lable.name}.${p.name}`)
+                this.printIR(`${lv_name} = alloca ${this.typeToLLVM(p.type)}`);
+                this.printIR(`store ${this.typeToLLVM(p.type)} %${p.name}, ${this.typeToLLVM(p.type)}* ${lv_name}`);
+            })
+            expr.body.forEach(s => {
+                s.accept(this);
+            })
+            this.printIR(`}`)
+            this.scope.leaveScope()
+            CodeGen.codeText.leaveFunc()
+        }
+
+        const reg_name = `%reg_function${n}`
+        this.printIR(`${reg_name} = bitcast ${retType} (${params.join(', ')})* ${lv_fnName} to ${retType} (${params.join(', ')})*`);
+
+        return { type: retType, valReg: lv_fnName };
     }
 
     visitInitializerExpr(expr: InitializerExpr): ExprResult {

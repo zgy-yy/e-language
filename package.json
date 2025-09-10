@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "@types/nanoid": "^2.1.0",
+    "nanoid": "^5.1.5",
     "ts-node": "^10.9.2",
     "vite": "^6.1.0"
   },

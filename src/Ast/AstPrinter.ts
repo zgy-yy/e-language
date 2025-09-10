@@ -153,7 +153,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `${expr.left.accept(this)}, ${expr.right.accept(this)}`;
     }
     visitFunctionExpr(expr: FunctionExpr): string {
-        return `${expr.fun_lable.name}`;
+        return `${expr.fun_lable.name} ${expr.body ? ` (${expr.fun_lable.paramsType.map((p) => p.toString()).join(", ")}) { ${expr.body.map((s) => s.accept(this)).join("\n")} }` : ''}`;
     }
 
 

@@ -1,3 +1,4 @@
+import { customAlphabet, nanoid } from "nanoid"
 import { ArrayType, DataType, FunType, StructType } from "./TypeDeclar"
 
 export class Var {
@@ -40,17 +41,16 @@ export class ArrayVar extends Var {
     }
 }
 
-
+const hexID = customAlphabet('0123456789ABCDEF', 4);
 //声明的函数
-export class FunLable{
-    inClosure: boolean = false
+export class FunLable {
     type: FunType
     retType: DataType
     paramsType: DataType[]
     name: string
     closureEnv: Var[]
     constructor(name: string, funType: FunType) {
-        this.name = name
+        this.name = name == 'main' ? name : name + '.' + hexID()
         this.type = funType
         this.retType = funType.retType
         this.paramsType = funType.paramsType

@@ -63,3 +63,16 @@ function checkEnv(): 'node' | 'browser' {
     }
     return 'browser'
 }
+
+
+function a(){
+    console.log("a")
+}
+
+let foo =()=>{
+    console.log("foo")
+    foo =a;
+    foo();
+}
+
+foo();

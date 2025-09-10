@@ -1,10 +1,13 @@
 
 int main(){
-    int a = foo();
-    return 2;
-}
+    (int)int fn=(int i)int{
+        if(i<=0){
+            return 0;
+        }
+        return i+fn(i-1);
+    };
 
-
-int foo(){
-    return 23;
+    int n = fn(3);
+    print n;
+    return 0;
 }

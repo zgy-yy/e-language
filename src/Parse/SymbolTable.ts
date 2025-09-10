@@ -1,14 +1,21 @@
 import { FunLable, Var } from "./Symbol";
 import { DataType, isSameType, StructType } from "./TypeDeclar";
 
-
+export enum ScopeType {
+    Global = "global",
+    Function = "function",
+    Block = "block",
+    For = "for",
+}
 class Env {
     level: number;
+    scopeType: ScopeType;
     varEnv: Map<string, Var> = new Map<string, Var>();
     structDeclareEnv: Map<string, StructType> = new Map<string, StructType>();
     funDeclareEnv: Map<string, FunLable> = new Map<string, FunLable>();
-    constructor(level: number) {
+    constructor(level: number, scopeType: ScopeType) {
         this.level = level;
+        this.scopeType = scopeType;
     }
 }
 export class SymbolTable {
@@ -16,12 +23,12 @@ export class SymbolTable {
     private symTab: Env[] = [];
 
     constructor() {
-        this.symTab.push(new Env(0));
+        this.symTab.push(new Env(0, ScopeType.Global));
     }
 
-    enterScope() {
+    enterScope(scopeType: ScopeType) {
         this.currentLevel++;
-        this.symTab.push(new Env(this.currentLevel));
+        this.symTab.push(new Env(this.currentLevel, scopeType));
     }
     leaveScope() {
         this.currentLevel--;
@@ -44,12 +51,21 @@ export class SymbolTable {
         if(inCurScope){
             return this.symTab.at(-1).varEnv.get(name)||this.symTab.at(-1).funDeclareEnv.get(name)
         }
+        let  crossFunc = false
         for (let i = this.symTab.length - 1; i >= 0; i--) {
-            if (this.symTab[i].varEnv.has(name)||this.symTab[i].funDeclareEnv.has(name)) {
-                const idne = this.symTab[i].varEnv.get(name) || this.symTab[i].funDeclareEnv.get(name)
-                if (i !== 0) {
-                    idne.inClosure = true // 非全局变量，在闭包中,捕获变量
+            const curEnv = this.symTab[i]
+            if(curEnv.scopeType === ScopeType.Function){
+                crossFunc = true
+            }
+            // debugger
+            if (curEnv.varEnv.has(name)||curEnv.funDeclareEnv.has(name)) {
+                const idne = curEnv.varEnv.get(name) || curEnv.funDeclareEnv.get(name)
+                if(crossFunc){
+                    if(idne instanceof Var){
+                        idne.inClosure = true // 非全局变量，在闭包中,捕获变量
+                    }
                 }
+                console.log("idne", idne)
                 return idne
             }
         }

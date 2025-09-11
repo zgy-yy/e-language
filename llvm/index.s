@@ -9,16 +9,20 @@ _main:                                  ; @main
 	.cfi_def_cfa_offset 32
 	.cfi_offset w30, -8
 	.cfi_offset w29, -16
-	adrp	x8, _main.fn@PAGE
+	adrp	x8, _main.a@PAGE
+	mov	w9, #1                          ; =0x1
+	strb	w9, [x8, _main.a@PAGEOFF]
 Lloh0:
-	adrp	x9, _anonymous.8828@PAGE
+	adrp	x9, _anonymous.EF10@PAGE
 Lloh1:
-	add	x9, x9, _anonymous.8828@PAGEOFF
-	mov	w0, #3                          ; =0x3
-	str	x9, [x8, _main.fn@PAGEOFF]
-	blr	x9
-	mov	w8, w0
-	str	w0, [sp, #12]
+	add	x9, x9, _anonymous.EF10@PAGEOFF
+	str	x9, [sp, #8]
+LBB0_1:                                 ; %do_body0
+                                        ; =>This Inner Loop Header: Depth=1
+	strb	wzr, [x8, _main.a@PAGEOFF]
+	cbnz	wzr, LBB0_1
+; %bb.2:                                ; %do_end0
+	ldrb	w8, [x8, _main.a@PAGEOFF]
 Lloh2:
 	adrp	x0, l_format@PAGE
 Lloh3:
@@ -26,47 +30,25 @@ Lloh3:
 	str	x8, [sp]
 	bl	_printf
 	ldp	x29, x30, [sp, #16]             ; 16-byte Folded Reload
-	mov	w0, wzr
+	mov	w0, #12                         ; =0xc
 	add	sp, sp, #32
 	ret
-	.loh AdrpAdd	Lloh2, Lloh3
 	.loh AdrpAdd	Lloh0, Lloh1
+	.loh AdrpAdd	Lloh2, Lloh3
 	.cfi_endproc
                                         ; -- End function
-	.globl	_anonymous.8828                 ; -- Begin function anonymous.8828
+	.globl	_anonymous.EF10                 ; -- Begin function anonymous.EF10
 	.p2align	2
-_anonymous.8828:                        ; @anonymous.8828
+_anonymous.EF10:                        ; @anonymous.EF10
 	.cfi_startproc
 ; %bb.0:                                ; %entry
-	sub	sp, sp, #48
-	stp	x20, x19, [sp, #16]             ; 16-byte Folded Spill
-	stp	x29, x30, [sp, #32]             ; 16-byte Folded Spill
-	.cfi_def_cfa_offset 48
-	.cfi_offset w30, -8
-	.cfi_offset w29, -16
-	.cfi_offset w19, -24
-	.cfi_offset w20, -32
-	cmp	w0, #0
+	sub	sp, sp, #16
+	.cfi_def_cfa_offset 16
+	adrp	x8, _main.a@PAGE
 	str	w0, [sp, #12]
-	b.gt	LBB1_2
-; %bb.1:
-	mov	w0, wzr
-	b	LBB1_3
-LBB1_2:                                 ; %if_end0
-	ldr	w19, [sp, #12]
-Lloh4:
-	adrp	x8, _main.fn@PAGE
-Lloh5:
-	ldr	x8, [x8, _main.fn@PAGEOFF]
-	sub	w0, w19, #1
-	blr	x8
-	add	w0, w19, w0
-LBB1_3:                                 ; %common.ret
-	ldp	x29, x30, [sp, #32]             ; 16-byte Folded Reload
-	ldp	x20, x19, [sp, #16]             ; 16-byte Folded Reload
-	add	sp, sp, #48
+	strb	wzr, [x8, _main.a@PAGEOFF]
+	add	sp, sp, #16
 	ret
-	.loh AdrpLdr	Lloh4, Lloh5
 	.cfi_endproc
                                         ; -- End function
 	.section	__TEXT,__cstring,cstring_literals
@@ -74,6 +56,12 @@ LBB1_3:                                 ; %common.ret
 l_format:
 	.asciz	"in llvm fun, value = %d\n"
 
-	.globl	_main.fn                        ; @main.fn
-.zerofill __DATA,__common,_main.fn,8,3
+	.section	__DATA,__data
+	.globl	_global.a                       ; @global.a
+	.p2align	2, 0x0
+_global.a:
+	.long	23                              ; 0x17
+
+	.globl	_main.a                         ; @main.a
+.zerofill __DATA,__common,_main.a,1,0
 .subsections_via_symbols

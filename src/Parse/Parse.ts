@@ -102,6 +102,7 @@ export class Parser {
                 }
             } else if (this.match(Tokenkind.LEFT_BRACKET)) {
                 const lenExpr = this.expression()
+                console.log(lenExpr)
                 if (lenExpr instanceof LiteralExpr && typeof lenExpr.value === 'number') {
                     const len = lenExpr.value as number
                     this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
@@ -221,6 +222,7 @@ export class Parser {
 
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
         this.symbolTable.addIdentifier(var_name.lexeme, var_)
+     
 
         let initializerExpr = new InitializerExpr(initializer, operator, var_)
         if (initializer && this.curExprSmtUnknowFuncLabel.size > 0) {
@@ -229,6 +231,12 @@ export class Parser {
         } else {
             initializerExpr && initializerExpr.verify()
         }
+        if(this.symbolTable.currentLevel===0&&initializer){
+            if(!(initializer instanceof LiteralExpr||initializer instanceof FunctionExpr)){
+                this.error(operator, "Global variable initializer must be a literal.")
+            }
+        }
+
         varStmt.push(new VarStmt(var_, initializerExpr))
 
         while (this.match(Tokenkind.COMMA)) {
@@ -251,6 +259,11 @@ export class Parser {
                 this.curExprSmtUnknowFuncLabel = new Map()
             } else {
                 initializerExpr && initializerExpr.verify()
+            }
+            if(this.symbolTable.currentLevel===0&&initializer){
+                if(!(initializer instanceof LiteralExpr||initializer instanceof FunctionExpr)){
+                    this.error(operator, "Global variable initializer must be a literal.")
+                }
             }
             varStmt.push(new VarStmt(var_, initializerExpr))
         }
@@ -345,9 +358,15 @@ export class Parser {
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
             const field_type = this.declarationKind()//字段类型
             const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
+            if (struct_fields.find(f => f.field === field_name.lexeme)) {
+                this.error(field_name, "Field with this name already declared in this struct.")
+            }
             struct_fields.push({ field: field_name.lexeme, type: field_type })
             while (this.match(Tokenkind.COMMA)) {
                 const field_name_ = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
+                if (struct_fields.find(f => f.field === field_name_.lexeme)) {
+                    this.error(field_name_, "Field with this name already declared in this struct.")
+                }
                 struct_fields.push({ field: field_name_.lexeme, type: field_type })
             }
             this.consume(Tokenkind.SEMICOLON, "Expect ';' after field declaration.")

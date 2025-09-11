@@ -54,10 +54,6 @@ export class SymbolTable {
         let  crossFunc = false
         for (let i = this.symTab.length - 1; i >= 0; i--) {
             const curEnv = this.symTab[i]
-            if(curEnv.scopeType === ScopeType.Function){
-                crossFunc = true
-            }
-            // debugger
             if (curEnv.varEnv.has(name)||curEnv.funDeclareEnv.has(name)) {
                 const idne = curEnv.varEnv.get(name) || curEnv.funDeclareEnv.get(name)
                 if(crossFunc){
@@ -65,8 +61,10 @@ export class SymbolTable {
                         idne.inClosure = true // 非全局变量，在闭包中,捕获变量
                     }
                 }
-                console.log("idne", idne)
                 return idne
+            }
+            if(curEnv.scopeType === ScopeType.Function){
+                crossFunc = true
             }
         }
         return null;

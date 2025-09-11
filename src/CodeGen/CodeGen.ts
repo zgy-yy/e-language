@@ -341,18 +341,8 @@ declare i32 @printf(i8*, ...)
                         this.printDecle(`${var_name} = global ${varType} ${lv_varName}`);
                     }
                 } else {
-                    if (stmt.initializer instanceof VariableExpr) {
-                        const lv_varName = this.scope.findVariable(stmt.initializer.variable)
-                        this.printDecle(`${var_name} = global ${varType} ${lv_varName}`);
-                    } else if (stmt.initializer instanceof LiteralExpr) {
-                        this.printDecle(`${var_name} = global ${varType} ${stmt.initializer.value}`);
-                    } else if (stmt.initializer instanceof StructExpr) {
-                        this.printDecle(`${var_name} = global ${varType} ${stmt.initializer.accept(this).valReg}`);
-                    } else if (stmt.initializer instanceof ArrayExpr) {
-                        this.printDecle(`${var_name} = global ${varType} ${stmt.initializer.accept(this).valReg}`);
-                    } else {
-                        throw new Error("Invalid initializer for global variable")
-                    }
+                    const initExpR = stmt.initializer.accept(this);
+                    this.printDecle(`${var_name} = global ${varType} ${initExpR.valReg}`);
                 }
             } else {
                 this.printDecle(`${var_name} = global ${varType} zeroinitializer`);
@@ -752,8 +742,8 @@ declare i32 @printf(i8*, ...)
             CodeGen.codeText.leaveFunc()
         }
 
-        const reg_name = `%reg_function${n}`
-        this.printIR(`${reg_name} = bitcast ${retType} (${params.join(', ')})* ${lv_fnName} to ${retType} (${params.join(', ')})*`);
+        // const reg_name = `%reg_function${n}`
+        // this.printIR(`${reg_name} = bitcast ${retType} (${params.join(', ')})* ${lv_fnName} to ${retType} (${params.join(', ')})*`);
 
         return { type: retType, valReg: lv_fnName };
     }

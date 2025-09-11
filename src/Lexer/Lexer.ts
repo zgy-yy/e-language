@@ -103,7 +103,15 @@ export class Scanner {//扫描器，或称为词法分析
                 this.addToken(Tokenkind.STAR)
                 break;
             case '/': // todo 注释符
-                this.addToken(Tokenkind.SLASH)
+                if (this.match("/")) {
+                    // A comment goes until the end of the line.
+                    while (this.peek() !== "\n" && !this.isAtEnd()) {
+                        this.advance();
+                    }
+                } else {
+                    this.addToken(Tokenkind.SLASH)
+                }
+
                 break
             case ';':
                 this.addToken(Tokenkind.SEMICOLON)

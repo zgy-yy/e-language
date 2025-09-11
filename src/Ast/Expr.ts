@@ -177,7 +177,7 @@ export class LiteralExpr implements Expr {
     value: string;
     operator: Token;
     constructor(_val: Token) {
-        this.value = _val.lexeme;
+        this.value = _val.literal;
         this.operator = _val
         const _valType = typeof _val.literal;
         if (_valType === 'string') {
@@ -305,7 +305,7 @@ export class InitializerExpr implements Expr {
     }
     verify(): void {
         this.initializer.verify()
-        if (!isSameType(this.initializer.exprType, this._var.type)) {
+        if (!isSameType(this._var.type, this.initializer.exprType)) {
             El.error(this.operator, "Type mismatch in initializer expression.")
         }
     }
@@ -358,8 +358,8 @@ export class CallExpr implements Expr {
             }
         } else if (this.callee instanceof VariableExpr) {
             if (this.callee.variable instanceof FuncVar) {
-                const fun_var= this.callee.variable
-                const paramsType =fun_var.paramsType
+                const fun_var = this.callee.variable
+                const paramsType = fun_var.paramsType
                 if (paramsType.length !== this.args.length) {
                     El.error(this.operator, "Type mismatch in call expression.")
                 }
@@ -369,7 +369,7 @@ export class CallExpr implements Expr {
                     }
                 }
                 this.exprType = this.callee.variable.retType
-                
+
             } else {
                 El.error(this.operator, "Call expression must be used with function.")
             }
@@ -388,9 +388,9 @@ export class StructExpr implements Expr {
     fields: { field: string, value: Expr }[];
     operator: Token;
     constructor(fields: { field: string, value: Expr }[], paren: Token) {
+        this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
         this.exprType = new StructType('anonymous', fields.map(f => ({ field: f.field, type: f.value.exprType })))
         this.operator = paren;
-        this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
     }
     verify(): void {
         this.fields.forEach(f => f.value.verify())

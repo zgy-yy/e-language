@@ -161,20 +161,32 @@ export function isSameType(left: DataType, right: DataType): boolean {
         case DataKind.struct:
             const structLeft = left as StructType
             const structRight = right as StructType
+
             if (structLeft !== structRight && structRight.name !== 'anonymous') {
-                return false
-            }
-            if (structLeft.fields.length !== structRight.fields.length) {
+                console.log(structLeft, structRight)
                 return false
             }
             for (let i = 0; i < structLeft.fields.length; i++) {
-                if (structLeft.fields[i].field !== structRight.fields[i].field) {
+                const curfield = structLeft.fields[i]
+                const curfieldRight = structRight.fields.find(f => f.field === curfield.field)
+                if (!curfieldRight) {
                     return false
                 }
-                if (!isSameType(structLeft.fields[i].type, structRight.fields[i].type)) {
+                if (!isSameType(curfield.type, curfieldRight.type)) {
                     return false
                 }
             }
+            // if (structLeft.fields.length !== structRight.fields.length) {
+            //     return false
+            // }
+            // for (let i = 0; i < structLeft.fields.length; i++) {
+            //     if (structLeft.fields[i].field !== structRight.fields[i].field) {
+            //         return false
+            //     }
+            //     if (!isSameType(structLeft.fields[i].type, structRight.fields[i].type)) {
+            //         return false
+            //     }
+            // }
             if (structRight.name === 'anonymous') {
                 structRight.name = structLeft.name
             }

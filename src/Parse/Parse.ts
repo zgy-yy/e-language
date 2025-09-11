@@ -50,15 +50,9 @@ export class Parser {
     // 程序语句 declaration -> varDeclaration | functionDeclaration 
     declaration(): Stmt {
         try {
-            if (this.match(Tokenkind.STRUCT)) {
-                return this.structStatement()
-            }
-            const declType = this.declarationKind()
-            if (declType) {
-                if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
-                    return this.funcDeclaration(declType)
-                }
-                return this.varListDeclaration(declType)
+            const stmt = this.declarationStmt()
+            if (stmt) {
+                return stmt
             }
             throw this.error(this.peek(), "Expect declaration.")
         } catch (error) {
@@ -130,8 +124,33 @@ export class Parser {
 
     /* 语句 statement -> printStatement | block | ifStatement | whileStatement | doWhileStatement | forStatement 
                         | breakStatement | continueStatement | expressionStatement
-                        ｜ declaration
+                        
      */
+    /* 语句语句 statementStmt -> declarationStmt | statement */
+    statementStmt(): Stmt {
+        const stmt = this.declarationStmt()
+        if (stmt) {
+            return stmt
+        }
+        return this.statement()
+    }
+
+    /* 声明语句 declarationStmt -> structStatement | funcDeclaration | varListDeclaration */
+    declarationStmt(): Stmt {
+        if (this.match(Tokenkind.STRUCT)) {
+            return this.structStatement()
+        }
+        let declType = this.declarationKind()
+        if (declType) {
+            if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
+                return this.funcDeclaration(declType)
+            }
+            return this.varListDeclaration(declType)
+        }
+        return null;
+    }
+
+
     statement(): Stmt {
         if (this.match(Tokenkind.PRINT))
             return this.printStatement()
@@ -153,17 +172,7 @@ export class Parser {
             return this.continueStatement()
         if (this.match(Tokenkind.RETURN))
             return this.returnStatement()
-        if (this.match(Tokenkind.STRUCT)) {
-            return this.structStatement()
-        }
 
-        let declType = this.declarationKind()
-        if (declType) {
-            if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
-                return this.funcDeclaration(declType)
-            }
-            return this.varListDeclaration(declType)
-        }
         return this.expressionStatement()
     }
 
@@ -217,7 +226,7 @@ export class Parser {
         if (initializer && this.curExprSmtUnknowFuncLabel.size > 0) {
             this.unKnowFuncLabelExprSmt.set(initializerExpr, this.curExprSmtUnknowFuncLabel)
             this.curExprSmtUnknowFuncLabel = new Map()
-        }else{
+        } else {
             initializerExpr && initializerExpr.verify()
         }
         varStmt.push(new VarStmt(var_, initializerExpr))
@@ -278,7 +287,7 @@ export class Parser {
         // 解析函数体
         const bodyStatements: Stmt[] = []
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
-            bodyStatements.push(this.statement())
+            bodyStatements.push(this.statementStmt())
         }
         // 如果函数体最后没有 return 语句
         if (!(bodyStatements.at(-1) instanceof ReturnStmt)) {
@@ -383,7 +392,7 @@ export class Parser {
         this.symbolTable.enterScope(ScopeType.Block)
         const statements = []
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
-            statements.push(this.statement())
+            statements.push(this.statementStmt())
         }
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after block.")
         this.symbolTable.leaveScope()
@@ -677,7 +686,7 @@ export class Parser {
                 this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before function body.")
                 const bodyStatements: Stmt[] = []
                 while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
-                    bodyStatements.push(this.statement())
+                    bodyStatements.push(this.statementStmt())
                 }
                 this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after function block.")
                 if (!(bodyStatements.at(-1) instanceof ReturnStmt)) {

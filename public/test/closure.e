@@ -1,6 +1,9 @@
 
 int main(){
     (int)int fn=(int i)int{
+        struct A{
+            int a;
+        }
         if(i<=0){
             return 0;
         }

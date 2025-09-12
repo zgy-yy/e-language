@@ -749,7 +749,7 @@ declare i32 @printf(i8*, ...)
     }
 
     visitInitializerExpr(expr: InitializerExpr): ExprResult {
-        const initExpR = expr.initializer.accept(this);
+        const initExpR = expr.initializer ? expr.initializer.accept(this) : { type: this.typeToLLVM(expr._var.type), valReg: 'zeroinitializer' };
         return { type: this.typeToLLVM(expr._var.type), valReg: initExpR.valReg };
     }
 

@@ -79,7 +79,8 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         if (stmt.variable.type instanceof PtrType) {
             equals = '=>'
         }
-        return stmt.initializer ? `${stmt.variable.name} ${equals} ${stmt.initializer.accept(this)}` : stmt.variable.name;
+        const initializer = stmt.initializer.accept(this)
+        return initializer ? `${stmt.variable.name} ${equals} ${initializer}` : stmt.variable.name;
     }
 
     // Expr 
@@ -121,7 +122,7 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
     }
 
     visitInitializerExpr(expr: InitializerExpr): string {
-        return `${expr.initializer.accept(this)}`;
+        return `${expr.initializer ? expr.initializer.accept(this) : ''}`;
     }
 
     visitBinaryExpr(expr: BinaryExpr): string {

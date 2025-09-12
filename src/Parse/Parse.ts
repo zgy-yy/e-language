@@ -66,6 +66,7 @@ export class Parser {
 
     // 声明类型
     declarationKind(): DataType {
+        const i = this.current //记录当前位置
         const declaration = () => {
             let declType: DataType = null
             if (this.match(...this.typeKind)) {
@@ -79,6 +80,7 @@ export class Parser {
                     declType = struct
                 }
             } else if (this.match(Tokenkind.LEFT_PAREN)) {
+
                 const paramsType: DataType[] = []
                 if (!this.check(Tokenkind.RIGHT_PAREN)) {
                     do {
@@ -91,6 +93,11 @@ export class Parser {
                         }
                     } while (this.match(Tokenkind.COMMA))
                 }
+                //如果匹配到标识符，则表示函数表达式
+                if (this.peek().type !== Tokenkind.RIGHT_PAREN) {
+                    this.back(i)
+                    return null
+                }
                 this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after parameters.")
                 if (this.match(...this.typeKind)) {
                     let kind = this.previous()//声明的类型
@@ -99,6 +106,11 @@ export class Parser {
                 }
                 else {
                     this.error(this.peek(), "Expect type after parameters.")
+                }
+                //如果匹配到左大括号，则表示函数表达式
+                if (this.peek().type == Tokenkind.LEFT_BRACE) {
+                    this.back(i)
+                    return null
                 }
             } else if (this.match(Tokenkind.LEFT_BRACKET)) {
                 const lenExpr = this.expression()
@@ -222,7 +234,7 @@ export class Parser {
 
         //解析过 initializer 后添加，防止定义的变量出现在 初始化表达式中
         this.symbolTable.addIdentifier(var_name.lexeme, var_)
-     
+
 
         let initializerExpr = new InitializerExpr(initializer, operator, var_)
         if (initializer && this.curExprSmtUnknowFuncLabel.size > 0) {
@@ -231,8 +243,8 @@ export class Parser {
         } else {
             initializerExpr && initializerExpr.verify()
         }
-        if(this.symbolTable.currentLevel===0&&initializer){
-            if(!(initializer instanceof LiteralExpr||initializer instanceof FunctionExpr)){
+        if (this.symbolTable.currentLevel === 0 && initializer) {
+            if (!(initializer instanceof LiteralExpr || initializer instanceof FunctionExpr)) {
                 this.error(operator, "Global variable initializer must be a literal.")
             }
         }
@@ -260,8 +272,8 @@ export class Parser {
             } else {
                 initializerExpr && initializerExpr.verify()
             }
-            if(this.symbolTable.currentLevel===0&&initializer){
-                if(!(initializer instanceof LiteralExpr||initializer instanceof FunctionExpr)){
+            if (this.symbolTable.currentLevel === 0 && initializer) {
+                if (!(initializer instanceof LiteralExpr || initializer instanceof FunctionExpr)) {
                     this.error(operator, "Global variable initializer must be a literal.")
                 }
             }
@@ -343,7 +355,6 @@ export class Parser {
                 }
 
             } while (this.match(Tokenkind.COMMA))
-
         }
         return declParamVars
     }
@@ -688,7 +699,7 @@ export class Parser {
         if (this.match(Tokenkind.LEFT_PAREN)) {
 
             const params = this.paramDeclaration()
-            if (params) {
+            if (this.peek().type == Tokenkind.RIGHT_PAREN || params.length > 0) {
                 this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after expression.")
                 const decRetType = this.declarationKind()
                 const funcEn: FuncEnclosing = {
@@ -802,6 +813,11 @@ export class Parser {
             this.current++
         }
         return this.previous()
+    }
+
+    //回退到指定位置
+    private back(i: number) {
+        this.current = i
     }
 
     private check(kind: Tokenkind) {

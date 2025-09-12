@@ -296,17 +296,19 @@ export class InitializerExpr implements Expr {
     exprType: DataType;
     operator: Token;
     _var: Var;
-    initializer: Expr;
+    initializer: Expr | null;
     constructor(expr: Expr, operator: Token, _var: Var) {
-        this.exprType = expr.exprType;
+        this.exprType = expr?.exprType;
         this.operator = operator;
         this.initializer = expr;
         this._var = _var;
     }
     verify(): void {
-        this.initializer.verify()
-        if (!isSameType(this._var.type, this.initializer.exprType)) {
-            El.error(this.operator, "Type mismatch in initializer expression.")
+        if (this.initializer) {
+            this.initializer.verify()
+            if (!isSameType(this._var.type, this.initializer.exprType)) {
+                El.error(this.operator, "Type mismatch in initializer expression.")
+            }
         }
     }
     accept<R>(visitor: ExprVisitor<R>): R {

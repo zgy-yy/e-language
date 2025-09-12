@@ -63,7 +63,7 @@ export class PrintStmt implements Stmt {
 
 export class VarStmt implements Stmt {
     variable: Var;
-    initializer?: Expr;
+    initializer: Expr;
     constructor(var_: Var, initializer?: Expr) {
         this.variable = var_;
         this.initializer = initializer;

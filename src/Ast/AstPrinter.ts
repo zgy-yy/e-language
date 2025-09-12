@@ -1,5 +1,5 @@
-import { ArrayType, PtrType } from "../Parse/TypeDeclar";
-import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "./Expr";
+import { ArrayType, PtrType, TupleType } from "../Parse/TypeDeclar";
+import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, TupleExpr, UnaryExpr, VariableExpr } from "./Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
@@ -71,6 +71,9 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         if (varType instanceof ArrayType) {
             return `${varType.toString()} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
         }
+        if (varType instanceof TupleType) {
+            return `${varType.toString()} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
+        }
         return `${varType} ${stmt.varStmts.map((v) => v.accept(this)).join(", ")}`;
 
     }
@@ -96,6 +99,9 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
         return `${expr.left.accept(this, true)} => ${expr.right.accept(this, true)}`;
     }
     visitArrayExpr(expr: ArrayExpr): string {
+        return `[${expr.elements.map((e) => e.accept(this)).join(", ")}]`;
+    }
+    visitTupleExpr(expr: TupleExpr): string {
         return `[${expr.elements.map((e) => e.accept(this)).join(", ")}]`;
     }
     visitIndexExpr(expr: IndexExpr): string {

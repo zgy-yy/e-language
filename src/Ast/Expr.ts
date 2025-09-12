@@ -1,4 +1,4 @@
-import { ArrayType, DataKind, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
+import { ArrayType, DataKind, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType, TupleType } from "../Parse/TypeDeclar";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token"
 import { FuncVar, FunLable, Var } from "../Parse/Symbol";
@@ -17,6 +17,7 @@ export interface ExprVisitor<R> {
     visitLiteralExpr(expr: LiteralExpr): R;
     visitVariableExpr(expr: VariableExpr, isLeft: boolean): R;
     visitAssignExpr(expr: AssignExpr): R;
+    visitTupleExpr(expr: TupleExpr): R;
     visitGroupingExpr(expr: GroupingExpr): R;
     visitLogicalBinaryExpr(expr: LogicalBinaryExpr): R;
     visitCallExpr(expr: CallExpr): R;
@@ -417,11 +418,6 @@ export class ArrayExpr implements Expr {
             this.exprType = new ArrayType(new SimpleType(SimpleKind.Void), 0)
         } else {
             const elementType = this.elements[0].exprType
-            for (const element of this.elements) {
-                if (!isSameType(elementType, element.exprType)) {
-                    El.error(null, "Type mismatch in array expression.")
-                }
-            }
             this.exprType = new ArrayType(elementType, this.elements.length)
         }
 
@@ -430,7 +426,21 @@ export class ArrayExpr implements Expr {
         return visitor.visitArrayExpr(this);
     }
 }
-
+export class TupleExpr implements Expr {
+    exprType: DataType;
+    elements: Expr[];
+    operator: Token;
+    constructor(elements: Expr[], paren: Token) {
+        this.exprType = new TupleType(elements.map(e => e.exprType))
+        this.elements = elements;
+    }
+    verify(): void {
+        this.elements.forEach(e => e.verify())
+    }
+    accept<R>(visitor: ExprVisitor<R>): R {
+        return visitor.visitTupleExpr(this);
+    }
+}
 export class IndexExpr implements Expr {
     exprType: DataType;
     target: Expr;

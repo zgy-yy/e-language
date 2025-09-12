@@ -1,8 +1,8 @@
-import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, TupleExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
-import { ArrayType, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType } from "./TypeDeclar";
+import { ArrayType, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType, TupleType } from "./TypeDeclar";
 import { ScopeType, SymbolTable } from "./SymbolTable";
 import { FuncVar, Var, StructVar, ArrayVar, FunLable } from "./Symbol";
 
@@ -65,7 +65,7 @@ export class Parser {
     }
 
     // 声明类型
-    declarationKind(): DataType {
+    declarationKind(): DataType | null {
         const i = this.current //记录当前位置
         const declaration = () => {
             let declType: DataType = null
@@ -113,15 +113,28 @@ export class Parser {
                     return null
                 }
             } else if (this.match(Tokenkind.LEFT_BRACKET)) {
-                const lenExpr = this.expression()
-                if (lenExpr instanceof LiteralExpr && typeof lenExpr.value === 'number') {
-                    const len = lenExpr.value as number
-                    this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
-                    const array_type = declaration()
-                    declType = new ArrayType(array_type, len)
+                const elementsType: DataType[] = []
+                do {
+                    const elementType = declaration()
+                    if (elementType) {
+                        elementsType.push(elementType)
+                    }
+                } while (this.match(Tokenkind.COMMA))
+                if (elementsType.length !== 0) {
+                    this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array elements.")
+                    declType = new TupleType(elementsType)
                 } else {
-                    this.error(this.peek(), "Array length must be a number literal.")
+                    const lenExpr = this.expression()
+                    if (lenExpr instanceof LiteralExpr && typeof lenExpr.value === 'number') {
+                        const len = lenExpr.value as number
+                        this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
+                        const array_type = declaration()
+                        declType = new ArrayType(array_type, len)
+                    } else {
+                        this.error(this.peek(), "Array length must be a number literal.")
+                    }
                 }
+
             }
             return declType
         }
@@ -736,8 +749,6 @@ export class Parser {
                 this.consume(Tokenkind.RIGHT_PAREN, "Expect ')' after expression.")
                 return new GroupingExpr(expr, this.previous())
             }
-
-
         }
         if (this.match(Tokenkind.IDENTIFIER)) {
             const var_ = this.previous()
@@ -780,14 +791,26 @@ export class Parser {
         // 数组表达式
         if (this.match(Tokenkind.LEFT_BRACKET)) {
             const elements = []
+            let exprType: "array" | "tuple" = "array"
+            let lastEleType: DataType = null
             while (!this.check(Tokenkind.RIGHT_BRACKET) && !this.isAtEnd()) {
                 elements.push(this.assignment())
                 if (this.peek().type !== Tokenkind.RIGHT_BRACKET) {
-                    this.consume(Tokenkind.COMMA, "Expect ',' after array element.")
+                    this.consume(Tokenkind.COMMA, "Expect ',' after array or tuple element.")
                 }
+                if (lastEleType !== null) {
+                    if (!isSameType(lastEleType, elements.at(-1).exprType)) {
+                        exprType = "tuple"
+                    }
+                }
+                lastEleType = elements.at(-1).exprType
             }
             this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")
-            return new ArrayExpr(elements, this.previous())
+            if (exprType === "array") {
+                return new ArrayExpr(elements, this.previous())
+            } else {
+                return new TupleExpr(elements, this.previous())
+            }
         }
 
         throw this.error(this.peek(), "Expect expression.");

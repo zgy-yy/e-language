@@ -11,6 +11,7 @@ export enum DataKind {
     simple = "simple",
     fun = "fun",
     struct = "struct",
+    tuple = "tuple",
     array = "array",
     class = "class",
     ptr = "ptr",
@@ -78,6 +79,17 @@ export class StructType extends DataType {
     }
     toString(): string {
         return `struct ${this.name}`
+    }
+}
+
+export class TupleType extends DataType {
+    elementsType: DataType[]
+    constructor(elements: DataType[]) {
+        super(DataKind.tuple)
+        this.elementsType = elements
+    }
+    toString(): string {
+        return `[${this.elementsType.map(item => item.toString()).join(',')}]`
     }
 }
 

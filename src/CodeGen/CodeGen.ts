@@ -1,7 +1,7 @@
-import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
+import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, TupleExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
 import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { ArrayVar, FuncVar, FunLable, Var } from "../Parse/Symbol";
-import { ArrayType, DataType, FunType, PtrType, SimpleKind, SimpleType, StructType } from "../Parse/TypeDeclar";
+import { ArrayType, DataType, FunType, PtrType, SimpleKind, SimpleType, StructType, TupleType } from "../Parse/TypeDeclar";
 import { Scope } from "./Scope";
 
 type ExprResult = {
@@ -450,6 +450,25 @@ declare i32 @printf(i8*, ...)
         return valueExpR
     }
 
+
+    visitTupleExpr(expr: TupleExpr): ExprResult {
+        const n = this.sequence.reg++;
+        const tuple_type = this.typeToLLVM(expr.exprType)
+        let undef_tuple = `undef`
+        if (this.scope.currentScope.scopeName === "global") {
+            // undef_tuple = `[${expr.elements.map((e) => `${this.typeToLLVM(e.exprType)} ${e.accept(this, false).valReg}`).join(', ')} ]`
+        } else {
+            for (let i = 0; i < expr.elements.length; i++) {
+                const elExprR = expr.elements[i].accept(this);
+                const element_type = this.typeToLLVM(expr.elements[i].exprType)
+                const regName = `%temp_tuple${n}_${i}`
+                this.printIR(`${regName} = insertvalue ${tuple_type} ${undef_tuple}, ${element_type} ${elExprR.valReg}, ${i}`);
+                undef_tuple = regName
+            }
+        } return { type: tuple_type, valReg: undef_tuple };
+    }
+
+
     //结构体表达式生成
     visitStructExpr(expr: StructExpr): ExprResult {
         const n = this.sequence.reg++;
@@ -638,7 +657,6 @@ declare i32 @printf(i8*, ...)
                 type: argExpR.type
             }
         });
-        console.log(args)
         const calleeExpR = expr.callee.accept(this);
         const retType = this.typeToLLVM(expr.exprType)
         const var_name = `%reg_call${n}`
@@ -792,6 +810,9 @@ declare i32 @printf(i8*, ...)
         }
         if (type instanceof ArrayType) {
             return `[${type.len} x ${this.typeToLLVM(type.elementType)}]`
+        }
+        if (type instanceof TupleType) {
+            return `{${type.elementsType.map(item => this.typeToLLVM(item)).join(',')}}`
         }
         //指针类型  
         if (type instanceof PtrType) {

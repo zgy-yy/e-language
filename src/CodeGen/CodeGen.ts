@@ -638,6 +638,7 @@ declare i32 @printf(i8*, ...)
                 type: argExpR.type
             }
         });
+        console.log(args)
         const calleeExpR = expr.callee.accept(this);
         const retType = this.typeToLLVM(expr.exprType)
         const var_name = `%reg_call${n}`
@@ -721,10 +722,10 @@ declare i32 @printf(i8*, ...)
         const fun = expr.fun_lable
         // 函数表达式 => 函数名
         const lv_fnName = `@${expr.fun_lable.name}`
-        const retType = this.typeToLLVM(fun.retType)
-        const params = fun.paramsType.map(p => this.typeToLLVM(p))
+        const retType = this.typeToLLVM(fun.type)
 
         if (expr.body) {
+            const retType = this.typeToLLVM(fun.retType)
             CodeGen.codeText.enterFunc()
             this.scope.enterScope(expr.fun_lable.name)
             this.printIR(`define ${retType} ${lv_fnName} (${expr.params.map(p => this.typeToLLVM(p.type) + ' %' + p.name).join(', ')}) {`)

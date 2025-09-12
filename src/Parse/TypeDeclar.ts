@@ -50,7 +50,7 @@ export class FunType extends DataType {
         this.retType = _retType
     }
     toString(): string {
-        return `(${this.paramsType.map(item => item.toString()).join('_')})->${this.retType.toString()}`
+        return `(${this.paramsType.map(item => item.toString()).join(',')})->${this.retType.toString()}`
     }
 }
 

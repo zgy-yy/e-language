@@ -3,3 +3,4 @@ node_modules
 asm/bin/*
 asm/obj/*
 *.DS_Store
+llvm/*

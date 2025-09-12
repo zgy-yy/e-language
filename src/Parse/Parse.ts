@@ -114,7 +114,6 @@ export class Parser {
                 }
             } else if (this.match(Tokenkind.LEFT_BRACKET)) {
                 const lenExpr = this.expression()
-                console.log(lenExpr)
                 if (lenExpr instanceof LiteralExpr && typeof lenExpr.value === 'number') {
                     const len = lenExpr.value as number
                     this.consume(Tokenkind.RIGHT_BRACKET, "Expect ']' after array length.")

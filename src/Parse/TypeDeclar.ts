@@ -119,9 +119,9 @@ export class PtrType extends DataType {
 
 
 export function isSameType(left: DataType, right: DataType): boolean {
-    // 如果类型为空，直接返回 false
-    if (!left || !right) {
-        return false
+
+    if (!left && !right) {
+        return true
     }
 
     if (left instanceof PtrType || right instanceof PtrType) {
@@ -139,6 +139,7 @@ export function isSameType(left: DataType, right: DataType): boolean {
     const leftKind = left.kind
     const rightKind = right.kind
     // 类型不一致，直接返回 false
+    // console.log(9628,leftKind, rightKind)
     if (leftKind !== rightKind) {
         return false
     }
@@ -195,6 +196,7 @@ export function isSameType(left: DataType, right: DataType): boolean {
         case DataKind.array:
             const arrayLeft = left as ArrayType
             const arrayRight = right as ArrayType
+            // console.log(9627,arrayLeft, arrayRight)
             
             //右侧元素类型为void时 代表空数组
             if (arrayLeft.len !== arrayRight.len) {

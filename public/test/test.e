@@ -1,7 +1,12 @@
 
 
 int main() {
-   [int, bool] tup =[1,true];
-   [4]int c=[1,2,3,4];
+    [3][2]int arr =[
+        [1,2],
+        [4,5],
+        [3,6]];
+
+    arr[0]=[23,9];
+    print arr[0][1];
     return 0;
 }

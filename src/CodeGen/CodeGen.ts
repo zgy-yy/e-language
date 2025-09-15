@@ -426,18 +426,23 @@ declare i32 @printf(i8*, ...)
         const indexVal = indexExpR.valReg
 
         const indexPtr = `%reg_index_ptr${n}`
-        const indexReg = `%reg_index${n}`
+        let indexReg = `%reg_index${n}`
         if (isLeft) {
             this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},i32 0, i32 ${indexVal}`);
             return { type: fieldType, valReg: indexPtr };
         } else {
-            const tempArr = `%temp_arr${n}`
-            if (targetType.endsWith("]")) {
-                this.printIR(`${tempArr} = alloca ${targetType}`);
-                this.printIR(`store ${targetType} ${targetVal}, ${targetType}* ${tempArr}`);
-                this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${tempArr},i32 0, i32 ${indexVal}`);
+            if (expr.target.exprType instanceof ArrayType) {
+                this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},i32 0, i32 ${indexVal}`);
+                if (!(expr.target.exprType.elementType instanceof ArrayType)) {
+                    this.printIR(`${indexReg} = load ${fieldType}, ${fieldType}* ${indexPtr}`);
+                } else {
+                    indexReg = indexPtr;
+                }
+            } else if (expr.target.exprType instanceof TupleType) { //元组
+                this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},i32 0, i32 ${indexVal}`);
                 this.printIR(`${indexReg} = load ${fieldType}, ${fieldType}* ${indexPtr}`);
             } else {
+                throw new Error("Invalid target type.")
             }
             return { type: fieldType, valReg: indexReg };
         }
@@ -728,7 +733,10 @@ declare i32 @printf(i8*, ...)
             this.printIR(`${reg_ptr} = load ${varType}, ${varType}* ${var_name}`);
             this.printIR(`${reg_name} = load ${elementType}, ${elementType}* ${reg_ptr}`);
             return { type: elementType, valReg: reg_name };
-        } else {
+        } else if (expr.variable.type instanceof ArrayType) {
+            return { type: varType, valReg: var_name };
+        }
+        else {
             this.printIR(`${reg_name} = load ${varType}, ${varType}* ${var_name}`);
             return { type: varType, valReg: reg_name };
         }

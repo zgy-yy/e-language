@@ -794,10 +794,12 @@ export class Parser {
             let exprType: "array" | "tuple" = "array"
             let lastEleType: DataType = null
             while (!this.check(Tokenkind.RIGHT_BRACKET) && !this.isAtEnd()) {
-                elements.push(this.assignment())
+                const ele = this.assignment()
+                elements.push(ele)
                 if (this.peek().type !== Tokenkind.RIGHT_BRACKET) {
                     this.consume(Tokenkind.COMMA, "Expect ',' after array or tuple element.")
                 }
+               
                 if (lastEleType !== null) {
                     if (!isSameType(lastEleType, elements.at(-1).exprType)) {
                         exprType = "tuple"

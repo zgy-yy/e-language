@@ -410,7 +410,6 @@ export class ArrayExpr implements Expr {
     constructor(elements: Expr[], paren: Token) {
         this.elements = elements
         this.operator = paren;
-
     }
     verify(): void {
         this.elements.forEach(e => e.verify())
@@ -458,7 +457,15 @@ export class IndexExpr implements Expr {
         const targetType = this.target.exprType
         if (targetType instanceof ArrayType) {
             this.exprType = targetType.elementType;
-        } else if (targetType instanceof PtrType) {
+        } else if (targetType instanceof TupleType) {
+            if (this.index.exprType instanceof LiteralExpr && typeof this.index.exprType.value === 'number') {
+                const index = this.index.exprType.value
+                this.exprType = targetType.elementsType[index]
+            } else {
+                El.error(this.operator, "Index expression must be used with const number.")
+            }
+        }
+        else if (targetType instanceof PtrType) {
             if (targetType.elementType instanceof ArrayType) {
                 this.exprType = targetType.elementType.elementType
             } else {

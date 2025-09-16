@@ -4,29 +4,35 @@
 _main:                                  ; @main
 	.cfi_startproc
 ; %bb.0:                                ; %entry
-	sub	sp, sp, #48
-	stp	x29, x30, [sp, #32]             ; 16-byte Folded Spill
-	.cfi_def_cfa_offset 48
+	sub	sp, sp, #64
+	stp	x20, x19, [sp, #32]             ; 16-byte Folded Spill
+	stp	x29, x30, [sp, #48]             ; 16-byte Folded Spill
+	.cfi_def_cfa_offset 64
 	.cfi_offset w30, -8
 	.cfi_offset w29, -16
-	mov	x8, #3                          ; =0x3
-	mov	x9, #4                          ; =0x4
+	.cfi_offset w19, -24
+	.cfi_offset w20, -32
 Lloh0:
-	adrp	x0, l_format@PAGE
+	adrp	x19, l_format@PAGE
 Lloh1:
-	add	x0, x0, l_format@PAGEOFF
-	movk	x8, #6, lsl #32
-	movk	x9, #5, lsl #32
-	stp	x9, x8, [sp, #16]
-	mov	x8, #23                         ; =0x17
-	movk	x8, #9, lsl #32
-	str	x8, [sp, #8]
-	mov	w8, #9                          ; =0x9
+	add	x19, x19, l_format@PAGEOFF
+	mov	w20, #23                        ; =0x17
+	mov	w8, #78                         ; =0x4e
+	mov	x0, x19
+	strb	wzr, [sp, #20]
+	str	w20, [sp, #16]
+	str	w8, [sp, #24]
 	str	x8, [sp]
 	bl	_printf
-	ldp	x29, x30, [sp, #32]             ; 16-byte Folded Reload
+	mov	x8, #90                         ; =0x5a
+	mov	x0, x19
+	movk	x8, #23, lsl #32
+	stp	x20, x8, [sp]
+	bl	_printf
+	ldp	x29, x30, [sp, #48]             ; 16-byte Folded Reload
 	mov	w0, wzr
-	add	sp, sp, #48
+	ldp	x20, x19, [sp, #32]             ; 16-byte Folded Reload
+	add	sp, sp, #64
 	ret
 	.loh AdrpAdd	Lloh0, Lloh1
 	.cfi_endproc

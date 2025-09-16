@@ -581,7 +581,7 @@ export class Parser {
         if (this.match(Tokenkind.ARROW)) {
             const arrow = this.previous()
             const value = this.assignment()
-            if (leftExpr instanceof VariableExpr && (value instanceof VariableExpr || value instanceof LiteralExpr)) {
+            if (leftExpr instanceof VariableExpr && (value instanceof VariableExpr || value instanceof LiteralExpr || value instanceof IndexExpr || value instanceof GetFieldExpr)) {
                 return new ArrowExpr(leftExpr, value, arrow)
             }
             El.error(arrow, "Invalid assignment target.")

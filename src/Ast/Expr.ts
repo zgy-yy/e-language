@@ -15,16 +15,16 @@ export interface ExprVisitor<R> {
     visitSuffixSelfExpr(expr: SuffixSelfExpr): R;
     visitPrefixSelfExpr(expr: PrefixSelfExpr): R;
     visitLiteralExpr(expr: LiteralExpr): R;
-    visitVariableExpr(expr: VariableExpr, isLeft: boolean): R;
+    visitVariableExpr(expr: VariableExpr, isAddress: boolean): R;
     visitAssignExpr(expr: AssignExpr): R;
     visitTupleExpr(expr: TupleExpr): R;
     visitGroupingExpr(expr: GroupingExpr): R;
     visitLogicalBinaryExpr(expr: LogicalBinaryExpr): R;
     visitCallExpr(expr: CallExpr): R;
     visitCommaExpr(expr: CommaExpr): R;
-    visitGetFieldExpr(expr: GetFieldExpr, isLeft: boolean): R;
+    visitGetFieldExpr(expr: GetFieldExpr, isAddress: boolean): R;
     visitSetFieldExpr(expr: SetFieldExpr): R;
-    visitIndexExpr(expr: IndexExpr, isLeft: boolean): R;
+    visitIndexExpr(expr: IndexExpr, isAddress: boolean): R;
     visitSetIndexExpr(expr: SetIndexExpr): R;
     visitArrowExpr(expr: ArrowExpr): R;
     visitInitializerExpr(expr: InitializerExpr): R;
@@ -214,8 +214,8 @@ export class VariableExpr implements Expr {
     }
     verify(): void {
     }
-    accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
-        return visitor.visitVariableExpr(this, isLeft);
+    accept<R>(visitor: ExprVisitor<R>, isAddress: boolean): R {
+        return visitor.visitVariableExpr(this, isAddress);
     }
 }
 
@@ -267,9 +267,9 @@ export class AssignExpr implements Expr {
 export class ArrowExpr implements Expr {
     exprType: DataType;
     left: VariableExpr;
-    right: VariableExpr | LiteralExpr;
+    right: Expr;
     operator: Token;
-    constructor(left: VariableExpr, right: VariableExpr | LiteralExpr, arrow: Token) {
+    constructor(left: VariableExpr, right: Expr, arrow: Token) {
         this.exprType = right.exprType;
         this.left = left;
         this.right = right;
@@ -299,14 +299,18 @@ export class InitializerExpr implements Expr {
     _var: Var;
     initializer: Expr | null;
     constructor(expr: Expr, operator: Token, _var: Var) {
-        this.exprType = expr?.exprType;
+        this.exprType = expr.exprType;
         this.operator = operator;
         this.initializer = expr;
         this._var = _var;
     }
     verify(): void {
-        if (this.initializer) {
+        if (this.initializer) { 
+            if(this._var.type instanceof TupleType && this.initializer instanceof ArrayExpr){
+                this.initializer = new TupleExpr(this.initializer.elements, this.operator)
+            }
             this.initializer.verify()
+            
             if (!isSameType(this._var.type, this.initializer.exprType)) {
                 El.error(this.operator, "Type mismatch in initializer expression.")
             }
@@ -458,8 +462,8 @@ export class IndexExpr implements Expr {
         if (targetType instanceof ArrayType) {
             this.exprType = targetType.elementType;
         } else if (targetType instanceof TupleType) {
-            if (this.index.exprType instanceof LiteralExpr && typeof this.index.exprType.value === 'number') {
-                const index = this.index.exprType.value
+            if (this.index instanceof LiteralExpr && typeof this.index.value === 'number') {
+                const index = this.index.value
                 this.exprType = targetType.elementsType[index]
             } else {
                 El.error(this.operator, "Index expression must be used with const number.")
@@ -475,8 +479,8 @@ export class IndexExpr implements Expr {
             El.error(this.operator, "Index expression must be used with array.")
         }
     }
-    accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
-        return visitor.visitIndexExpr(this, isLeft);
+    accept<R>(visitor: ExprVisitor<R>, isAddress: boolean): R {
+        return visitor.visitIndexExpr(this, isAddress);
     }
 }
 
@@ -532,8 +536,8 @@ export class GetFieldExpr implements Expr {
             El.error(null, "Get field expression must be used with struct.")
         }
     }
-    accept<R>(visitor: ExprVisitor<R>, isLeft: boolean): R {
-        return visitor.visitGetFieldExpr(this, isLeft);
+    accept<R>(visitor: ExprVisitor<R>, isisAddress: boolean): R {
+        return visitor.visitGetFieldExpr(this, isisAddress);
     }
 }
 

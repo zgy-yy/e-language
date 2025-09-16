@@ -357,19 +357,29 @@ declare i32 @printf(i8*, ...)
             }
         }
         if (stmt.initializer) {
-            if (stmt.variable.type instanceof PtrType) {
-                const initVar = stmt.initializer
-                if (initVar instanceof VariableExpr) {
-                    const lv_varName = this.scope.findVariable(initVar.variable)
-                    this.printIR(`store ${varType} ${lv_varName}, ${varType}* ${var_name}`);
+            if (stmt.initializer instanceof InitializerExpr) {
+                const init = stmt.initializer.initializer
+                console.log(9627, stmt.variable.type)
+                if (stmt.variable.type instanceof PtrType) {
+                    if (init instanceof VariableExpr) {
+                        const lv_varName = this.scope.findVariable(init.variable)
+                        this.printIR(`store ${varType} ${lv_varName}, ${varType}* ${var_name}`);
+                    } else if (init instanceof LiteralExpr) {
+                        this.printIR(`store ${varType} ${init.value}, ${varType}* ${var_name}`);
+                    } else if (init instanceof IndexExpr) {
+                        const initExpR = init.accept(this, true);
+                        this.printIR(`store ${varType} ${initExpR.valReg}, ${varType}* ${var_name}`);
+                    } else if (init instanceof GetFieldExpr) {
+                        const initExpR = init.accept(this, true);
+                        this.printIR(`store ${varType} ${initExpR.valReg}, ${varType}* ${var_name}`);
+                    } else {
+                    }
                 } else {
-                    const initExpR = initVar.accept(this);
+                    const initExpR = stmt.initializer.accept(this);
                     this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* ${var_name}`);
                 }
-            } else {
-                const initExpR = stmt.initializer.accept(this);
-                this.printIR(`store ${initExpR.type} ${initExpR.valReg}, ${varType}* ${var_name}`);
             }
+
         }
     }
 
@@ -389,8 +399,11 @@ declare i32 @printf(i8*, ...)
         let rightReg = null
         if (expr.right instanceof VariableExpr) {
             rightReg = this.scope.findVariable(expr.right.variable)
-        } else {
+        } else if (expr.right instanceof LiteralExpr) {
             rightReg = expr.right.value
+        } else if (expr.right instanceof IndexExpr) {
+            rightReg = expr.right.accept(this, true).valReg
+        } else {
         }
         this.printIR(`store ${leftType} ${rightReg}, ${leftType}* ${leftReg}`);
         return { type: leftType, valReg: leftReg };
@@ -415,9 +428,10 @@ declare i32 @printf(i8*, ...)
 
         return { type: array_type, valReg: undef_array };
     }
-    visitIndexExpr(expr: IndexExpr, isLeft: boolean): ExprResult {
+
+    visitIndexExpr(expr: IndexExpr, isAddress: boolean): ExprResult {
         const n = this.sequence.reg++;
-        const targetExpR = expr.target.accept(this, isLeft)
+        const targetExpR = expr.target.accept(this, isAddress)
         const targetType = targetExpR.type
         const targetVal = targetExpR.valReg
 
@@ -427,19 +441,19 @@ declare i32 @printf(i8*, ...)
 
         const indexPtr = `%reg_index_ptr${n}`
         let indexReg = `%reg_index${n}`
-        if (isLeft) {
+        if (isAddress) {
             this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},i32 0, i32 ${indexVal}`);
             return { type: fieldType, valReg: indexPtr };
         } else {
             if (expr.target.exprType instanceof ArrayType) {
                 this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},i32 0, i32 ${indexVal}`);
-                if (!(expr.target.exprType.elementType instanceof ArrayType)) {
+                if ((expr.target.exprType.elementType instanceof SimpleType)) {
                     this.printIR(`${indexReg} = load ${fieldType}, ${fieldType}* ${indexPtr}`);
                 } else {
                     indexReg = indexPtr;
                 }
             } else if (expr.target.exprType instanceof TupleType) { //元组
-                this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},i32 0, i32 ${indexVal}`);
+                this.printIR(`${indexPtr} = getelementptr ${targetType}, ${targetType}* ${targetVal},i32 0,i32 ${indexVal}`);
                 this.printIR(`${indexReg} = load ${fieldType}, ${fieldType}* ${indexPtr}`);
             } else {
                 throw new Error("Invalid target type.")
@@ -674,14 +688,15 @@ declare i32 @printf(i8*, ...)
     }
 
 
-    visitGetFieldExpr(expr: GetFieldExpr, isLeft: boolean): ExprResult {
+    visitGetFieldExpr(expr: GetFieldExpr, isAddress: boolean): ExprResult {
         const n = this.sequence.reg++;
-        const leftExpR = expr.target.accept(this, isLeft)
+        const leftExpR = expr.target.accept(this, isAddress)
         const leftType = leftExpR.type
         const leftVal = leftExpR.valReg
         const field_type = this.typeToLLVM(expr.exprType)
-        let retType = leftType
-        const field_val = `%reg_field${expr.field}_${n}`
+        let retType = field_type
+        const field_ptr = `%reg_field_ptr${expr.field}_${n}`
+        let field_val = `%reg_field${expr.field}_${n}`
         let field_index = -1
         if (expr.target.exprType instanceof StructType) {
             field_index = expr.target.exprType.fields.findIndex((f) => f.field === expr.field)
@@ -693,15 +708,18 @@ declare i32 @printf(i8*, ...)
         if (field_index === -1) {
             throw new Error("Invalid field expression.")
         }
-        if (isLeft) {
+        if (isAddress) {
             this.printIR(`${field_val} = getelementptr ${leftType}, ${leftType}* ${leftVal}, i32 0, i32 ${field_index}`);
-            retType = field_type
         } else {
-            if (leftType.endsWith("*")) { // 左值为指针
-                this.printIR(`${field_val} = load ${field_type}, ${leftType} ${leftVal}`);
+            if (expr.target.exprType instanceof StructType) {
+                this.printIR(`${field_ptr} = getelementptr ${leftType}, ${leftType}* ${leftVal}, i32 0, i32 ${field_index}`);
+                if (expr.target.exprType.fields[field_index].type instanceof SimpleType) {
+                    this.printIR(`${field_val} = load ${field_type}, ${field_type}* ${field_ptr}`);
+                } else {
+                    field_val = field_ptr
+                }
             } else {
-                this.printIR(`${field_val} = extractvalue ${leftType} ${leftVal}, ${field_index}`);
-                retType = field_type
+
             }
         }
         return { type: retType, valReg: field_val };
@@ -713,12 +731,12 @@ declare i32 @printf(i8*, ...)
         return valueExpR;
     }
     //变量表达式生成 变量表达式 => 变量名,函数名
-    visitVariableExpr(expr: VariableExpr, isLeft: boolean): ExprResult {
+    visitVariableExpr(expr: VariableExpr, isAddress: boolean): ExprResult {
         const var_name = this.scope.findVariable(expr.variable);
         let varType = this.typeToLLVM(expr.variable.type);
         const n = this.sequence.reg++;
         let reg_name = `%reg_${expr.variable.name}${n}`
-        if (isLeft) {
+        if (isAddress) {
             if (expr.variable.type instanceof PtrType) {
                 const reg_ptr = `${reg_name}_ptr${n}`
                 this.printIR(`${reg_ptr} = load ${varType}, ${varType}* ${var_name}`);
@@ -733,12 +751,11 @@ declare i32 @printf(i8*, ...)
             this.printIR(`${reg_ptr} = load ${varType}, ${varType}* ${var_name}`);
             this.printIR(`${reg_name} = load ${elementType}, ${elementType}* ${reg_ptr}`);
             return { type: elementType, valReg: reg_name };
-        } else if (expr.variable.type instanceof ArrayType) {
-            return { type: varType, valReg: var_name };
-        }
-        else {
+        } else if (expr.variable.type instanceof SimpleType) { //简单类型 加载值
             this.printIR(`${reg_name} = load ${varType}, ${varType}* ${var_name}`);
             return { type: varType, valReg: reg_name };
+        }else{
+            return { type: varType, valReg: var_name };
         }
     }
 

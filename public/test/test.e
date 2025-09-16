@@ -1,12 +1,31 @@
 
 
-int main() {
-    [3][2]int arr =[
-        [1,2],
-        [4,5],
-        [3,6]];
+struct Iner{
+    int c;
+}
 
-    arr[0]=[23,9];
-    print arr[0][1];
+struct St {
+    int a;
+    bool b;
+    Iner in;
+}
+
+
+int main() {
+
+St t ={
+    a:23,
+    b:false,
+    in:{
+        c:12
+    }
+};
+t.in.c =78;
+print t.in.c;
+
+
+   [int,int] tup =[90,23];
+
+   print tup[1];
     return 0;
 }

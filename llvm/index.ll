@@ -5,27 +5,31 @@
     declare i32 @printf(i8*, ...)
 
 
+    %struct.global.Iner = type { i32 }
+    %struct.global.St = type { i32, i1, %struct.global.Iner }
+
 ; 函数定义
 define i32 @main() {
 entry:
-    %main.arr = alloca [3 x [2 x i32]]  ; 分配局部变量
-    %temp_arr1_0 = insertvalue [2 x i32] undef, i32 1, 0
-    %temp_arr1_1 = insertvalue [2 x i32] %temp_arr1_0, i32 2, 1
-    %temp_arr0_0 = insertvalue [3 x [2 x i32]] undef, [2 x i32] %temp_arr1_1, 0
-    %temp_arr2_0 = insertvalue [2 x i32] undef, i32 4, 0
-    %temp_arr2_1 = insertvalue [2 x i32] %temp_arr2_0, i32 5, 1
-    %temp_arr0_1 = insertvalue [3 x [2 x i32]] %temp_arr0_0, [2 x i32] %temp_arr2_1, 1
-    %temp_arr3_0 = insertvalue [2 x i32] undef, i32 3, 0
-    %temp_arr3_1 = insertvalue [2 x i32] %temp_arr3_0, i32 6, 1
-    %temp_arr0_2 = insertvalue [3 x [2 x i32]] %temp_arr0_1, [2 x i32] %temp_arr3_1, 2
-    store [3 x [2 x i32]] %temp_arr0_2, [3 x [2 x i32]]* %main.arr  ; 存储值到变量
-    %reg_index_ptr4 = getelementptr [3 x [2 x i32]], [3 x [2 x i32]]* %main.arr,i32 0, i32 0  ; 获取数组元素指针
-    %temp_arr6_0 = insertvalue [2 x i32] undef, i32 23, 0
-    %temp_arr6_1 = insertvalue [2 x i32] %temp_arr6_0, i32 9, 1
-    store [2 x i32] %temp_arr6_1, [2 x i32]* %reg_index_ptr4  ; 存储值到变量
-    %reg_index_ptr8 = getelementptr [3 x [2 x i32]], [3 x [2 x i32]]* %main.arr,i32 0, i32 0  ; 获取数组元素指针
-    %reg_index_ptr7 = getelementptr [2 x i32], [2 x i32]* %reg_index_ptr8,i32 0, i32 1  ; 获取数组元素指针
-    %reg_index7 = load i32, i32* %reg_index_ptr7  ; 加载变量值
-    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_index7)  ; 函数调用
+    %main.t = alloca %struct.global.St  ; 分配局部变量
+    %temp_struct0_a = insertvalue %struct.global.St undef, i32 23, 0
+    %temp_struct0_b = insertvalue %struct.global.St %temp_struct0_a, i1 false, 1
+    %temp_struct1_c = insertvalue %struct.global.Iner undef, i32 12, 0
+    %temp_struct0_in = insertvalue %struct.global.St %temp_struct0_b, %struct.global.Iner %temp_struct1_c, 2
+    store %struct.global.St %temp_struct0_in, %struct.global.St* %main.t  ; 存储值到变量
+    %reg_fieldin_3 = getelementptr %struct.global.St, %struct.global.St* %main.t, i32 0, i32 2  ; 获取数组元素指针
+    %reg_fieldc_2 = getelementptr %struct.global.Iner, %struct.global.Iner* %reg_fieldin_3, i32 0, i32 0  ; 获取数组元素指针
+    store i32 78, i32* %reg_fieldc_2  ; 存储值到变量
+    %reg_field_ptrin_6 = getelementptr %struct.global.St, %struct.global.St* %main.t, i32 0, i32 2  ; 获取数组元素指针
+    %reg_field_ptrc_5 = getelementptr %struct.global.Iner, %struct.global.Iner* %reg_field_ptrin_6, i32 0, i32 0  ; 获取数组元素指针
+    %reg_fieldc_5 = load i32, i32* %reg_field_ptrc_5  ; 加载变量值
+    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_fieldc_5)  ; 函数调用
+    %main.tup = alloca {i32,i32}  ; 分配局部变量
+    %temp_tuple8_0 = insertvalue {i32,i32} undef, i32 90, 0
+    %temp_tuple8_1 = insertvalue {i32,i32} %temp_tuple8_0, i32 23, 1
+    store {i32,i32} %temp_tuple8_1, {i32,i32}* %main.tup  ; 存储值到变量
+    %reg_index_ptr9 = getelementptr {i32,i32}, {i32,i32}* %main.tup,i32 0,i32 1  ; 获取数组元素指针
+    %reg_index9 = load i32, i32* %reg_index_ptr9  ; 加载变量值
+    call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @format, i32 0, i32 0), i32 %reg_index9)  ; 函数调用
     ret i32 0  ; 返回
     }

@@ -1,5 +1,5 @@
 import { FunLable, Var } from "../Parse/Symbol";
-import { StructType } from "../Parse/TypeDeclar";
+import { ClassType, StructType } from "../Parse/TypeDeclar";
 
 class Env {
     level: number;
@@ -54,7 +54,7 @@ export class Scope {
         return null;
     }
     addDeclare(declare: any, name: string): string {
-        if (declare instanceof StructType) {
+        if (declare instanceof StructType || declare instanceof ClassType) {
             const declareName = `struct.${this.env.at(-1).scopeName}.${declare.name}`
             this.env.at(-1).declares.set(declare, declareName);
             return declareName

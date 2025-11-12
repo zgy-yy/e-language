@@ -94,15 +94,17 @@ export class TupleType extends DataType {
 }
 
 export class ClassType extends DataType {
-    constructor() {
+    name: string
+    fields: { field: string, type: DataType }[]
+    constructor(name: string, fields: { field: string, type: DataType }[]) {
         super(DataKind.class)
-        this.kind = DataKind.class; //声明类型为类
+        this.name = name
+        this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
     }
     toString(): string {
-        return super.toString() + 'class'
+        return `class ${this.name}`
     }
 }
-
 
 export class PtrType extends DataType {
     elementType: DataType

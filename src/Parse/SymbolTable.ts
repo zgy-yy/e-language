@@ -1,5 +1,5 @@
 import { FunLable, Var } from "./Symbol";
-import { DataType, isSameType, StructType } from "./TypeDeclar";
+import { ClassType, DataType, isSameType, StructType } from "./TypeDeclar";
 
 export enum ScopeType {
     Global = "global",
@@ -12,6 +12,7 @@ class Env {
     scopeType: ScopeType;
     varEnv: Map<string, Var> = new Map<string, Var>();
     structDeclareEnv: Map<string, StructType> = new Map<string, StructType>();
+    classDeclareEnv: Map<string, ClassType> = new Map<string, ClassType>();
     funDeclareEnv: Map<string, FunLable> = new Map<string, FunLable>();
     constructor(level: number, scopeType: ScopeType) {
         this.level = level;
@@ -97,5 +98,26 @@ export class SymbolTable {
             return false;
         }
         return this.symTab.at(-1).structDeclareEnv.has(name);
+    }
+
+    classInCurrentScope(name: string): boolean {// 判断当前作用域是否有这个类
+        if (this.symTab.length === 0) {
+            return false;
+        }
+        return this.symTab.at(-1).classDeclareEnv.has(name);
+    }
+
+    addClass(name: string, class_: ClassType) {
+        this.symTab.at(-1).classDeclareEnv.set(name, class_)
+        return class_;
+    }
+
+    findClass(name: string): ClassType {
+        for (let i = this.symTab.length - 1; i >= 0; i--) {
+            if (this.symTab[i].classDeclareEnv.has(name)) {
+                return this.symTab[i].classDeclareEnv.get(name);
+            }
+        }
+        return null;
     }
 }

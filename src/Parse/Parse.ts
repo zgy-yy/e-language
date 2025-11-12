@@ -1,10 +1,10 @@
 import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, TupleExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, ClassStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { El } from "../El/El";
 import { Token, Tokenkind } from "../Lexer/Token";
-import { ArrayType, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType, TupleType } from "./TypeDeclar";
+import { ArrayType, ClassType, DataType, FunType, isSameType, PtrType, SimpleKind, SimpleType, StructType, TupleType } from "./TypeDeclar";
 import { ScopeType, SymbolTable } from "./SymbolTable";
-import { FuncVar, Var, StructVar, ArrayVar, FunLable } from "./Symbol";
+import { FuncVar, Var, StructVar, ArrayVar, FunLable, ClassVar } from "./Symbol";
 
 type FuncEnclosing = {
     funcName: string,
@@ -73,11 +73,16 @@ export class Parser {
                 let kind = this.previous()//声明的类型
                 declType = new SimpleType(SimpleKind[kind.type])//声明 类型
             } else if (this.peek().type == Tokenkind.IDENTIFIER) {
-                const struct_name = this.peek().lexeme
-                const struct = this.symbolTable.findStructure(struct_name)
+                const type_name = this.peek().lexeme
+                const struct = this.symbolTable.findStructure(type_name)
                 if (struct) {
                     this.advance()
                     declType = struct
+                }
+                const class_ = this.symbolTable.findClass(type_name)
+                if (class_) {
+                    this.advance()
+                    declType = class_
                 }
             } else if (this.match(Tokenkind.LEFT_PAREN)) {
 
@@ -165,6 +170,9 @@ export class Parser {
         if (this.match(Tokenkind.STRUCT)) {
             return this.structStatement()
         }
+        if (this.match(Tokenkind.CLASS)) {
+            return this.classDeclaration()
+        }
         let declType = this.declarationKind()
         if (declType) {
             if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
@@ -222,7 +230,9 @@ export class Parser {
             this.symbolTable.addIdentifier(var_name.lexeme, var_)
         } else if (varT instanceof StructType) {
             var_ = new StructVar(var_name.lexeme, varT, varT.fields)
-        } else if (varT instanceof ArrayType) {
+        } else if (varT instanceof ClassType) {
+            var_ = new ClassVar(var_name.lexeme, varT, varT.fields)
+        }else if (varT instanceof ArrayType) {
             var_ = new ArrayVar(var_name.lexeme, varT)
         } else {
             var_ = new Var(var_name.lexeme, varT)
@@ -400,6 +410,35 @@ export class Parser {
         this.symbolTable.addStructure(struct_name.lexeme, struct_)
         return new StructStmt(struct_)
     }
+    classDeclaration(): Stmt {
+        const class_name = this.consume(Tokenkind.IDENTIFIER, "Expect class name.")//类名
+        if (this.symbolTable.classInCurrentScope(class_name.lexeme)) {
+            this.error(class_name, "Class with this name already declared in this scope.")
+        }
+        this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before class body.")
+        const class_fields: { field: string, type: DataType }[] = []
+        while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
+            const field_type = this.declarationKind()//字段类型
+            const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
+            if (class_fields.find(f => f.field === field_name.lexeme)) {
+                this.error(field_name, "Field with this name already declared in this class.")
+            }
+            class_fields.push({ field: field_name.lexeme, type: field_type })
+            while (this.match(Tokenkind.COMMA)) {
+                const field_name_ = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")
+                if (class_fields.find(f => f.field === field_name_.lexeme)) {
+                    this.error(field_name_, "1Field with this name already declared in this class.")
+                }
+                class_fields.push({ field: field_name_.lexeme, type: field_type })
+            }
+            this.consume(Tokenkind.SEMICOLON, "Expect ';' after field declaration.")
+        }
+        this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after class body.")
+        const class_ = new ClassType(class_name.lexeme, class_fields)
+        this.symbolTable.addClass(class_name.lexeme, class_)
+        return new ClassStmt(class_)
+    }
+
 
     printStatement(): Stmt {
         const value = this.expression()
@@ -799,7 +838,7 @@ export class Parser {
                 if (this.peek().type !== Tokenkind.RIGHT_BRACKET) {
                     this.consume(Tokenkind.COMMA, "Expect ',' after array or tuple element.")
                 }
-               
+
                 if (lastEleType !== null) {
                     if (!isSameType(lastEleType, elements.at(-1).exprType)) {
                         exprType = "tuple"

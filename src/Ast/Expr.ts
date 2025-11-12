@@ -298,19 +298,22 @@ export class InitializerExpr implements Expr {
     operator: Token;
     _var: Var;
     initializer: Expr | null;
-    constructor(expr: Expr, operator: Token, _var: Var) {
-        this.exprType = expr.exprType;
+    constructor(iniExper: Expr, operator: Token, _var: Var) {
+
         this.operator = operator;
-        this.initializer = expr;
+        this.initializer = iniExper;
         this._var = _var;
+        if (this.initializer) {
+            this.exprType = iniExper.exprType;
+        }
     }
     verify(): void {
-        if (this.initializer) { 
-            if(this._var.type instanceof TupleType && this.initializer instanceof ArrayExpr){
+        if (this.initializer) {
+            if (this._var.type instanceof TupleType && this.initializer instanceof ArrayExpr) {
                 this.initializer = new TupleExpr(this.initializer.elements, this.operator)
             }
             this.initializer.verify()
-            
+
             if (!isSameType(this._var.type, this.initializer.exprType)) {
                 El.error(this.operator, "Type mismatch in initializer expression.")
             }

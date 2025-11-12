@@ -2,11 +2,10 @@
 * 语句节点
 */
 
-import { DataType, isSameType, StructType } from "../Parse/TypeDeclar";
+import { ClassType, DataType, isSameType, StructType } from "../Parse/TypeDeclar";
 import { Token } from "../Lexer/Token";
 import { FunLable, Var } from "../Parse/Symbol";
 import { Expr } from "./Expr";
-import { El } from "../El/El";
 
 
 
@@ -27,6 +26,7 @@ export interface StmtVisitor<R> {
     visitFunctionStmt(stmt: FunctionStmt): R;
     visitReturnStmt(stmt: ReturnStmt): R;
     visitStructStmt(stmt: StructStmt): R;
+    visitClassStmt(stmt: ClassStmt): R;
 }
 
 export interface Stmt {
@@ -213,5 +213,15 @@ export class StructStmt implements Stmt {
     }
     accept<R>(visitor: StmtVisitor<R>): R {
         return visitor.visitStructStmt(this);
+    }
+}
+
+export class ClassStmt implements Stmt {
+    class: ClassType
+    constructor(classType: ClassType) {
+        this.class = classType;
+    }
+    accept<R>(visitor: StmtVisitor<R>): R {
+        return visitor.visitClassStmt(this);
     }
 }

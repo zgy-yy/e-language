@@ -1,6 +1,6 @@
 import { ArrayType, PtrType, TupleType } from "../Parse/TypeDeclar";
 import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, TupleExpr, UnaryExpr, VariableExpr } from "./Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
+import { BlockStmt, BreakStmt, ClassStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "./Stmt";
 
 
 export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
@@ -16,6 +16,10 @@ export class AstPrinter implements ExprVisitor<string>, StmtVisitor<string> {
 
     visitStructStmt(stmt: StructStmt): string {
         return `struct ${stmt.struct.name} { ${stmt.struct.fields.map((f) => `${f.type} ${f.field}`).join(", ")} }`;
+    }
+
+    visitClassStmt(stmt: ClassStmt): string {
+        return `class ${stmt.class.name} { ${stmt.class.fields.map((f) => `${f.type} ${f.field}`).join(", ")} }`;
     }
 
     visitContinueStmt(stmt: ContinueStmt): string {

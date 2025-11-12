@@ -1,7 +1,7 @@
 import { ArrayExpr, ArrowExpr, AssignExpr, BinaryExpr, CallExpr, CommaExpr, Expr, ExprVisitor, FunctionExpr, GetFieldExpr, GroupingExpr, IndexExpr, InitializerExpr, LiteralExpr, LogicalBinaryExpr, PrefixSelfExpr, SetFieldExpr, SetIndexExpr, StructExpr, SuffixSelfExpr, TupleExpr, UnaryExpr, VariableExpr } from "../Ast/Expr";
-import { BlockStmt, BreakStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
+import { BlockStmt, BreakStmt, ClassStmt, ContinueStmt, DoWhileStmt, ExpressionStmt, ForStmt, FunctionStmt, IfStmt, LoopStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, StructStmt, VarListStmt, VarStmt, WhileStmt } from "../Ast/Stmt";
 import { ArrayVar, FuncVar, FunLable, Var } from "../Parse/Symbol";
-import { ArrayType, DataType, FunType, PtrType, SimpleKind, SimpleType, StructType, TupleType } from "../Parse/TypeDeclar";
+import { ArrayType, ClassType, DataType, FunType, PtrType, SimpleKind, SimpleType, StructType, TupleType } from "../Parse/TypeDeclar";
 import { Scope } from "./Scope";
 
 type ExprResult = {
@@ -84,6 +84,11 @@ declare i32 @printf(i8*, ...)
     visitStructStmt(stmt: StructStmt): void {
         const lv_structName = this.scope.addDeclare(stmt.struct, stmt.struct.name)
         this.printDecle(`%${lv_structName} = type { ${stmt.struct.fields.map((f) => this.typeToLLVM(f.type)).join(', ')} }`);
+    }
+
+    visitClassStmt(stmt: ClassStmt): void {
+        const lv_className = this.scope.addDeclare(stmt.class, stmt.class.name)
+        this.printDecle(`%${lv_className} = type { ${stmt.class.fields.map((f) => this.typeToLLVM(f.type)).join(', ')} }`);
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
@@ -718,8 +723,15 @@ declare i32 @printf(i8*, ...)
                 } else {
                     field_val = field_ptr
                 }
-            } else {
-
+            } else if (expr.target.exprType instanceof PtrType) {
+                if (expr.target.exprType.elementType instanceof StructType) {
+                    this.printIR(`${field_ptr} = getelementptr ${leftType}, ${leftType}* ${leftVal}, i32 0, i32 ${field_index}`);
+                    if (expr.target.exprType.elementType.fields[field_index].type instanceof SimpleType) {
+                        this.printIR(`${field_val} = load ${field_type}, ${field_type}* ${field_ptr}`);
+                    } else {
+                        field_val = field_ptr
+                    }
+                }
             }
         }
         return { type: retType, valReg: field_val };
@@ -748,13 +760,17 @@ declare i32 @printf(i8*, ...)
         if (expr.variable.type instanceof PtrType) {
             const reg_ptr = `${reg_name}_ptr${n}`
             const elementType = this.typeToLLVM(expr.variable.type.elementType)
-            this.printIR(`${reg_ptr} = load ${varType}, ${varType}* ${var_name}`);
-            this.printIR(`${reg_name} = load ${elementType}, ${elementType}* ${reg_ptr}`);
+            if(expr.variable.type.elementType instanceof SimpleType){
+                this.printIR(`${reg_ptr} = load ${varType}, ${varType}* ${var_name}`);
+                this.printIR(`${reg_name} = load ${elementType}, ${elementType}* ${reg_ptr}`);
+            }else {
+                this.printIR(`${reg_name} = load ${varType}, ${varType}* ${var_name}`);
+            }
             return { type: elementType, valReg: reg_name };
         } else if (expr.variable.type instanceof SimpleType) { //简单类型 加载值
             this.printIR(`${reg_name} = load ${varType}, ${varType}* ${var_name}`);
             return { type: varType, valReg: reg_name };
-        }else{
+        } else {
             return { type: varType, valReg: var_name };
         }
     }
@@ -832,6 +848,9 @@ declare i32 @printf(i8*, ...)
         }
         if (type instanceof StructType) {
             return `%${this.scope.findDeclare(type)}`
+        }
+        if (type instanceof ClassType) {
+            return `%${this.scope.findDeclare(type)}*`
         }
         if (type instanceof ArrayType) {
             return `[${type.len} x ${this.typeToLLVM(type.elementType)}]`

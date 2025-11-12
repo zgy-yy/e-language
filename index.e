@@ -77,10 +77,6 @@ struct BB{
     string b;
 }
  
-struct C::BA,BB{
-    BB..b=32;
-
-}
 
 C c={
     Ba : 90,
@@ -104,17 +100,10 @@ class A{
     Uint a =0;
 
     public
+   say(){
+     A.c=23;
 
-}
-class B <: A,C{
-    Int cc =90
-    Uint a=1
-    void say(Uint a){
-        A..cc=90
-        cc =12
-        this.a=a;
-        this.a = this.a
-    }
+   }
 
 }
 
@@ -128,20 +117,8 @@ class B::A{
 
 class C{
     int age;
-
     void say(){
-        this.a=1
-    }
-}
-
-class D::C,B{
-    int age;
-    static string name;
-    void say(){
-        name ="fefe"
-        age =1;
-        B.age =23;
-        B.A.age =23;
+        a=1
     }
 }
 
@@ -177,7 +154,7 @@ void main(){
             break;
     }
 
-    Int print(){Int a,String d}{
+    Int print(){
         B b = new B("ell")
         main..b.name = b
 
@@ -199,21 +176,6 @@ clsss M{
     void() say;
 }
 
-class C :: P,M{
-    Int age;
-    void say(){
-        print(P..age)
-    }
-}
-class S :: C,P{
-    static 
-
-   const void say(){ //重写
-        P..age
-        age
-    }
-}
-
 
 int process(){
 
@@ -227,3 +189,10 @@ int mian(){
    print c;
 
 }
+
+
+
+
+//静态多态， 
+// 函数静态多态 static 编译时确定
+// 动态多态，虚函数表，运行时计算偏移

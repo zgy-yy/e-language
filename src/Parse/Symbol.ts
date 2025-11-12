@@ -41,6 +41,15 @@ export class ArrayVar extends Var {
     }
 }
 
+
+export class ClassVar extends Var {
+    fields: { field: string, type: DataType }[]
+    constructor(name: string, classType: DataType, fields: { field: string, type: DataType }[]) {
+        super(name, classType)
+        this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
+    }
+}
+
 const hexID = customAlphabet('0123456789ABCDEF', 4);
 //声明的函数
 export class FunLable {

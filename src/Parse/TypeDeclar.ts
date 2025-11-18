@@ -1,3 +1,4 @@
+import { Stmt } from "Ast/Stmt";
 
 export enum SimpleKind {
     Int = "int",
@@ -45,10 +46,12 @@ export class SimpleType extends DataType {
 export class FunType extends DataType {
     paramsType: DataType[]
     retType: DataType
-    constructor(_paramsType: DataType[], _retType: DataType) {
+    isConstructor: boolean
+    constructor(_paramsType: DataType[], _retType: DataType, isConstructor: boolean=false) {
         super(DataKind.fun)
         this.paramsType = _paramsType
         this.retType = _retType
+        this.isConstructor = isConstructor
     }
     toString(): string {
         return `(${this.paramsType.map(item => item.toString()).join(',')})->${this.retType.toString()}`
@@ -95,11 +98,14 @@ export class TupleType extends DataType {
 
 export class ClassType extends DataType {
     name: string
+    constructors : FunType[]
     fields: { field: string, type: DataType }[]
-    constructor(name: string, fields: { field: string, type: DataType }[]) {
+    methods: FunType[]
+    constructor(name: string, fields: { field: string, type: DataType }[], methods: FunType[] ) {
         super(DataKind.class)
         this.name = name
         this.fields = fields.sort((a, b) => a.field.localeCompare(b.field))
+        this.methods = methods
     }
     toString(): string {
         return `class ${this.name}`

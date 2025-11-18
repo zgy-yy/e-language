@@ -28,6 +28,7 @@ export class Scanner {//扫描器，或称为词法分析
         ["return", Tokenkind.RETURN],
         ["struct", Tokenkind.STRUCT],
         ["class", Tokenkind.CLASS],
+        ["new", Tokenkind.NEW_OPERATOR],
         //导入、导出
         ["link", Tokenkind.LINK],
         ["by", Tokenkind.BY],
@@ -185,6 +186,8 @@ export class Scanner {//扫描器，或称为词法分析
             this.addToken(type, false);
         } else if (type === Tokenkind.NULL) {
             this.addToken(type, null);
+        } else if (type === Tokenkind.NEW_OPERATOR) {
+            this.addToken(type, "new");
         } else {
             this.addToken(type);
         }

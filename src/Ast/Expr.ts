@@ -132,7 +132,12 @@ export class PrefixSelfExpr implements Expr {
         this.operator = operator;
         if (operator.type === Tokenkind.PLUS_PLUS || operator.type === Tokenkind.MINUS_MINUS) {
             this.exprType = new SimpleType(SimpleKind.Int); //前缀自增自减表达式的类型为Int
-        } else {
+        }
+        else if (operator.type === Tokenkind.NEW_OPERATOR) {
+            console.warn("todo new constructor expression");
+            // this.exprType = new SimpleType(SimpleKind.Void); //new表达式的类型为Void
+        }
+        else {
             El.error(operator, "Invalid operator in prefix self expression.")
         }
     }

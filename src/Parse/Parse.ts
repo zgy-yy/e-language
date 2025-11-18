@@ -232,7 +232,7 @@ export class Parser {
             var_ = new StructVar(var_name.lexeme, varT, varT.fields)
         } else if (varT instanceof ClassType) {
             var_ = new ClassVar(var_name.lexeme, varT, varT.fields)
-        }else if (varT instanceof ArrayType) {
+        } else if (varT instanceof ArrayType) {
             var_ = new ArrayVar(var_name.lexeme, varT)
         } else {
             var_ = new Var(var_name.lexeme, varT)
@@ -417,26 +417,34 @@ export class Parser {
         }
         this.consume(Tokenkind.LEFT_BRACE, "Expect '{' before class body.")
         const class_fields: { field: string, type: DataType }[] = []
+        const funcDecls: Stmt[] = []
+        const methods: FunType[] = []
         while (!this.check(Tokenkind.RIGHT_BRACE) && !this.isAtEnd()) {
-            const field_type = this.declarationKind()//字段类型
-            const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
-            if (class_fields.find(f => f.field === field_name.lexeme)) {
-                this.error(field_name, "Field with this name already declared in this class.")
-            }
-            class_fields.push({ field: field_name.lexeme, type: field_type })
-            while (this.match(Tokenkind.COMMA)) {
-                const field_name_ = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")
-                if (class_fields.find(f => f.field === field_name_.lexeme)) {
-                    this.error(field_name_, "1Field with this name already declared in this class.")
+            const dec_type = this.declarationKind()//字段类型
+            if (this.peekNext().type == Tokenkind.LEFT_PAREN) {
+                const func: FunctionStmt = this.funcDeclaration(dec_type) as FunctionStmt
+                funcDecls.push(func)
+                methods.push(func.fn_name.type)
+            } else {
+                const field_name = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")//字段名
+                if (class_fields.find(f => f.field === field_name.lexeme)) {
+                    this.error(field_name, "Field with this name already declared in this class.")
                 }
-                class_fields.push({ field: field_name_.lexeme, type: field_type })
+                class_fields.push({ field: field_name.lexeme, type: dec_type })
+                while (this.match(Tokenkind.COMMA)) {
+                    const field_name_ = this.consume(Tokenkind.IDENTIFIER, "Expect field name.")
+                    if (class_fields.find(f => f.field === field_name_.lexeme)) {
+                        this.error(field_name_, "1Field with this name already declared in this class.")
+                    }
+                    class_fields.push({ field: field_name_.lexeme, type: dec_type })
+                }
+                this.consume(Tokenkind.SEMICOLON, "Expect ';' after field declaration.")
             }
-            this.consume(Tokenkind.SEMICOLON, "Expect ';' after field declaration.")
         }
         this.consume(Tokenkind.RIGHT_BRACE, "Expect '}' after class body.")
-        const class_ = new ClassType(class_name.lexeme, class_fields)
+        const class_ = new ClassType(class_name.lexeme,  class_fields, methods)
         this.symbolTable.addClass(class_name.lexeme, class_)
-        return new ClassStmt(class_)
+        return new ClassStmt(class_, funcDecls)
     }
 
 
@@ -694,7 +702,7 @@ export class Parser {
 
 
     prefix(): Expr {
-        if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS)) {
+        if (this.match(Tokenkind.PLUS_PLUS, Tokenkind.MINUS_MINUS, Tokenkind.NEW_OPERATOR)) {
             const operator = this.previous()
             const expr = this.postfix()
             return new PrefixSelfExpr(operator, expr)

@@ -53,6 +53,7 @@ export enum Tokenkind {
     GREATER_EQUAL = ">=",
     LESS = "<",
     LESS_EQUAL = "<=",
+    NEW_OPERATOR = "New",
 
     //literal
     IDENTIFIER = "Identifier", //标识符 例如变量名
@@ -80,7 +81,6 @@ export enum Tokenkind {
     RETURN = "Return",
     STRUCT = "Struct",
     CLASS = "Class",
-
     //导入、导出
     LINK = "Link",
     BY = "By",

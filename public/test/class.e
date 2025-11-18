@@ -9,7 +9,7 @@ struct B{
 
 int main(){
 
-    A a;
+    int age =23;
 
     return 1;
 }
